@@ -1,4 +1,4 @@
-// Reverse resolve a chainId to name via ReverseChainResolver (ENSIP-10)
+// Reverse resolve a chainId to name via unified ChainResolver (ENSIP-10)
 
 import 'dotenv/config'
 import { init } from "./libs/init.ts";
@@ -12,26 +12,29 @@ const { deployerWallet, smith, rl } = await initSmith(
 );
 
 try {
-  // Locate ReverseChainResolver
-  let reverseAddress: string | undefined;
+  // Locate ChainResolver
+  let resolverAddress: string | undefined;
   try {
-    const res = await loadDeployment(chainId, "ReverseChainResolver");
+    const res = await loadDeployment(chainId, "ChainResolver");
     const found = res.target as string;
     const code = await deployerWallet.provider.getCode(found);
     if (code && code !== '0x') {
-      reverseAddress = found;
+      resolverAddress = found;
     }
   } catch {}
-  if (!reverseAddress) reverseAddress = process.env.REVERSE_RESOLVER_ADDRESS || "";
-  if (!reverseAddress) reverseAddress = (await askQuestion(rl, "ReverseChainResolver address: ")).trim();
-  if (!reverseAddress) {
-    console.error("ReverseChainResolver address is required.");
+  if (!resolverAddress) resolverAddress = process.env.CHAIN_RESOLVER_ADDRESS || process.env.RESOLVER_ADDRESS || "";
+  if (!resolverAddress) resolverAddress = (await askQuestion(rl, "ChainResolver address: ")).trim();
+  if (!resolverAddress) {
+    console.error("ChainResolver address is required.");
     process.exit(1);
   }
 
-  const reverse = new Contract(
-    reverseAddress!,
-    ["function resolve(bytes name, bytes data) view returns (bytes)"],
+  const resolver = new Contract(
+    resolverAddress!,
+    [
+      "function resolve(bytes name, bytes data) view returns (bytes)",
+      "function chainName(bytes) view returns (string)",
+    ],
     deployerWallet
   );
 
@@ -44,20 +47,19 @@ try {
   }
   const chainIdBytes = getBytes(cidIn);
 
-  // Build key for ReverseChainResolver data() path: abi.encode("chain-name:") || chainIdBytes
-  // Build ENSIP-10 data() call: key = abi.encode("chain-name:") || chainIdBytes
+  // Build key for ChainResolver data() path: raw bytes("chain-name:") || chainIdBytes
   const IFACE = new Interface([
     "function data(bytes32,bytes) view returns (bytes)",
   ]);
-  const prefix = AbiCoder.defaultAbiCoder().encode(["string"], ["chain-name:"]);
-  const key = hexlify(new Uint8Array([...getBytes(prefix), ...chainIdBytes]));
-  const dnsName = dnsEncode("x.cid.eth", 255);
+  const prefixRaw = getBytes('0x' + Buffer.from('chain-name:', 'utf8').toString('hex'));
+  const key = hexlify(new Uint8Array([...prefixRaw, ...chainIdBytes]));
+  const dnsName = dnsEncode("x.cid.eth", 255); // any label works; reverse uses key
   const ZERO_NODE = "0x" + "0".repeat(64);
   
 
   try {
     const call = IFACE.encodeFunctionData("data(bytes32,bytes)", [ZERO_NODE, key]);
-    const answer: string = await reverse.resolve(dnsName, call);
+    const answer: string = await resolver.resolve(dnsName, call);
     const [encoded] = IFACE.decodeFunctionResult("data(bytes32,bytes)", answer);
     let name: string;
     try {
@@ -71,6 +73,11 @@ try {
     // Print just Chainname and ChainId
     console.log('Chain name:', name);
     console.log('ENS name:', name + '.cid.eth');
+    // Also show the direct read path
+    try {
+      const direct = await resolver.chainName(chainIdBytes);
+      console.log('Direct read (chainName):', direct);
+    } catch {}
   } catch (e) {
     console.error((e as Error).message);
     process.exit(1);

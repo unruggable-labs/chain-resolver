@@ -1,11 +1,10 @@
-// Register a chain in ChainRegistry and optionally set ChainResolver records
+// Register a chain and set records in the unified ChainResolver
 import 'dotenv/config'
 
 import { init } from "./libs/init.ts";
 import {
   initSmith,
   shutdownSmith,
-  loadDeployment,
   askQuestion,
   promptContinueOrExit,
 } from "./libs/utils.ts";
@@ -18,11 +17,101 @@ import {
   isHexString,
   hexlify,
 } from "ethers";
+import * as contentHash from 'content-hash';
+import { CID } from 'multiformats/cid';
+
+async function encodeContenthash(input: string): Promise<string> {
+  // Trim optional wrapping quotes
+  input = input.trim();
+  if ((input.startsWith("'") && input.endsWith("'")) || (input.startsWith('"') && input.endsWith('"'))) {
+    input = input.slice(1, -1);
+  }
+  // Hex path
+  if (isHexString(input)) return input;
+  // IPFS/IPNS convenience
+  const lower = input.toLowerCase();
+  if (lower.startsWith('ipfs://') || lower.startsWith('ipns://')) {
+    try {
+      const mod: any = await import('content-hash');
+      const ch = mod.default ?? mod;
+      const ns = lower.startsWith('ipfs://') ? 'ipfs-ns' : 'ipns-ns';
+      const cid = input.replace(/^ipfs:\/\//i, '').replace(/^ipns:\/\//i, '');
+      const encoded = ch.encode(ns, cid);
+      return '0x' + encoded;
+    } catch (e) {
+      throw new Error("content-hash package not available. Provide hex 0x.. bytes or `bun add content-hash`.");
+    }
+  }
+  throw new Error("Unsupported contenthash format. Use 0x.. hex or ipfs:// / ipns://");
+}
 
 function toBytesLike(input: string): string {
   if (!input) return "0x";
   if (isHexString(input)) return input;
   return hexlify(toUtf8Bytes(input));
+}
+
+async function encodeContenthash(input: string): Promise<string> {
+  input = input.trim();
+
+  // Strip optional wrapping quotes
+  if ((input.startsWith("'") && input.endsWith("'")) || (input.startsWith('"') && input.endsWith('"'))) {
+    input = input.slice(1, -1);
+  }
+
+  // Hex contenthash (with or without 0x)
+  if (isHexString(input)) {
+    const hex = input.startsWith('0x') ? input.slice(2) : input;
+    try {
+      (contentHash as any).decode(hex);
+      return '0x' + hex;
+    } catch {
+      throw new Error('Invalid contenthash hex encoding');
+    }
+  }
+
+  const lower = input.toLowerCase();
+
+  // IPFS / IPNS
+  if (lower.startsWith('ipfs://') || lower.startsWith('ipns://')) {
+    const isIpfs = lower.startsWith('ipfs://');
+    const ns = isIpfs ? 'ipfs-ns' : 'ipns-ns';
+    let value = input.replace(/^ipfs:\/\//i, '').replace(/^ipns:\/\//i, '');
+    if (isIpfs) {
+      try {
+        value = CID.parse(value).toString();
+      } catch (err) {
+        throw new Error('Invalid CID in ipfs URL: ' + String(err));
+      }
+    } else {
+      try { value = CID.parse(value).toString(); } catch {}
+    }
+    const encoded = (contentHash as any).encode(ns, value);
+    return '0x' + encoded;
+  }
+
+  // Swarm / BZZ
+  if (lower.startsWith('bzz://') || lower.startsWith('swarm://')) {
+    const valuePart = input.slice(input.indexOf('://') + 3);
+    if (!isHexString(valuePart)) {
+      throw new Error('Swarm content must be hex hash');
+    }
+    const clean = valuePart.startsWith('0x') ? valuePart.slice(2) : valuePart;
+    const encoded = (contentHash as any).encode('swarm-ns', clean);
+    return '0x' + encoded;
+  }
+
+  // Optional generic URI
+  if (lower.startsWith('data:') || lower.startsWith('uri:') || lower.startsWith('http://') || lower.startsWith('https://')) {
+    try {
+      const encoded = (contentHash as any).encode('uri', input);
+      return '0x' + encoded;
+    } catch {
+      throw new Error('URI / data protocol not supported by content-hash codec');
+    }
+  }
+
+  throw new Error('Unsupported contenthash format. Use 0x… hex, ipfs://, ipns://, bzz://');
 }
 
 const { chainId, privateKey } = await init();
@@ -32,61 +121,27 @@ const { deployerWallet, smith, rl } = await initSmith(
 );
 
 try {
-  // Resolve contract addresses (env > deployments > prompt)
-  let registryAddress: string | undefined;
+  // Resolve ChainResolver address (env > prompt)
   let resolverAddress: string | undefined;
-
-  // 0) Prefer explicit env var for ChainRegistry
   try {
-    const envReg = (process.env.CHAIN_REGISTRY_ADDRESS || "").trim();
-    if (envReg) {
-      const code = await deployerWallet.provider.getCode(envReg);
-      if (code && code !== "0x") registryAddress = envReg;
-    }
-  } catch {}
-
-  try {
-    const reg = await loadDeployment(chainId, "ChainRegistry");
-    const found = reg.target as string;
-    const code = await deployerWallet.provider.getCode(found);
-    if (code && code !== "0x") registryAddress = found;
-  } catch {}
-  // 0b) Prefer explicit env var for ChainResolver
-  try {
-    const envRes = (process.env.CHAIN_RESOLVER_ADDRESS || "").trim();
+    const envRes = (process.env.CHAIN_RESOLVER_ADDRESS || process.env.RESOLVER_ADDRESS || "").trim();
     if (envRes) {
       const code = await deployerWallet.provider.getCode(envRes);
       if (code && code !== "0x") resolverAddress = envRes;
     }
   } catch {}
-  try {
-    const res = await loadDeployment(chainId, "ChainResolver");
-    const found = res.target as string;
-    const code = await deployerWallet.provider.getCode(found);
-    if (code && code !== "0x") resolverAddress = found;
-  } catch {}
-
-  if (!registryAddress) registryAddress = (await askQuestion(rl, "ChainRegistry address: ")).trim();
   if (!resolverAddress) resolverAddress = (await askQuestion(rl, "ChainResolver address: ")).trim();
-  if (!registryAddress || !resolverAddress) {
-    console.error("ChainRegistry and ChainResolver addresses are required.");
+  if (!resolverAddress) {
+    console.error("ChainResolver address is required.");
     process.exit(1);
   }
-
-  const registry = new Contract(
-    registryAddress,
-    [
-      "function register(string,address,bytes) external",
-      "function chainId(bytes32) view returns (bytes)",
-      "function chainName(bytes) view returns (string)",
-    ],
-    deployerWallet
-  );
 
   const resolver = new Contract(
     resolverAddress,
     [
-      "function register(bytes32,address) external",
+      "function register(string,address,bytes) external",
+      "function chainId(bytes32) view returns (bytes)",
+      "function chainName(bytes) view returns (string)",
       "function setAddr(bytes32,uint256,address) external",
       "function setContenthash(bytes32,bytes) external",
       "function setText(bytes32,string,string) external",
@@ -103,14 +158,14 @@ try {
   const ownerIn = (await askQuestion(rl, `Owner [default ${deployerWallet.address}]: `)).trim();
   const owner = ownerIn || deployerWallet.address;
 
-  // Register in registry and resolver
-  console.log("Registering in ChainRegistry...");
+  // Register in unified resolver (owner-only)
+  console.log("Registering in ChainResolver...");
   let ok = await promptContinueOrExit(rl, "Proceed? (y/n): ");
   if (ok) {
     try {
-      const tx = await registry.register(label, owner, cidIn);
+      const tx = await resolver.register(label, owner, cidIn);
       await tx.wait();
-      console.log("✓ registry.register");
+      console.log("✓ resolver.register");
     } catch (e: any) {
       const errIface = new Interface([
         "error LabelAlreadyRegistered(bytes32)",
@@ -121,42 +176,19 @@ try {
       try { if (data && typeof data === 'string') decoded = errIface.parseError(data); } catch {}
       const short = e?.shortMessage || e?.message || "";
       if (decoded?.name === 'LabelAlreadyRegistered' || /LabelAlreadyRegistered/.test(short)) {
-        console.log("✗ Label already registered:", label, "(skipping registry.register)");
+        console.log("✗ Label already registered (skipping)");
       } else if (/Ownable: caller is not the owner|NotAuthorized/.test(short)) {
         console.log("✗ Not authorized to register this label (owner-only)");
       } else {
-        console.error("✗ registry.register failed:", short);
-      }
-    }
-  }
-
-  console.log("Registering label in ChainResolver...");
-  ok = await promptContinueOrExit(rl, "Proceed? (y/n): ");
-  if (ok) {
-    try {
-      const tx = await resolver.register(labelHash, owner);
-      await tx.wait();
-      console.log("✓ resolver.register");
-    } catch (e: any) {
-      const errIface = new Interface(["error LabelAlreadyRegistered(bytes32)"]);
-      const data: string | undefined = e?.data || e?.error?.data || e?.info?.error?.data;
-      let decoded = undefined as any;
-      try { if (data && typeof data === 'string') decoded = errIface.parseError(data); } catch {}
-      const short = e?.shortMessage || e?.message || "";
-      if (decoded?.name === 'LabelAlreadyRegistered' || /LabelAlreadyRegistered/.test(short)) {
-        console.log("✗ Label already registered in resolver (skipping)");
-      } else if (/Ownable: caller is not the owner/.test(short)) {
-        console.log("✗ Not authorized to register label in resolver (owner-only)");
-      } else {
-        console.error("✗ resolver.register failed:", short);
+        console.error("✗ register failed:", short);
       }
     }
   }
 
   // Quick sanity
   try {
-    const cid = await registry.chainId(labelHash);
-    const name = await registry.chainName(cid);
+    const cid = await resolver.chainId(labelHash);
+    const name = await resolver.chainName(cid);
     console.log("chainId:", cid, "chainName:", name);
   } catch {}
 
@@ -180,7 +212,8 @@ try {
   }
 
   if (await promptContinueOrExit(rl, "Set contenthash? (y/n): ")) {
-    const ch = (await askQuestion(rl, "contenthash (0x..): ")).trim();
+    const chIn = (await askQuestion(rl, "contenthash (ipfs://, ipns://, bzz:// or 0x..): ")).trim();
+    const ch = await encodeContenthash(chIn);
     const tx = await resolver.setContenthash(labelHash, ch);
     await tx.wait();
     console.log("✓ setContenthash");

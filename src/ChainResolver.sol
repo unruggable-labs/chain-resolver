@@ -3,10 +3,11 @@ pragma solidity ^0.8.25;
 
 /**
  * @title ChainResolver
- * @author @unruggable-labs (base on Wonderland's L2Resolver)
- * @dev This contract provides ENS record resolution, reverse chain resolution, and chain data management in one contract.
+ * @author Unruggable Labs
+ * @notice Unified contract for ENS record resolution, reverse resolution, and chain data management.
+ * @dev Based on Wonderland's L2Resolver.
+ * @dev Repository: https://github.com/unruggable-labs/chain-resolver
  */
-
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {HexUtils} from "@ensdomains/ens-contracts/contracts/utils/HexUtils.sol";
@@ -15,7 +16,6 @@ import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol
 import {IChainResolver} from "./interfaces/IChainResolver.sol";
 
 contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
-
     /**
      * @notice Modifier to ensure only the label owner or authorized operator can call the function
      * @param _labelHash The labelhash to check authorization for
@@ -39,13 +39,13 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     string public constant CHAIN_ID_KEY = "chain-id";
     string public constant CHAIN_NAME_PREFIX = "chain-name:";
 
-    // Chain data storage 
+    // Chain data storage
     mapping(bytes32 _labelHash => bytes _chainId) internal chainIds;
     mapping(bytes _chainId => string _chainName) internal chainNames;
     mapping(bytes32 _labelHash => address _owner) internal labelOwners;
     mapping(address _owner => mapping(address _operator => bool _isOperator)) internal operators;
 
-    // ENS record storage 
+    // ENS record storage
     mapping(bytes32 labelHash => mapping(uint256 coinType => address addr)) private addressRecords;
     mapping(bytes32 labelHash => bytes contentHash) private contenthashRecords;
     mapping(bytes32 labelHash => mapping(string key => string value)) private textRecords;
@@ -135,9 +135,8 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     }
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
-        return interfaceId == type(IERC165).interfaceId || 
-               interfaceId == type(IExtendedResolver).interfaceId ||
-               interfaceId == type(IChainResolver).interfaceId;
+        return interfaceId == type(IERC165).interfaceId || interfaceId == type(IExtendedResolver).interfaceId
+            || interfaceId == type(IChainResolver).interfaceId;
     }
 
     // ============ Chain Registry Functions ============
@@ -163,13 +162,18 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         _register(_chainName, _owner, _chainId);
     }
 
+    
+
     /**
      * @notice Batch register multiple chains (owner only)
      * @param _chainNames Array of chain names
      * @param _owners Array of owners for each chain
      * @param _chainIds Array of chain IDs
      */
-    function batchRegister(string[] calldata _chainNames, address[] calldata _owners, bytes[] calldata _chainIds) external onlyOwner {
+    function batchRegister(string[] calldata _chainNames, address[] calldata _owners, bytes[] calldata _chainIds)
+        external
+        onlyOwner
+    {
         uint256 _length = _chainNames.length;
         if (_length != _owners.length || _length != _chainIds.length) {
             revert InvalidDataLength();
@@ -232,7 +236,10 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @param _value The text record value.
      * @dev Note: "chain-id" text record will be stored but not used - resolve() overrides it with internal registry value.
      */
-    function setText(bytes32 _labelHash, string calldata _key, string calldata _value) external onlyAuthorized(_labelHash) {
+    function setText(bytes32 _labelHash, string calldata _key, string calldata _value)
+        external
+        onlyAuthorized(_labelHash)
+    {
         textRecords[_labelHash][_key] = _value;
     }
 
@@ -242,7 +249,10 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @param _key The data record key.
      * @param _data The data record value.
      */
-    function setData(bytes32 _labelHash, bytes calldata _key, bytes calldata _data) external onlyAuthorized(_labelHash) {
+    function setData(bytes32 _labelHash, bytes calldata _key, bytes calldata _data)
+        external
+        onlyAuthorized(_labelHash)
+    {
         dataRecords[_labelHash][_key] = _data;
     }
 
@@ -285,8 +295,6 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         return dataRecords[_labelHash][_key];
     }
 
-
-
     /**
      * @notice Get the owner of a labelhash.
      * @param _labelHash The labelhash to query.
@@ -295,7 +303,6 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     function getOwner(bytes32 _labelHash) external view returns (address) {
         return labelOwners[_labelHash];
     }
-
 
     // ============ Utility Functions ============
 

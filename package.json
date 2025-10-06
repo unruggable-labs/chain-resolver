@@ -3,6 +3,8 @@
     "dependencies": {
         "@adraffy/blocksmith": "https://github.com/clowestab/blocksmith.js.git#2bf93f74d56b5e44de652a088d58a680d002e076",
         "@ensdomains/ens-contracts": "^1.6.0",
+        "content-hash": "^2.5.2",
+        "multiformats": "^13.4.1",
         "dotenv": "^16.5.0",
         "ethers": "^6.14.0",
         "tsx": "^4.19.4"

@@ -73,29 +73,14 @@ try {
     return decoded;
   }
 
-  // Resolve chain-id once, preferring data() raw bytes then falling back to text()
-  function ensure0x(s: string): string {
-    return s.startsWith("0x") ? s : `0x${s}`;
-  }
-
-  let chainIdHex: string | undefined;
+  // Resolve chain-id (hex string, no 0x prefix)
   try {
-    const call = IFACE.encodeFunctionData("data(bytes32,bytes)", [labelHash, toBytesLike("chain-id")]);
-    const raw: string = await resolver.resolve(dnsName, call); // expected 0x-prefixed bytes
-    chainIdHex = ensure0x(raw);
-  } catch {}
-
-  if (!chainIdHex) {
-    try {
-      const hexCid = await resolveDecode("text(bytes32,string)", [labelHash, "chain-id"]); // sans 0x
-      chainIdHex = ensure0x(hexCid);
-    } catch (e) {
-      console.error((e as Error).message);
-      process.exit(1);
-    }
+    const hexCid = await resolveDecode("text(bytes32,string)", [labelHash, "chain-id"]);
+    console.log(`Chain ID: 0x${hexCid}`);
+  } catch (e) {
+    console.error((e as Error).message);
+    process.exit(1);
   }
-
-  console.log(`Chain ID: ${chainIdHex}`);
 } finally {
   await shutdownSmith(rl, smith);
 }

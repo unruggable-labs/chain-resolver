@@ -180,8 +180,6 @@ export const verifyContract = async (
 
   const fqNameMap: Record<string, string> = {
     ChainResolver: "src/ChainResolver.sol:ChainResolver",
-    ChainRegistry: "src/ChainRegistry.sol:ChainRegistry",
-    ReverseChainResolver: "src/ReverseChainResolver.sol:ReverseChainResolver",
     KeygenLib: "src/utils/KeyGenLib.sol:KeygenLib"
   };
   const nameOrFQN = fqNameMap[contractName] || contractName;
