@@ -24,20 +24,18 @@ This repo contains a single contract — [`ChainResolver.sol`](src/ChainResolver
 </p>
 
 Forward resolution (label → 7930):
-The ENS field `text(..., "chain-id")` (per [ENSIP‑5](https://docs.ens.domains/ensip/5)) returns the chain’s 7930 ID as a hex string without `0x` (prepend it client‑side). This value is written at registration by the contract owner (e.g., a multisig) and the resolver ignores any user‑set text under that key. To resolve a chain ID:
+The ENS field `text(..., "chain-id")` (per [ENSIP‑5](https://docs.ens.domains/ensip/5)) returns the chain’s 7930 ID as a hex. This value is written at registration by the contract owner (e.g., a multisig) and the resolver ignores any user‑set text under that key. To resolve a chain ID:
  - DNS‑encode the ENS name (e.g., `optimism.cid.eth`).
  - Compute `labelHash = keccak256(bytes(label))` (e.g., `label = "optimism"`).
  - Call `resolve(name, abi.encodeWithSelector(text(labelHash, "chain-id")))` → returns a hex string.
 
 Reverse resolution (7930 → name):
-- Pass a key prefixed with `"chain-name:"` and suffixed with the raw 7930 bytes via either `text(bytes32,string)` (per [ENSIP‑5](https://docs.ens.domains/ensip/5)) or `data(bytes32,bytes)` (per [ENSIP‑TBD‑19](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-19.md)); this uses the `chain-name:` service key parameter (per [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md)); the resolver returns the chain name. For example:
-  - Text path (key as string): `text(node, "chain-name:000000010001010a00")`
-  - Data path (key as bytes): `data(node, bytes("chain-name:") || chainIdBytes)`
-  - textKey (string): `"chain-name:<7930-hex>"`
-  - dataKey (bytes): `bytes("chain-name:") || chainIdBytes`
+- Pass a key prefixed with `"chain-name:"` and suffixed with the 7930 hex via either `text(bytes32,string)` (per ENSIP‑5) or `data(bytes32,string)` (per [ENSIP‑TBD‑19](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-19.md)); this uses the `chain-name:` service key parameter (per [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md)). For example:
+
+  - serviceKey (string): `"chain-name:<7930-hex>"`
   - Calls:
-    - `resolve(name, encode(text(labelHash, textKey)))`
-    - `resolve(name, encode(data(labelHash, dataKey)))`
+    - `resolve(name, encode(text(labelHash, serviceKey)))`
+    - `resolve(name, encode(data(labelHash, serviceKey)))`
 
 
 ## Contract Interfaces
@@ -53,26 +51,14 @@ function setOperator(address operator, bool isOperator) external;   // per-owner
 ```
 
 ENS fields available via `IExtendedResolver.resolve(name,data)`:
-- `addr(bytes32)` and `addr(bytes32,uint256)` → EVM address per coin type (60 = ETH) — multi‑coin per [ENSIP‑9](https://docs.ens.domains/ensip/9)
+- `addr(bytes32)` and `addr(bytes32,uint256)` → EVM address per coin type (60 = ETH) — multichain address resolution per [ENSIP‑9](https://docs.ens.domains/ensip/9)
 - `contenthash(bytes32)` → bytes — per [ENSIP‑7](https://docs.ens.domains/ensip/7)
-- `text(bytes32,string)` → string — per [ENSIP‑5](https://docs.ens.domains/ensip/5) (with special handling for `"chain-id"` and `"chain-name:"`)
-- `data(bytes32,bytes)` → bytes — per [ENSIP‑TBD‑19](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-19.md) (used here with the `"chain-name:"` reverse key convention)
-
-## Client Flows
-
-- Forward (label → 7930 hex):
-  - DNS‑encode the ENS name (e.g., `optimism.cid.eth`).
-  - Compute `labelHash = keccak256(bytes(label))` where `label` is the left‑most label (e.g., `optimism`).
-  - Call `resolve(name, abi.encodeWithSelector(text(bytes32,string), labelHash, "chain-id"))`.
-  - Decode as a string hex.
-
-- Reverse (7930 → name):
-  - Build `key = bytes("chain-name:") || chainIdBytes`.
-  - Call `resolve(anyDNS, abi.encodeWithSelector(data(bytes32,bytes), labelHash, key))` and decode as `string`.
+- `text(bytes32,string)` → string — per ENSIP‑5 (with special handling for `"chain-id"` and `"chain-name:"`)
+- `data(bytes32,string)` → bytes — per ENSIP‑TBD‑19 (with special handling for `"chain-name:"`)
 
 ## 7930 Chain Identifier
 
-We use the chain identifier variant of [ERC‑7930](https://eips.ethereum.org/EIPS/eip-7930), which contains no address payload. The layout is:
+We use the chain identifier variant of ERC‑7930, which contains no address payload. The layout is:
 
 - Version (4 bytes) | ChainType (2 bytes) | ChainRefLen (1 byte) | ChainRef (N bytes) | AddrLen (1 byte) | Addr (0 bytes)
 
@@ -93,6 +79,7 @@ The examples below show how to build the full 7930 identifier.
 ### Size limits
 
 EVM example sizes: Optimism/Arbitrum are 9 bytes total: 4 (Version) + 2 (ChainType) + 1 (ChainRefLen) + 1 (ChainRef; 1‑byte here) + 1 (AddrLen=0).
+
 Solana example size: 40 bytes total: 4 (Version) + 2 (ChainType) + 1 (ChainRefLen) + 32 (ChainRef) + 1 (AddrLen=0).
 
 - 7930 theoretical maximum: 263 bytes total (8 bytes overhead + up to 255‑byte ChainRef; no address payload).
@@ -173,4 +160,4 @@ bun run deploy/ReverseResolveByChainId.ts -- --chain=sepolia
 - [ENSIP‑10](https://docs.ens.domains/ensip/10) — Extended resolver
 - [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md) — Service Key Parameters (e.g., `chain-name:`)
 - [ENSIP‑TBD‑18](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-18.md) — Global `chain-id` text record
-- [ENSIP‑TBD‑19](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-19.md) — `data()` binary records for chain IDs
+- [ENSIP‑TBD‑19](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-19.md) — `data()` records for chain IDs
