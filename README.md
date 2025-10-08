@@ -1,11 +1,11 @@
 # Unified Chain Resolver (Registry + Resolver)
 
-This repo contains a single contract — [`ChainResolver.sol`](src/ChainResolver.sol) — that lets clients look up ENS records and reverse names in one place. Read operations use the ENSIP‑10 extended resolver entrypoint `resolve(bytes name, bytes data)` (https://docs.ens.domains/ensip/10). Only the contract owner can make changes (ideally a multisig).
+This repo contains a single contract — [`ChainResolver.sol`](src/ChainResolver.sol) — that lets clients look up chain IDs and ENS records in one place. Read operations use the ENSIP‑10 extended resolver entrypoint `resolve(bytes name, bytes data)` (https://docs.ens.domains/ensip/10). Only the contract owner (ideally a multisig) can make changes to the label–chain ID pairs.
 
 ### Why this structure works
-- Everything is keyed by labelhash (computed as `labelhash = keccak256(bytes(label))`, for example with `label = "optimism"`). This keeps us agnostic to the final namespace (`cid.eth`, `on.eth`, `l2.eth`, etc.), so we can change hierarchies later without migrating fields.
+- Everything is keyed by labelhash (computed as `labelhash = keccak256(bytes(label))`, for example with `label = "optimism"`). This keeps the contract agnostic to the final namespace (`cid.eth`, `on.eth`, `l2.eth`, etc.), so we can change hierarchies later without migrating fields.
 - One source of truth: Ownership, 7930 chain IDs ([ERC‑7930](https://eips.ethereum.org/EIPS/eip-7930)), ENS records, and reverse lookups live in one place.
-- ENSIP‑10 Extended Resolver: Once registered, the chain owner (or an authorised operator) can set ENS fields like addresses, contenthash and other text/data fields. Reads go through the extended resolver entrypoint `resolve(bytes name, bytes data)` (see ENSIP‑10), so clients can call the standard ENS fields - `addr`, `contenthash`, `text`, and `data` - to pull chain metadata directly from an ENS name like `optimism.cid.eth`. For available fields and examples, see [Contract Interfaces](#contract-interfaces).
+- ENSIP‑10 Extended Resolver: Once registered, the chain owner (or an authorised operator) can set ENS fields like addresses, contenthash and other text/data fields. Reads go through the extended resolver entrypoint `resolve(bytes name, bytes data)` (see ENSIP‑10), so clients can call the standard ENS fields - `addr`, `contenthash`, and `text` - to pull chain metadata directly from an ENS name like `optimism.cid.eth`. For available fields and examples, see [Contract Interfaces](#contract-interfaces).
 - Clear forward and reverse: Forward returns a chain’s 7930 identifier; reverse maps 7930 bytes back to the chain name.
 
 ## ChainResolver.sol
@@ -26,18 +26,18 @@ This repo contains a single contract — [`ChainResolver.sol`](src/ChainResolver
 Forward resolution (label → 7930):
 The ENS field `text(..., "chain-id")` (per [ENSIP‑5](https://docs.ens.domains/ensip/5)) returns the chain’s 7930 ID as a hex string. The field `data(..., "chain-id")` returns the raw 7930 bytes (per ENSIP‑TBD‑19). This value is written at registration by the contract owner (e.g., a multisig) and the resolver ignores any user‑set text under that key. To resolve a chain ID:
  - DNS‑encode the ENS name (e.g., `optimism.cid.eth`).
- - Compute `labelhash = keccak256(bytes(label))` (e.g., `label = "optimism"`).
+ - Compute the node of the ENS name (e.g., using `ethers`: `namehash(name)`)
  - Calls:
-    -  `resolve(name, abi.encodeWithSelector(text(labelhash, "chain-id")))` → returns a hex string.
-    - `resolve(name, abi.encodeWithSelector(data(labelhash, "chain-id")))` → returns raw bytes.
+    -  `resolve(name, abi.encodeWithSelector(text(node, "chain-id")))` → returns a hex string.
+    - `resolve(name, abi.encodeWithSelector(data(node, "chain-id")))` → returns raw bytes.
 
 Reverse resolution (7930 → name):
-- Pass a key prefixed with `"chain-name:"` and suffixed with the 7930 hex via either `text(bytes32,string)` (per ENSIP‑5) or `data(bytes32,string)` (per [ENSIP‑TBD‑19](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-19.md)); this uses the `chain-name:` service key parameter (per [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md)). For example:
+- Pass a key prefixed with `"chain-name:"` and suffixed with the 7930 hex via either `text(bytes32 node,string key)` (per ENSIP‑5) or `data(bytes32 node,string key)` (per [ENSIP‑TBD‑19](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-19.md)); this uses the `chain-name:` text key parameter standard (per [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md)). For example:
 
-  - serviceKey (string): `"chain-name:<7930-hex>"`
+  - Text Key and Parameter (string): `"chain-name:<7930-hex>"`
   - Calls:
-    - `resolve(name, encode(text(labelhash, serviceKey)))`
-    - `resolve(name, encode(data(labelhash, serviceKey)))`
+    - `resolve(name, encode(text(node, serviceKey)))`
+    - `resolve(name, encode(data(node, serviceKey)))`
 
 
 ## Contract Interfaces
@@ -53,41 +53,21 @@ function setOperator(address operator, bool isOperator) external;   // per-owner
 ```
 
 ENS fields available via `IExtendedResolver.resolve(name,data)`:
-- `addr(bytes32)` → address (ETH, coin type 60) — per [ENSIP‑1](https://docs.ens.domains/ensip/1)
-- `addr(bytes32,uint256)` → bytes (raw multi‑coin value) — per [ENSIP‑9](https://docs.ens.domains/ensip/9)
-- `contenthash(bytes32)` → bytes — per [ENSIP‑7](https://docs.ens.domains/ensip/7)
-- `text(bytes32,string)` → string — per ENSIP‑5 (with special handling for `"chain-id"` and `"chain-name:"`)
-- `data(bytes32,string)` → bytes — per ENSIP‑TBD‑19 (with special handling for `"chain-id"` and `"chain-name:"`)
+- `addr(bytes32 node)` → address (ETH, coin type 60) — per [ENSIP‑1](https://docs.ens.domains/ensip/1)
+- `addr(bytes32 node,uint256 coinType)` → bytes (raw multi‑coin value) — per [ENSIP‑9](https://docs.ens.domains/ensip/9)
+- `contenthash(bytes32 node)` → bytes — per [ENSIP‑7](https://docs.ens.domains/ensip/7)
+- `text(bytes32 node,string key)` → string — per ENSIP‑5 (with special handling for `"chain-id"` and `"chain-name:"`)
+- `data(bytes32 node,string key)` → bytes — per ENSIP‑TBD‑19 (with special handling for `"chain-id"` and `"chain-name:"`)
 
 ## 7930 Chain Identifier
 
-We use the chain identifier variant of ERC‑7930, which contains no address payload. The layout is:
+We use the chain identifier variant of ERC‑7930. Examples:
 
-- Version (4 bytes) | ChainType (2 bytes) | ChainRefLen (1 byte) | ChainRef (N bytes) | AddrLen (1 byte) | Addr (0 bytes)
+- Optimism (chain 10): `0x000000010001010a00`
+- Arbitrum (chain 102): `0x000000010001016600`
 
-The examples below show how to build the full 7930 identifier.
+See [ERC‑7930: Universal Chain Identifier](https://eips.ethereum.org/EIPS/eip-7930) for the full specification.
 
-- Optimism (chain 10):
-  - Fields: `00000001` (Version=1), `0001` (EVM), `01` (ChainRefLen=1), `0a` (ChainRef=10), `00` (AddrLen=0)
-  - 7930 identifier: `0x000000010001010a00`
-
-- Arbitrum (chain 102):
-  - Fields: `00000001` (Version=1), `0001` (EVM), `01` (ChainRefLen=1), `66` (ChainRef=102), `00` (AddrLen=0)
-  - 7930 identifier: `0x000000010001016600`
-
-- Solana (mainnet):
-  - Fields: `00000001` (Version=1), `0002` (Solana), `20` (ChainRefLen=32), `45296998a6f8e2a784db5d9f95e18fc23f70441a1039446801089879b08c7ef0` (ChainRef = 32‑byte genesis hash), `00` (AddrLen=0)
-  - 7930 identifier: `0x0000000100022045296998a6f8e2a784db5d9f95e18fc23f70441a1039446801089879b08c7ef000`
-
-### Size limits
-
-EVM example sizes: Optimism/Arbitrum are 9 bytes total: 4 (Version) + 2 (ChainType) + 1 (ChainRefLen) + 1 (ChainRef; 1‑byte here) + 1 (AddrLen=0).
-
-Solana example size: 40 bytes total: 4 (Version) + 2 (ChainType) + 1 (ChainRefLen) + 32 (ChainRef) + 1 (AddrLen=0).
-
-- 7930 theoretical maximum: 263 bytes total (8 bytes overhead + up to 255‑byte ChainRef; no address payload).
-- EVM practical maximum (CAIP‑2 aligned): CAIP‑2 uses `eip155:<reference>`, where `<reference>` is the EIP‑155 chain ID. We treat `<reference>` as an integer limited to 32 bytes. That makes an EVM 7930 identifier at most 8 + 32 = 40 bytes. See CAIP‑2: https://chainagnostic.org/CAIPs/caip-2
-- Non‑EVM common case: Most CAIP‑2 references are ≤ 32 bytes, so ≤ 40‑byte 7930 IDs are typical; some namespaces may exceed this, and 7930 still allows up to 263 bytes.
 
 ## Development
 
