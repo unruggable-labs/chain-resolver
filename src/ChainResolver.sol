@@ -4,7 +4,7 @@ pragma solidity ^0.8.25;
 /**
  * @title ChainResolver
  * @author Unruggable
- * @notice ENS resolver for chain ID registration and resolution with 7930 identifiers.
+ * @notice ENS resolver for chain ID registration and resolution with ERC-7930 identifiers.
  * @dev Based on Wonderland's L2Resolver.
  * @dev Repository: https://github.com/unruggable-labs/chain-resolver
  */
@@ -343,7 +343,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      */
     function _getTextWithOverrides(bytes32 _labelhash, string memory _key) internal view returns (string memory) {
         // Special case for "chain-id" text record
-        // When client requests text record with key "chain-id", return the chain's 7930 identifier as hex string
+        // When client requests text record with key "chain-id", return the chain's ERC-7930 identifier as hex string
         if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_ID_KEY))) {
             // Get chain ID bytes from internal registry and encode as hex string
             bytes memory chainIdBytes = chainIds[_labelhash];
@@ -351,8 +351,8 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         }
 
         // Check if key starts with "chain-name:" prefix (reverse resolution)
-        // This enables reverse lookup: given a 7930 chain ID, find the chain name
-        // Format: "chain-name:0x<7930-hex-string>" where <7930-hex-string> is the chain ID in hex
+        // This enables reverse lookup: given a ERC-7930 chain ID, find the chain name
+        // Format: "chain-name:0x<ERC-7930-hex-string>" where <ERC-7930-hex-string> is the chain ID in hex
         bytes memory keyBytes = bytes(_key);
         bytes memory keyPrefixBytes = bytes(CHAIN_NAME_PREFIX);
         if (_startsWith(keyBytes, keyPrefixBytes)) {
