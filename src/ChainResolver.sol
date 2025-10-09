@@ -271,7 +271,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @notice Get a data record for a labelhash.
      * @param _labelhash The labelhash to query.
      * @param _key The data record key.
-     * @return The data record value (with special handling for chain-id and chain-name:).
+     * @return The data record value (with special handling for chain-id).
      */
     function getData(bytes32 _labelhash, string calldata _key) external view returns (bytes memory) {
         return _getDataWithOverrides(_labelhash, _key);
@@ -367,22 +367,12 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @notice Internal function to handle data record keys with overrides
      * @param _labelhash The labelhash to query
      * @param _key The data record key
-     * @return The data record value (with overrides for chain-id and chain-name:)
+     * @return The data record value (with override for chain-id)
      */
     function _getDataWithOverrides(bytes32 _labelhash, string memory _key) internal view returns (bytes memory) {
         // Special case for "chain-id" data record: return raw ERC-7930 bytes
         if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_ID_KEY))) {
             return chainIds[_labelhash];
-        }
-
-        // Check if key starts with "chain-name:" prefix (reverse resolution)
-        bytes memory keyBytes = bytes(_key);
-        bytes memory keyPrefixBytes = bytes(CHAIN_NAME_PREFIX);
-        if (_startsWith(keyBytes, keyPrefixBytes)) {
-            // Extract chainId suffix from key
-            string memory chainIdHex = _substring(_key, keyPrefixBytes.length, keyBytes.length);
-            (bytes memory chainIdBytes,) = HexUtils.hexToBytes(bytes(chainIdHex), 0, bytes(chainIdHex).length);
-            return bytes(chainNames[chainIdBytes]);
         }
 
         // Default: return stored data record
