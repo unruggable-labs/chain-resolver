@@ -151,54 +151,60 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(user1);
 
         // Test with various address types
-        address[] memory testAddresses = new address[](5);
-        testAddresses[0] = address(0x0); // Zero address
-        testAddresses[1] = address(0x1); // Low address
-        testAddresses[2] = address(0x1234567890123456789012345678901234567890); // Normal address
-        testAddresses[3] = address(0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF); // Max address
-        testAddresses[4] = address(this); // Contract address
+        address[] memory testAddresses = new address[](4);
+        testAddresses[0] = address(0x1); // Low address (ETH)
+        testAddresses[1] = address(0x1234567890123456789012345678901234567890); // Normal address (Polygon)
+        testAddresses[2] = address(0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF); // Max address (Arbitrum)
+        testAddresses[3] = address(this); // Contract address (Custom)
 
-        uint256[] memory coinTypes = new uint256[](5);
-        coinTypes[0] = 0;
-        coinTypes[1] = 60; // ETH
-        coinTypes[2] = 137; // Polygon
-        coinTypes[3] = 42161; // Arbitrum
-        coinTypes[4] = 999999; // Custom coin type
+        uint256[] memory coinTypes = new uint256[](4);
+        coinTypes[0] = 60; // ETH
+        coinTypes[1] = 137; // Polygon
+        coinTypes[2] = 42161; // Arbitrum
+        coinTypes[3] = 999999; // Custom coin type
 
-        // Set all addresses: ETH via convenience, others via bytes
-        resolver.setAddr(LABEL_HASH, testAddresses[1]); // coinType 60
-        resolver.setAddr(LABEL_HASH, coinTypes[0], abi.encodePacked(testAddresses[0]));
+        // EVM examples: ETH via convenience, others via bytes
+        resolver.setAddr(LABEL_HASH, testAddresses[0]); // coinType 60
+        resolver.setAddr(LABEL_HASH, coinTypes[1], abi.encodePacked(testAddresses[1]));
         resolver.setAddr(LABEL_HASH, coinTypes[2], abi.encodePacked(testAddresses[2]));
         resolver.setAddr(LABEL_HASH, coinTypes[3], abi.encodePacked(testAddresses[3]));
-        resolver.setAddr(LABEL_HASH, coinTypes[4], abi.encodePacked(testAddresses[4]));
+
+        // Bitcoin (bech32) example - coin type 0 (SLIP-44)
+        // Store the bech32 string bytes directly
+        bytes memory btcBech32 = bytes("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080");
+        resolver.setAddr(LABEL_HASH, 0, btcBech32);
+
+        // Solana (base58) example - coin type 501 (SLIP-44)
+        // Store the base58 string bytes directly
+        bytes memory solBase58 = bytes("11111111111111111111111111111111");
+        resolver.setAddr(LABEL_HASH, 501, solBase58);
 
         vm.stopPrank();
 
         // Verify all addresses were set correctly
         // Verify packed 20-byte values for EVM-like addresses
         assertEq(
-            resolver.getAddr(LABEL_HASH, 60), abi.encodePacked(testAddresses[1]), "ETH address should be preserved"
+            resolver.getAddr(LABEL_HASH, 60), abi.encodePacked(testAddresses[0]), "ETH address should be preserved"
         );
         assertEq(
-            resolver.getAddr(LABEL_HASH, coinTypes[0]),
-            abi.encodePacked(testAddresses[0]),
-            "Zero address should be preserved"
+            resolver.getAddr(LABEL_HASH, coinTypes[1]),
+            abi.encodePacked(testAddresses[1]),
+            "Polygon address should be preserved"
         );
         assertEq(
             resolver.getAddr(LABEL_HASH, coinTypes[2]),
             abi.encodePacked(testAddresses[2]),
-            "Polygon address should be preserved"
+            "Arbitrum address should be preserved"
         );
         assertEq(
             resolver.getAddr(LABEL_HASH, coinTypes[3]),
             abi.encodePacked(testAddresses[3]),
-            "Arbitrum address should be preserved"
-        );
-        assertEq(
-            resolver.getAddr(LABEL_HASH, coinTypes[4]),
-            abi.encodePacked(testAddresses[4]),
             "Custom address should be preserved"
         );
+
+        // Verify Bitcoin and Solana records were stored (raw string bytes)
+        assertEq(resolver.getAddr(LABEL_HASH, 0), btcBech32, "Bitcoin bech32 address bytes should be preserved");
+        assertEq(resolver.getAddr(LABEL_HASH, 501), solBase58, "Solana base58 address bytes should be preserved");
 
         console.log("Successfully handled various address types");
     }
@@ -247,83 +253,7 @@ contract ChainResolverDataFormatsTest is Test {
         console.log("Successfully handled various content hash formats");
     }
 
-    function test_006____setOperator_________________OperatorManagement() public {
-        vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-
-        vm.stopPrank();
-
-        // Operator management scenarios (add/remove per-owner operators)
-        vm.startPrank(user1);
-
-        // Set multiple operators
-        resolver.setOperator(user2, true);
-        resolver.setOperator(attacker, true);
-        resolver.setOperator(address(this), true);
-
-        // Verify all are authorized
-        assertTrue(resolver.isAuthorized(LABEL_HASH, user2), "User2 should be authorized");
-        assertTrue(resolver.isAuthorized(LABEL_HASH, attacker), "Attacker should be authorized");
-        assertTrue(resolver.isAuthorized(LABEL_HASH, address(this)), "Contract should be authorized");
-
-        // Test operator interactions
-        vm.stopPrank();
-        vm.startPrank(user2);
-
-        // User2 tries to remove attacker (this works because setOperator is per-caller)
-        resolver.setOperator(attacker, false);
-
-        // User2 tries to set new operator (this works because setOperator is per-caller)
-        resolver.setOperator(address(0x777), true);
-        // But this doesn't make address(0x777) authorized for the label hash
-        assertFalse(
-            resolver.isAuthorized(LABEL_HASH, address(0x777)), "New operator should not be authorized for label hash"
-        );
-
-        vm.stopPrank();
-
-        console.log("Successfully handled operator management");
-    }
-
-    function test_007____chainName___________________ReverseLookupHandling() public {
-        vm.startPrank(admin);
-
-        // Register multiple chains with complex relationships
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-        resolver.register("arbitrum", user2, hex"000000010001016600");
-        resolver.register("polygon", user1, hex"000000010001013700");
-
-        vm.stopPrank();
-
-        // Reverse lookup scenarios across multiple chain IDs
-        // Test with various chain IDs
-        bytes[] memory testChainIds = new bytes[](4);
-        testChainIds[0] = CHAIN_ID;
-        testChainIds[1] = hex"000000010001016600";
-        testChainIds[2] = hex"000000010001013700";
-        testChainIds[3] = hex"000000010001019999"; // Non-existent
-
-        string[] memory expectedNames = new string[](4);
-        expectedNames[0] = CHAIN_NAME;
-        expectedNames[1] = "arbitrum";
-        expectedNames[2] = "polygon";
-        expectedNames[3] = "";
-
-        for (uint256 i = 0; i < testChainIds.length; i++) {
-            string memory result = resolver.chainName(testChainIds[i]);
-            assertEq(
-                result,
-                expectedNames[i],
-                string(abi.encodePacked("Chain name ", vm.toString(i), " should match expected"))
-            );
-        }
-
-        console.log("Successfully handled reverse lookup");
-    }
-
-    function test_008____register____________________LargeBatchRegistration() public {
+    function test_006____register____________________MultiRegistrationVariousInputs() public {
         vm.startPrank(admin);
 
         // Registration edge cases (names/owners/IDs of varying shapes)
@@ -374,10 +304,10 @@ contract ChainResolverDataFormatsTest is Test {
 
         vm.stopPrank();
 
-        console.log("Successfully handled large batch registration");
+        console.log("Successfully handled batch registration various inputs");
     }
 
-    function test_009____setData_____________________LargeDataHandling() public {
+    function test_007____setData_____________________LargeDataHandling() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -406,21 +336,5 @@ contract ChainResolverDataFormatsTest is Test {
         console.log("Successfully handled large data");
     }
 
-    function test_010____register____________________GasLimitHandling() public {
-        vm.startPrank(admin);
-
-        // Test with very long chain name that might cause gas issues
-        string memory veryLongName =
-            "this_is_a_very_long_chain_name_that_is_much_longer_than_normal_chain_names_used_in_blockchain_ecosystems_and_should_test_the_limits_of_the_registration_system_and_gas_consumption";
-
-        // This should work without hitting gas limits
-        resolver.register(veryLongName, user1, CHAIN_ID);
-
-        bytes32 longLabelHash = keccak256(bytes(veryLongName));
-        assertEq(resolver.getOwner(longLabelHash), user1, "Long name registration should work");
-
-        vm.stopPrank();
-
-        console.log("Successfully handled gas limit edge cases");
-    }
+    // Invalid DNS encoding test moved to EdgeCases suite
 }

@@ -124,7 +124,7 @@ contract ChainResolverENSForwardTest is Test {
         console.log("Successfully set content hash");
     }
 
-    function test_005____resolve_____________________ResolvesENSRecords() public {
+    function test_005____resolve_____________________ResolvesChainIdTextRecord() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -132,40 +132,11 @@ contract ChainResolverENSForwardTest is Test {
 
         vm.stopPrank();
 
-        // User1 sets some records
+        // Manually set a conflicting value for the special key to prove overrides apply
+        // Even if a user sets textRecords["chain-id"] = "hacked",
+        // _getTextWithOverrides ignores it and returns the canonical hex from internal mapping.
         vm.startPrank(user1);
-
-        address testAddr = address(0x456);
-        resolver.setAddr(LABEL_HASH, testAddr);
-        resolver.setText(LABEL_HASH, "description", "Test chain");
-
-        vm.stopPrank();
-
-        // Test resolve function with proper DNS encoding
-        // DNS format: length byte + name bytes + null terminator
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-
-        // Test addr(bytes32) selector
-        bytes memory addrData = abi.encodeWithSelector(resolver.ADDR_SELECTOR(), LABEL_HASH);
-        bytes memory result = resolver.resolve(name, addrData);
-        address resolvedAddr = abi.decode(result, (address));
-        assertEq(resolvedAddr, testAddr, "Should resolve address correctly");
-
-        // Test text(bytes32,string) selector
-        bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), LABEL_HASH, "description");
-        bytes memory textResult = resolver.resolve(name, textData);
-        string memory resolvedText = abi.decode(textResult, (string));
-        assertEq(resolvedText, "Test chain", "Should resolve text correctly");
-
-        console.log("Successfully resolved ENS records via resolve function");
-    }
-
-    function test_006____resolve_____________________ResolvesChainIdTextRecord() public {
-        vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-
+        resolver.setText(LABEL_HASH, "chain-id", "hacked");
         vm.stopPrank();
 
         // Test resolve function for chain-id text record with proper DNS encoding
@@ -176,13 +147,13 @@ contract ChainResolverENSForwardTest is Test {
 
         // Should return hex representation of chain ID (without 0x prefix)
         string memory expectedHex = "000000010001010a00";
-        assertEq(resolvedChainId, expectedHex, "Should resolve chain-id as hex string");
+        assertEq(resolvedChainId, expectedHex, "Override should return canonical chain-id, ignoring stored text");
 
         console.log("Successfully resolved chain-id text record");
         console.log("Resolved chain ID:", resolvedChainId);
     }
 
-    function test_007____resolve_____________________ResolvesChainIdDataRecord() public {
+    function test_006____resolve_____________________ResolvesChainIdDataRecord() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -192,8 +163,8 @@ contract ChainResolverENSForwardTest is Test {
 
         // Test resolve function for chain-id data record (raw bytes) with proper DNS encoding
         bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory dataData = abi.encodeWithSelector(resolver.DATA_SELECTOR(), LABEL_HASH, "chain-id");
-        bytes memory result = resolver.resolve(name, dataData);
+        bytes memory data = abi.encodeWithSelector(resolver.DATA_SELECTOR(), LABEL_HASH, "chain-id");
+        bytes memory result = resolver.resolve(name, data);
         bytes memory resolvedChainIdBytes = abi.decode(result, (bytes));
 
         // Should return the raw 7930 bytes
@@ -202,7 +173,7 @@ contract ChainResolverENSForwardTest is Test {
         console.log("Successfully resolved chain-id via data record");
     }
 
-    function test_008____resolve_____________________ResolvesCustomDataRecord() public {
+    function test_007____resolve_____________________ResolvesCustomDataRecord() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -220,8 +191,8 @@ contract ChainResolverENSForwardTest is Test {
 
         // Test resolve function for custom data record with proper DNS encoding
         bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory dataData = abi.encodeWithSelector(resolver.DATA_SELECTOR(), LABEL_HASH, "custom");
-        bytes memory result = resolver.resolve(name, dataData);
+        bytes memory data = abi.encodeWithSelector(resolver.DATA_SELECTOR(), LABEL_HASH, "custom");
+        bytes memory result = resolver.resolve(name, data);
         bytes memory resolvedData = abi.decode(result, (bytes));
 
         // Should return the custom data we set
@@ -230,7 +201,7 @@ contract ChainResolverENSForwardTest is Test {
         console.log("Successfully resolved custom data record via resolve function");
     }
 
-    function test_009____setAddr_____________________RevertsOnInvalidEthBytes() public {
+    function test_008____setAddr_____________________RevertsOnInvalidEthBytes() public {
         vm.startPrank(admin);
         resolver.register(CHAIN_NAME, user1, CHAIN_ID);
         vm.stopPrank();
@@ -245,7 +216,7 @@ contract ChainResolverENSForwardTest is Test {
         assertEq(resolver.getAddr(LABEL_HASH, 60), hex"", "ETH address storage should remain empty on invalid bytes");
     }
 
-    function test_008____supportsInterface___________ReturnsCorrectInterfaceIds() public view {
+    function test_009____supportsInterface___________ReturnsCorrectInterfaceIds() public view {
         // Test IERC165
         assertTrue(resolver.supportsInterface(type(IERC165).interfaceId), "Should support IERC165");
 
@@ -261,76 +232,54 @@ contract ChainResolverENSForwardTest is Test {
         console.log("Successfully verified interface support");
     }
 
-    function test_010____resolve_____________________EmptyAddressRecord() public {
+    function test_010____resolve_____________________ContentHashSelector() public {
         vm.startPrank(admin);
         resolver.register(CHAIN_NAME, user1, CHAIN_ID);
         vm.stopPrank();
-        
-        // Test resolve with ADDR_SELECTOR when no address is set
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory addrData = abi.encodeWithSelector(resolver.ADDR_SELECTOR(), LABEL_HASH);
-        bytes memory result = resolver.resolve(name, addrData);
-        
-        // Should return empty bytes for unset address
-        assertEq(result, abi.encode(address(0)));
-        
-        console.log("Successfully handled empty address record");
-    }
 
-    function test_011____resolve_____________________UnknownSelector() public {
-        vm.startPrank(admin);
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-        vm.stopPrank();
-        
-        // Test resolve with unknown selector
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory unknownData = abi.encodeWithSelector(bytes4(0x12345678), LABEL_HASH);
-        bytes memory result = resolver.resolve(name, unknownData);
-        
-        // Should return empty string for unknown selector
-        assertEq(result, abi.encode(""));
-        
-        console.log("Successfully handled unknown selector");
-    }
-
-    function test_012____resolve_____________________EmptyAddressRecordWithCoinType() public {
-        vm.startPrank(admin);
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-        vm.stopPrank();
-        
-        // Test resolve with ADDR_COINTYPE_SELECTOR when no address is set
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory addrData = abi.encodeWithSelector(resolver.ADDR_COINTYPE_SELECTOR(), LABEL_HASH, 60); // Ethereum coin type
-        bytes memory result = resolver.resolve(name, addrData);
-        
-        // Should return empty bytes for unset address
-        assertEq(result, abi.encode(bytes("")));
-        
-        console.log("Successfully handled empty address record with coin type");
-    }
-
-    function test_013____resolve_____________________ContentHashSelector() public {
-        vm.startPrank(admin);
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-        vm.stopPrank();
-        
         vm.startPrank(user1);
-        
+
         // Set a content hash
         bytes memory testContentHash = hex"e301017012201234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
         resolver.setContenthash(LABEL_HASH, testContentHash);
-        
+
         // Now resolve it with CONTENTHASH_SELECTOR
         bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
         bytes memory contentHashData = abi.encodeWithSelector(resolver.CONTENTHASH_SELECTOR(), LABEL_HASH);
         bytes memory result = resolver.resolve(name, contentHashData);
         bytes memory resolvedContentHash = abi.decode(result, (bytes));
-        
+
         // Should return the same content hash
         assertEq(resolvedContentHash, testContentHash);
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully resolved content hash via CONTENTHASH_SELECTOR");
+    }
+
+    function test_011____resolve_____________________CustomTextRecords() public {
+        vm.startPrank(admin);
+        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
+        vm.stopPrank();
+
+        // User1 sets a custom text record
+        vm.startPrank(user1);
+
+        string memory customTextKey = "profile:bio";
+        string memory customTextVal = "gm-chain-resolver";
+        resolver.setText(LABEL_HASH, customTextKey, customTextVal);
+
+        vm.stopPrank();
+
+        // Prepare DNS-encoded name for resolve()
+        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
+
+        // Resolve custom text record
+        bytes memory textCalldata = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), LABEL_HASH, customTextKey);
+        bytes memory textAnswer = resolver.resolve(name, textCalldata);
+        string memory resolvedText = abi.decode(textAnswer, (string));
+        assertEq(resolvedText, customTextVal, "Should resolve custom text record via resolve");
+
+        console.log("Successfully resolved custom text");
     }
 }

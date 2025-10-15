@@ -3,7 +3,7 @@ pragma solidity 0.8.30;
 
 /**
  * @title IChainResolver
- * @author @unruggable-labs, @defi-wonderland 
+ * @author @unruggable-labs, @defi-wonderland
  * @notice Interface for the ChainResolver that manages chain data using labelhashes
  * @dev Source: https://github.com/unruggable-labs/chain-resolver/tree/main/src/interfaces/IChainResolver.sol
  */

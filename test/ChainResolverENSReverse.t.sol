@@ -31,7 +31,7 @@ contract ChainResolverENSReverseTest is Test {
     function test1100_____________________________ENS_REVERSE____________________________________() public {}
     function test1200________________________________________________________________________________() public {}
 
-    function test_001____resolve_____________________ResolvesReverseChainNameText() public {
+    function test_001____resolve_____________________ReverseResolvesChainNameText() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -42,50 +42,26 @@ contract ChainResolverENSReverseTest is Test {
         // Test reverse resolution via resolve function with proper DNS encoding
         bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
 
-        // Test text record with chain-name: prefix (set it manually first)
+        // Manually set a conflicting value for the special key to prove overrides apply
+        // Even if a user sets textRecords["chain-name:<hex>"] = "hacked",
+        // _getTextWithOverrides ignores it and returns from internal mapping.
         vm.startPrank(user1);
         string memory chainIdHex = HexUtils.bytesToHex(CHAIN_ID);
         string memory chainNameKey = string(abi.encodePacked("chain-name:", chainIdHex));
-        resolver.setText(LABEL_HASH, chainNameKey, CHAIN_NAME);
+        resolver.setText(LABEL_HASH, chainNameKey, "hacked");
         vm.stopPrank();
 
         bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), LABEL_HASH, chainNameKey);
         bytes memory result = resolver.resolve(name, textData);
         string memory resolvedChainName = abi.decode(result, (string));
 
-        assertEq(resolvedChainName, CHAIN_NAME, "Should resolve chain name from chain ID via resolve function");
+        assertEq(resolvedChainName, CHAIN_NAME, "Override should return canonical chain name, ignoring stored text");
 
         console.log("Successfully resolved reverse chain name via resolve function");
         console.log("Chain ID -> Chain Name:", resolvedChainName);
     }
 
-    function test_002____resolve_____________________ResolvesReverseChainNameData() public {
-        vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-
-        vm.stopPrank();
-
-        // Test reverse resolution via data record with proper DNS encoding
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-
-        // Test data record with chain-name: prefix (string key)
-        string memory chainIdHex = HexUtils.bytesToHex(CHAIN_ID);
-        string memory chainNameKey = string(abi.encodePacked("chain-name:", chainIdHex));
-        bytes memory dataData = abi.encodeWithSelector(resolver.DATA_SELECTOR(), LABEL_HASH, chainNameKey);
-        bytes memory result = resolver.resolve(name, dataData);
-        bytes memory encodedName = abi.decode(result, (bytes));
-        string memory resolvedChainName = string(encodedName);
-
-        assertEq(
-            resolvedChainName, CHAIN_NAME, "Should resolve chain name from chain ID via data record resolve function"
-        );
-
-        console.log("Successfully resolved reverse chain name via data record resolve function");
-    }
-
-    function test_003____chainName___________________ResolvesChainNameFromChainId() public {
+    function test_002____chainName___________________ReverseResolvesChainNameFromChainId() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -102,31 +78,7 @@ contract ChainResolverENSReverseTest is Test {
         console.log("Chain ID -> Chain Name:", resolvedChainName);
     }
 
-    function test_004____reverseLookup_______________MultipleChainsReverseResolution() public {
-        vm.startPrank(admin);
-
-        // Register multiple chains
-        string memory chainName2 = "arbitrum";
-        bytes memory chainId2 = hex"000000010001016600"; // 7930 format for chain 102
-
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-        resolver.register(chainName2, user2, chainId2);
-
-        vm.stopPrank();
-
-        // Test reverse resolution for both chains
-        string memory resolvedName1 = resolver.chainName(CHAIN_ID);
-        string memory resolvedName2 = resolver.chainName(chainId2);
-
-        assertEq(resolvedName1, CHAIN_NAME, "Should resolve first chain name");
-        assertEq(resolvedName2, chainName2, "Should resolve second chain name");
-
-        console.log("Successfully resolved multiple chains via reverse lookup");
-        console.log("Chain 1:", resolvedName1);
-        console.log("Chain 2:", resolvedName2);
-    }
-
-    function test_005____chainName___________________ReturnsEmptyForUnknownChainId() public {
+    function test_003____chainName___________________ReturnsEmptyForUnknownChainId() public {
         vm.startPrank(admin);
 
         // Register a chain

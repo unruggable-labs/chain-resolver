@@ -72,34 +72,7 @@ contract ChainResolverRegistryTest is Test {
         console.log("Correctly allowed duplicate chain registration (overwrite)");
     }
 
-    function test_003____setOperator_________________EnablesOperatorManagement() public {
-        vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-
-        vm.stopPrank();
-
-        // User1 sets operator
-        vm.startPrank(user1);
-        resolver.setOperator(operator, true);
-        assertTrue(resolver.isAuthorized(LABEL_HASH, operator), "Operator should be authorized");
-
-        vm.stopPrank();
-
-        // Operator should now be able to perform authorized actions
-        vm.startPrank(operator);
-
-        // Test that operator can set label owner (authorized action)
-        resolver.setLabelOwner(LABEL_HASH, user2);
-        assertEq(resolver.getOwner(LABEL_HASH), user2, "Operator should be able to transfer ownership");
-
-        vm.stopPrank();
-
-        console.log("Successfully demonstrated operator authorization");
-    }
-
-    function test_004____setLabelOwner_______________TransfersLabelOwnership() public {
+    function test_003____setLabelOwner_______________TransfersLabelOwnership() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -128,118 +101,118 @@ contract ChainResolverRegistryTest is Test {
         console.log("Successfully transferred label ownership");
     }
 
-    function test_005____batchRegister_______________SuccessfulBatchRegistration() public {
+    function test_004____batchRegister_______________SuccessfulBatchRegistration() public {
         vm.startPrank(admin);
-        
+
         // Prepare batch data
         string[] memory chainNames = new string[](2);
         address[] memory owners = new address[](2);
         bytes[] memory chainIds = new bytes[](2);
-        
+
         chainNames[0] = "optimism";
         chainNames[1] = "arbitrum";
         owners[0] = user1;
         owners[1] = user2;
         chainIds[0] = hex"000000010001010a00"; // optimism
         chainIds[1] = hex"000000010001016600"; // arbitrum
-        
+
         // Register batch
         resolver.batchRegister(chainNames, owners, chainIds);
-        
+
         // Verify registrations
         assertEq(resolver.getOwner(keccak256(bytes("optimism"))), user1);
         assertEq(resolver.getOwner(keccak256(bytes("arbitrum"))), user2);
         assertEq(resolver.chainId(keccak256(bytes("optimism"))), chainIds[0]);
         assertEq(resolver.chainId(keccak256(bytes("arbitrum"))), chainIds[1]);
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully registered batch of chains");
     }
 
-    function test_006____batchRegister_______________RevertsOnMismatchedArrayLengths() public {
+    function test_005____batchRegister_______________RevertsOnMismatchedArrayLengths() public {
         vm.startPrank(admin);
-        
+
         // Prepare mismatched arrays
         string[] memory chainNames = new string[](2);
         address[] memory owners = new address[](1); // Different length
         bytes[] memory chainIds = new bytes[](2);
-        
+
         chainNames[0] = "optimism";
         chainNames[1] = "arbitrum";
         owners[0] = user1;
         chainIds[0] = hex"000000010001010a00";
         chainIds[1] = hex"000000010001016600";
-        
+
         // Should revert with InvalidDataLength
         vm.expectRevert(IChainResolver.InvalidDataLength.selector);
         resolver.batchRegister(chainNames, owners, chainIds);
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully reverted on mismatched array lengths");
     }
 
-    function test_007____batchRegister_______________RevertsOnMismatchedChainIdsLength() public {
+    function test_006____batchRegister_______________RevertsOnMismatchedChainIdsLength() public {
         vm.startPrank(admin);
-        
+
         // Prepare mismatched arrays
         string[] memory chainNames = new string[](2);
         address[] memory owners = new address[](2);
         bytes[] memory chainIds = new bytes[](1); // Different length
-        
+
         chainNames[0] = "optimism";
         chainNames[1] = "arbitrum";
         owners[0] = user1;
         owners[1] = user2;
         chainIds[0] = hex"000000010001010a00";
-        
+
         // Should revert with InvalidDataLength
         vm.expectRevert(IChainResolver.InvalidDataLength.selector);
         resolver.batchRegister(chainNames, owners, chainIds);
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully reverted on mismatched chainIds length");
     }
 
-    function test_008____batchRegister_______________EmptyArrays() public {
+    function test_007____batchRegister_______________EmptyArrays() public {
         vm.startPrank(admin);
-        
+
         // Prepare empty arrays
         string[] memory chainNames = new string[](0);
         address[] memory owners = new address[](0);
         bytes[] memory chainIds = new bytes[](0);
-        
+
         // Should not revert with empty arrays
         resolver.batchRegister(chainNames, owners, chainIds);
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully handled empty arrays");
     }
 
-    function test_009____batchRegister_______________SingleItemBatch() public {
+    function test_008____batchRegister_______________SingleItemBatch() public {
         vm.startPrank(admin);
-        
+
         // Prepare single item batch
         string[] memory chainNames = new string[](1);
         address[] memory owners = new address[](1);
         bytes[] memory chainIds = new bytes[](1);
-        
+
         chainNames[0] = "optimism";
         owners[0] = user1;
         chainIds[0] = hex"000000010001010a00";
-        
+
         // Register single item
         resolver.batchRegister(chainNames, owners, chainIds);
-        
+
         // Verify registration
         assertEq(resolver.getOwner(keccak256(bytes("optimism"))), user1);
         assertEq(resolver.chainId(keccak256(bytes("optimism"))), chainIds[0]);
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully registered single item batch");
     }
 }

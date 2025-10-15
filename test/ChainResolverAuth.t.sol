@@ -25,7 +25,9 @@ contract ChainResolverAuthTest is Test {
 
     // Identify the file being tested
     function test1000________________________________________________________________________________() public {}
+
     function test1100_____________________________CHAIN_RESOLVER_AUTH________________________________() public {}
+
     function test1200________________________________________________________________________________() public {}
 
     function test_001____register____________________UnauthorizedRegistration() public {
@@ -36,16 +38,16 @@ contract ChainResolverAuthTest is Test {
 
         vm.stopPrank();
 
-        // Attacker tries to register the same chain name
+        // Attacker tries to register a chain
         vm.startPrank(attacker);
 
-        vm.expectRevert(); // Should fail due to onlyOwner modifier
-        resolver.register(CHAIN_NAME, attacker, CHAIN_ID);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, attacker));
+        resolver.register("attacker-label", attacker, hex"0101");
 
         vm.stopPrank();
 
-        // Verify original registration is intact
-        assertEq(resolver.getOwner(LABEL_HASH), user1, "Original owner should remain");
+        // Verify registration failed
+        assertEq(resolver.chainName(hex"0101"), hex"", "Unauthorized registration failed");
 
         console.log("Successfully prevented unauthorized registration");
     }
@@ -61,7 +63,7 @@ contract ChainResolverAuthTest is Test {
         // Attacker tries to transfer ownership
         vm.startPrank(attacker);
 
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
         resolver.setLabelOwner(LABEL_HASH, attacker);
 
         vm.stopPrank();
@@ -72,29 +74,7 @@ contract ChainResolverAuthTest is Test {
         console.log("Successfully prevented unauthorized ownership transfer");
     }
 
-    function test_003____setOperator_________________UnauthorizedOperatorSetting() public {
-        vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-
-        vm.stopPrank();
-
-        // Attacker tries to set themselves as operator
-        vm.startPrank(attacker);
-
-        // This works but doesn't make attacker authorized for the label hash
-        resolver.setOperator(attacker, true);
-
-        vm.stopPrank();
-
-        // Verify attacker is still not authorized for the label hash
-        assertFalse(resolver.isAuthorized(LABEL_HASH, attacker), "Attacker should not be authorized for label hash");
-
-        console.log("Successfully prevented unauthorized operator setting");
-    }
-
-    function test_004____setAddr_____________________UnauthorizedAddressSetting() public {
+    function test_003____setAddr_____________________UnauthorizedAddressSetting() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -105,18 +85,15 @@ contract ChainResolverAuthTest is Test {
         // Attacker tries to set address records
         vm.startPrank(attacker);
 
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
         resolver.setAddr(LABEL_HASH, attacker);
 
         vm.stopPrank();
 
-        // Verify no address was set
-        assertEq(resolver.getAddr(LABEL_HASH, 60), hex"", "No address should be set");
-
         console.log("Successfully prevented unauthorized address setting");
     }
 
-    function test_005____setText_____________________UnauthorizedTextSetting() public {
+    function test_004____setText_____________________UnauthorizedTextSetting() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -127,7 +104,7 @@ contract ChainResolverAuthTest is Test {
         // Attacker tries to set text records
         vm.startPrank(attacker);
 
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
         resolver.setText(LABEL_HASH, "website", "https://hacked.com");
 
         vm.stopPrank();
@@ -138,7 +115,7 @@ contract ChainResolverAuthTest is Test {
         console.log("Successfully prevented unauthorized text setting");
     }
 
-    function test_006____setData_____________________UnauthorizedDataSetting() public {
+    function test_005____setData_____________________UnauthorizedDataSetting() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -149,7 +126,7 @@ contract ChainResolverAuthTest is Test {
         // Attacker tries to set data records
         vm.startPrank(attacker);
 
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
         resolver.setData(LABEL_HASH, "custom", hex"deadbeef");
 
         vm.stopPrank();
@@ -160,7 +137,7 @@ contract ChainResolverAuthTest is Test {
         console.log("Successfully prevented unauthorized data setting");
     }
 
-    function test_007____setContenthash______________UnauthorizedContentHashSetting() public {
+    function test_006____setContenthash______________UnauthorizedContentHashSetting() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -171,7 +148,7 @@ contract ChainResolverAuthTest is Test {
         // Attacker tries to set content hash
         vm.startPrank(attacker);
 
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
         resolver.setContenthash(
             LABEL_HASH, hex"e30101701220deadbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
         );
@@ -184,7 +161,7 @@ contract ChainResolverAuthTest is Test {
         console.log("Successfully prevented unauthorized content hash setting");
     }
 
-    function test_008____resolve_____________________InvalidDNSEncodingReverts() public {
+    function test_007____setOperator_________________AuthorizationLogic() public {
         vm.startPrank(admin);
 
         // Register a chain
@@ -192,45 +169,41 @@ contract ChainResolverAuthTest is Test {
 
         vm.stopPrank();
 
-        // Invalid DNS-encoded name should revert
-        bytes memory maliciousName = abi.encodePacked(
-            bytes1(0xff), // Invalid length byte
-            "optimism",
-            bytes1(0x00)
+        // Operator management scenarios (add/remove per-owner operators)
+        vm.startPrank(user1);
+
+        // Set multiple operators
+        resolver.setOperator(user2, true);
+        resolver.setOperator(attacker, true);
+        resolver.setOperator(address(this), true);
+
+        // Verify all are authorized
+        assertTrue(resolver.isAuthorized(LABEL_HASH, user2), "User2 should be authorized");
+        assertTrue(resolver.isAuthorized(LABEL_HASH, attacker), "Attacker should be authorized");
+        assertTrue(resolver.isAuthorized(LABEL_HASH, address(this)), "Contract should be authorized");
+
+        // Test operator interactions
+        vm.stopPrank();
+        vm.startPrank(user1);
+
+        // User1 removes attacker
+        resolver.setOperator(attacker, false);
+
+        // Assert label owner removed label authorization
+        assertFalse(resolver.isAuthorized(LABEL_HASH, attacker));
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+
+        // User2 tries to set new operator (this works because setOperator is per-caller)
+        resolver.setOperator(address(0x777), true);
+        // But this doesn't make address(0x777) authorized for the label hash
+        assertFalse(
+            resolver.isAuthorized(LABEL_HASH, address(0x777)), "New operator should not be authorized for label hash"
         );
 
-        bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), LABEL_HASH, "description");
-
-        // This should revert due to invalid DNS encoding
-        vm.expectRevert();
-        resolver.resolve(maliciousName, textData);
-
-        console.log("Successfully handled invalid DNS encoding");
-    }
-
-    function test_009____isAuthorized_________________AuthorizationLogic() public {
-        vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-
         vm.stopPrank();
 
-        // Test various authorization bypass attempts
-        assertFalse(resolver.isAuthorized(LABEL_HASH, attacker), "Attacker should not be authorized");
-        assertFalse(resolver.isAuthorized(LABEL_HASH, address(0)), "Zero address should not be authorized");
-        assertFalse(resolver.isAuthorized(LABEL_HASH, address(this)), "Contract should not be authorized");
-
-        // Verify legitimate authorization works
-        assertTrue(resolver.isAuthorized(LABEL_HASH, user1), "Owner should be authorized");
-
-        // Set operator and verify
-        vm.startPrank(user1);
-        resolver.setOperator(user2, true);
-        vm.stopPrank();
-
-        assertTrue(resolver.isAuthorized(LABEL_HASH, user2), "Operator should be authorized");
-
-        console.log("Successfully handled authorization logic");
+        console.log("Successfully handled operator management");
     }
 }

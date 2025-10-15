@@ -10,6 +10,7 @@
         "dotenv": "^16.5.0",
         "ethers": "^6.14.0",
         "multiformats": "^13.4.1",
+        "solidity-bytes-utils": "^0.8.4",
         "tsx": "^4.19.4",
       },
     },
@@ -494,6 +495,8 @@
     "slice-ansi": ["slice-ansi@4.0.0", "", { "dependencies": { "ansi-styles": "^4.0.0", "astral-regex": "^2.0.0", "is-fullwidth-code-point": "^3.0.0" } }, "sha512-qMCMfhY040cVHT43K9BFygqYbUPFZKHOg7K73mtTWJRb8pyP3fzf4Ixd5SzdEJQ6MRUg/WBnOLxghZtKKurENQ=="],
 
     "solc": ["solc@0.8.26", "", { "dependencies": { "command-exists": "^1.2.8", "commander": "^8.1.0", "follow-redirects": "^1.12.1", "js-sha3": "0.8.0", "memorystream": "^0.3.1", "semver": "^5.5.0", "tmp": "0.0.33" }, "bin": { "solcjs": "solc.js" } }, "sha512-yiPQNVf5rBFHwN6SIf3TUUvVAFKcQqmSUFeq+fb6pNRCo0ZCgpYOZDi3BVoezCPIAcKrVYd/qXlBLUP9wVrZ9g=="],
+
+    "solidity-bytes-utils": ["solidity-bytes-utils@0.8.4", "", {}, "sha512-/bjac5YR12i0plOKvGlhE51F5IWGP6rI8DJetCQlXcnwKWz/Hgf/vr+Qlk1BWz56xVcwVhmhCaDkTMnx5xvt0g=="],
 
     "source-map": ["source-map@0.6.1", "", {}, "sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g=="],
 

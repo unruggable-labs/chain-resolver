@@ -62,6 +62,7 @@ contract ChainResolverEdgeCasesTest is Test {
         // Verify registration
         assertEq(resolver.getOwner(longLabelHash), user1, "Long chain name should be registrable");
         assertEq(resolver.chainId(longLabelHash), CHAIN_ID, "Chain ID should be set for long name");
+        assertEq(resolver.chainName(CHAIN_ID), longName, "Long chain name correctly reverse resolves");
 
         vm.stopPrank();
 
@@ -107,51 +108,23 @@ contract ChainResolverEdgeCasesTest is Test {
         console.log("Successfully registered with very long chain ID");
     }
 
-    function test_005____setOperator_________________RemoveOperator() public {
+    function test_005____resolve_____________________UnknownSelector() public {
         vm.startPrank(admin);
-
-        // Register a chain
         resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-
         vm.stopPrank();
 
-        // User1 sets operator
-        vm.startPrank(user1);
-        resolver.setOperator(operator, true);
-        assertTrue(resolver.isAuthorized(LABEL_HASH, operator), "Operator should be authorized");
-
-        // Remove operator
-        resolver.setOperator(operator, false);
-        assertFalse(resolver.isAuthorized(LABEL_HASH, operator), "Operator should no longer be authorized");
-
-        vm.stopPrank();
-
-        console.log("Successfully removed operator");
-    }
-
-    function test_006____resolve_____________________SelectorHandling() public {
-        vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
-
-        vm.stopPrank();
-
-        // Unknown selector should return empty bytes
-        bytes4 maliciousSelector = 0x00000000; // Zero selector
-
+        // Test resolve with unknown selector
         bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory maliciousData = abi.encodeWithSelector(maliciousSelector, LABEL_HASH);
+        bytes memory unknownData = abi.encodeWithSelector(bytes4(0x12345678), LABEL_HASH);
+        bytes memory result = resolver.resolve(name, unknownData);
 
-        // This should return empty bytes, not crash
-        bytes memory result = resolver.resolve(name, maliciousData);
-        bytes memory emptyResult = abi.encode("");
-        assertEq(result, emptyResult, "Should return empty bytes for unknown selector");
+        // Should return empty string for unknown selector
+        assertEq(result, abi.encode(""));
 
-        console.log("Successfully handled selector resolution");
+        console.log("Successfully handled unknown selector");
     }
 
-    function test_007____supportsInterface___________InterfaceSupport() public view {
+    function test_006____supportsInterface___________InterfaceSupport() public view {
         // Interface support across common and arbitrary IDs (edge cases)
 
         // Test with various interface IDs
@@ -191,134 +164,196 @@ contract ChainResolverEdgeCasesTest is Test {
         console.log("Successfully handled interface support");
     }
 
-    function test_008____bytesToAddress_______________RevertsOnInvalidLength() public {
+    function test_007____bytesToAddress_______________RevertsOnInvalidLength() public {
         vm.startPrank(admin);
         resolver.register(CHAIN_NAME, user1, CHAIN_ID);
         vm.stopPrank();
-        
+
         vm.startPrank(user1);
-        
+
         // Test setAddr with invalid length (not 20 bytes)
         bytes memory invalidBytes = hex"1234"; // 2 bytes instead of 20
-        
+
         // This should revert because bytesToAddress is internal and requires 20 bytes
         // We can't directly test this function since it's internal, but we can test
         // the setAddr function that uses it with invalid data
-        
+
         vm.expectRevert();
         resolver.setAddr(LABEL_HASH, 60, invalidBytes); // Use the coinType version
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully reverted on invalid address length");
     }
 
-    function test_009____setAddr_____________________NonEthereumCoinType() public {
+    function test_008____setAddr_____________________NonEthereumCoinType() public {
         vm.startPrank(admin);
         resolver.register(CHAIN_NAME, user1, CHAIN_ID);
         vm.stopPrank();
-        
+
         vm.startPrank(user1);
-        
+
         // Test setAddr with non-Ethereum coin type
         address testAddr = address(0x1234567890123456789012345678901234567890);
         uint256 nonEthereumCoinType = 1; // Bitcoin coin type
-        
-        // This should not revert but should not set the address for non-Ethereum coin types
+
+        // This should set the address for the requested non-Ethereum coin type (generic storage),
+        // but NOT affect the ETH (60) record.
         resolver.setAddr(LABEL_HASH, nonEthereumCoinType, abi.encodePacked(testAddr));
-        
-        // The address should not be retrievable via getAddr (which only handles Ethereum)
+
+        // ETH address remains unset
         bytes memory retrievedAddr = resolver.getAddr(LABEL_HASH, 60); // Ethereum coin type
         assertEq(retrievedAddr.length, 0, "Non-Ethereum addresses should not be retrievable via getAddr");
-        
+
+        // The generic coin type record should be retrievable as raw bytes
+        bytes memory nonEth = resolver.getAddr(LABEL_HASH, nonEthereumCoinType);
+        assertEq(nonEth, abi.encodePacked(testAddr), "Non-Ethereum coin type should be stored and retrievable");
+
         vm.stopPrank();
-        
+
         console.log("Successfully handled non-Ethereum coin type");
     }
 
-    function test_010____startsWith__________________DataShorterThanPrefix() public {
+    function test_009____startsWith__________________NoOverrideForDataKeysShorterThanPrefix() public {
         vm.startPrank(admin);
         resolver.register(CHAIN_NAME, user1, CHAIN_ID);
         vm.stopPrank();
-        
+
         vm.startPrank(user1);
-        
+
         // Test _startsWith with data shorter than prefix
         // This tests the internal _startsWith function through setText with chain-name: prefix
         string memory shortKey = "test-key"; // Regular key that doesn't trigger special handling
-        
+
         // This should not revert but should not match the prefix
         resolver.setText(LABEL_HASH, shortKey, "test-value");
-        
+
         // Verify the text was set (not handled by special logic)
         string memory retrievedValue = resolver.getText(LABEL_HASH, shortKey);
         assertEq(retrievedValue, "test-value", "Short key should be stored as regular text");
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully handled data shorter than prefix");
     }
 
-    function test_011____startsWith__________________DataDoesNotMatchPrefix() public {
+    function test_010____startsWith__________________NoOverrideForPrefixMismatch() public {
         vm.startPrank(admin);
         resolver.register(CHAIN_NAME, user1, CHAIN_ID);
         vm.stopPrank();
-        
+
         vm.startPrank(user1);
-        
-        // Test _startsWith with data that doesn't match prefix
-        string memory nonMatchingKey = "test-key-2"; // Regular key that doesn't trigger special handling
-        
+
+        // Test _startsWith with same-length-or-longer key that mismatches the prefix
+        // Prefix is "chain-name:"; here we use "chain-nom:abcdef" which is >= length but differs
+        string memory nonMatchingKey = "chain-nom:abcdef";
+
         // This should not revert but should not match the prefix
         resolver.setText(LABEL_HASH, nonMatchingKey, "test-value");
-        
-        // Verify the text was set (not handled by special logic)
+
+        // Verify the text was set (no override due to prefix mismatch)
         string memory retrievedValue = resolver.getText(LABEL_HASH, nonMatchingKey);
         assertEq(retrievedValue, "test-value", "Non-matching key should be stored as regular text");
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully handled data that doesn't match prefix");
     }
 
-    function test_012____bytesToAddress_______________ValidAddressConversion() public {
+    function test_011____bytesToAddress_______________ValidAddressConversion() public {
         vm.startPrank(admin);
         resolver.register(CHAIN_NAME, user1, CHAIN_ID);
         vm.stopPrank();
-        
+
         vm.startPrank(user1);
-        
+
         // Test bytesToAddress with valid data through setAddr
         address testAddr = address(0x1234567890123456789012345678901234567890);
         resolver.setAddr(LABEL_HASH, testAddr);
-        
+
         // Now resolve it to trigger bytesToAddress with valid data
         bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
         bytes memory addrData = abi.encodeWithSelector(resolver.ADDR_SELECTOR(), LABEL_HASH);
         bytes memory result = resolver.resolve(name, addrData);
         address resolvedAddr = abi.decode(result, (address));
-        
+
         // Should return the same address
         assertEq(resolvedAddr, testAddr);
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully converted valid address bytes");
     }
 
-    function test_013____authenticateCaller___________OwnerIsCaller() public {
+    function test_012____authenticateCaller___________OwnerIsCaller() public {
         vm.startPrank(admin);
         resolver.register(CHAIN_NAME, user1, CHAIN_ID);
         vm.stopPrank();
-        
+
         // Test _authenticateCaller when owner is the caller
         vm.startPrank(user1);
-        
+
         // This should not revert because user1 is the owner
         resolver.setText(LABEL_HASH, "test-key", "test-value");
-        
+
         vm.stopPrank();
-        
+
         console.log("Successfully authenticated owner as caller");
+    }
+
+    function test_013____resolve_____________________EmptyCoinTypeAddress() public {
+        vm.startPrank(admin);
+        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
+        vm.stopPrank();
+
+        // Test resolve with ADDR_COINTYPE_SELECTOR when no address is set
+        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
+        bytes memory addrData = abi.encodeWithSelector(resolver.ADDR_COINTYPE_SELECTOR(), LABEL_HASH, 60); // Ethereum coin type
+        bytes memory result = resolver.resolve(name, addrData);
+
+        // Should return empty bytes for unset address
+        assertEq(result, abi.encode(bytes("")));
+
+        console.log("Successfully handled empty address record with coin type");
+    }
+
+    function test_014____resolve_____________________EmptyAddressRecord() public {
+        vm.startPrank(admin);
+        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
+        vm.stopPrank();
+
+        // Test resolve with ADDR_SELECTOR when no address is set
+        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
+        bytes memory addrData = abi.encodeWithSelector(resolver.ADDR_SELECTOR(), LABEL_HASH);
+        bytes memory result = resolver.resolve(name, addrData);
+
+        // Should return empty bytes for unset address
+        assertEq(result, abi.encode(address(0)));
+
+        console.log("Successfully handled empty address record");
+    }
+
+    function test_015____resolve_____________________InvalidDNSEncodingReverts() public {
+        vm.startPrank(admin);
+
+        // Register a chain
+        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
+
+        vm.stopPrank();
+
+        // Invalid DNS-encoded name should revert
+        bytes memory maliciousName = abi.encodePacked(
+            bytes1(0xff), // Invalid length byte
+            "optimism",
+            bytes1(0x00)
+        );
+
+        bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), LABEL_HASH, "description");
+
+        // This should revert due to invalid DNS encoding
+        vm.expectRevert();
+        resolver.resolve(maliciousName, textData);
+
+        console.log("Successfully handled invalid DNS encoding");
     }
 }

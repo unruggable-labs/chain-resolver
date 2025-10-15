@@ -4,7 +4,7 @@ pragma solidity ^0.8.25;
 /**
  * @title ChainResolver
  * @author Unruggable
- * @notice ENS resolver for chain ID registration and resolution with 7930 identifiers.
+ * @notice ENS resolver for chain ID registration and resolution with ERC-7930 identifiers.
  * @dev Based on Wonderland's L2Resolver.
  * @dev Repository: https://github.com/unruggable-labs/chain-resolver
  */
@@ -271,7 +271,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @notice Get a data record for a labelhash.
      * @param _labelhash The labelhash to query.
      * @param _key The data record key.
-     * @return The data record value (with special handling for chain-id and chain-name:).
+     * @return The data record value (with special handling for chain-id).
      */
     function getData(bytes32 _labelhash, string calldata _key) external view returns (bytes memory) {
         return _getDataWithOverrides(_labelhash, _key);
@@ -343,6 +343,8 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      */
     function _getTextWithOverrides(bytes32 _labelhash, string memory _key) internal view returns (string memory) {
         // Special case for "chain-id" text record
+        // When client requests text record with key "chain-id", return the chain's ERC-7930 identifier as hex string
+        // Note: Resolving ERC-7930 chain IDs via data record (raw bytes) is preferred, but text record is included for compatibility with ENSIP-5
         if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_ID_KEY))) {
             // Get chain ID bytes from internal registry and encode as hex string
             bytes memory chainIdBytes = chainIds[_labelhash];
@@ -350,16 +352,22 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         }
 
         // Check if key starts with "chain-name:" prefix (reverse resolution)
+        // This enables reverse lookup: given a ERC-7930 chain ID, find the chain name
+        // Format: "chain-name:0x<ERC-7930-hex-string>" where <ERC-7930-hex-string> is the chain ID in hex
         bytes memory keyBytes = bytes(_key);
         bytes memory keyPrefixBytes = bytes(CHAIN_NAME_PREFIX);
         if (_startsWith(keyBytes, keyPrefixBytes)) {
-            // Extract chainId suffix from key
+            // Extract the chain ID hex string from after the "chain-name:" prefix
+            // Example: "chain-name:0x000000010001010a00" -> "0x000000010001010a00"
             string memory chainIdPart = _substring(_key, keyPrefixBytes.length, keyBytes.length);
+            // Convert hex string to bytes for lookup in chainNames mapping
             (bytes memory chainIdBytes,) = HexUtils.hexToBytes(bytes(chainIdPart), 0, bytes(chainIdPart).length);
+            // Return the chain name associated with this chain ID
             return chainNames[chainIdBytes];
         }
 
         // Default: return stored text record
+        // For all other keys, return the value stored in the textRecords mapping
         return textRecords[_labelhash][_key];
     }
 
@@ -367,22 +375,12 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @notice Internal function to handle data record keys with overrides
      * @param _labelhash The labelhash to query
      * @param _key The data record key
-     * @return The data record value (with overrides for chain-id and chain-name:)
+     * @return The data record value (with override for chain-id)
      */
     function _getDataWithOverrides(bytes32 _labelhash, string memory _key) internal view returns (bytes memory) {
         // Special case for "chain-id" data record: return raw ERC-7930 bytes
         if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_ID_KEY))) {
             return chainIds[_labelhash];
-        }
-
-        // Check if key starts with "chain-name:" prefix (reverse resolution)
-        bytes memory keyBytes = bytes(_key);
-        bytes memory keyPrefixBytes = bytes(CHAIN_NAME_PREFIX);
-        if (_startsWith(keyBytes, keyPrefixBytes)) {
-            // Extract chainId suffix from key
-            string memory chainIdHex = _substring(_key, keyPrefixBytes.length, keyBytes.length);
-            (bytes memory chainIdBytes,) = HexUtils.hexToBytes(bytes(chainIdHex), 0, bytes(chainIdHex).length);
-            return bytes(chainNames[chainIdBytes]);
         }
 
         // Default: return stored data record

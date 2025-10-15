@@ -32,12 +32,11 @@ The ENS field `text(..., "chain-id")` (per [ENSIP‑5](https://docs.ens.domains/
     - `resolve(name, abi.encodeWithSelector(data(node, "chain-id")))` → returns raw bytes.
 
 Reverse resolution (7930 → name):
-- Pass a key prefixed with `"chain-name:"` and suffixed with the 7930 hex via either `text(bytes32 node,string key)` (per ENSIP‑5) or `data(bytes32 node,string key)` (per [ENSIP‑TBD‑19](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-19.md)); this uses the `chain-name:` text key parameter standard (per [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md)). For example:
+- Reverse lookups are performed via the ENS text interface. Pass a key prefixed with `"chain-name:"` and suffixed with the 7930 hex using `text(bytes32 node,string key)` (per ENSIP‑5). This follows the `chain-name:` text key parameter standard (per [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md)). For example:
 
-  - Text Key and Parameter (string): `"chain-name:<7930-hex>"`
-  - Calls:
+  - Text key parameter (string): `"chain-name:<7930-hex>"`
+  - Call:
     - `resolve(name, encode(text(node, serviceKey)))`
-    - `resolve(name, encode(data(node, serviceKey)))`
 
 
 ## Contract Interfaces
@@ -57,7 +56,7 @@ ENS fields available via `IExtendedResolver.resolve(name,data)`:
 - `addr(bytes32 node,uint256 coinType)` → bytes (raw multi‑coin value) — per [ENSIP‑9](https://docs.ens.domains/ensip/9)
 - `contenthash(bytes32 node)` → bytes — per [ENSIP‑7](https://docs.ens.domains/ensip/7)
 - `text(bytes32 node,string key)` → string — per ENSIP‑5 (with special handling for `"chain-id"` and `"chain-name:"`)
-- `data(bytes32 node,string key)` → bytes — per ENSIP‑TBD‑19 (with special handling for `"chain-id"` and `"chain-name:"`)
+- `data(bytes32 node,string key)` → bytes — per ENSIP‑TBD‑19 (with special handling for `"chain-id"`)
 
 ## 7930 Chain Identifier
 
