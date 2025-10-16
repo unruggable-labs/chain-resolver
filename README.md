@@ -32,10 +32,14 @@ The ENS field `text(..., "chain-id")` (per [ENSIP‑5](https://docs.ens.domains/
     - `resolve(name, abi.encodeWithSelector(data(node, "chain-id")))` → returns raw bytes.
 
 Reverse resolution (7930 → name):
-- Reverse lookups are performed via the ENS text interface, and are only served when the DNS‑encoded query name is exactly `reverse.cid.eth`. Pass a key prefixed with `"chain-name:"` and suffixed with the 7930 hex using `text(bytes32 node,string key)` (per ENSIP‑5). This follows the `chain-name:` text key parameter standard (per [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md)). For example:
+- Reverse lookups are performed via the ENS text interface and are namespace‑agnostic. They are served when:
+  - `name` is the DNS‑encoded namespace root `<namespace>.eth` (for example, `cid.eth`), and
+  - the `node` argument equals `namehash("reverse." + <namespace>.eth)` (for example, `namehash("reverse.cid.eth")`).
+
+Pass a key prefixed with `"chain-name:"` and suffixed with the 7930 hex using `text(bytes32 node,string key)` (per ENSIP‑5). This follows the `chain-name:` text key parameter standard (per [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md)). For example:
 
   - Text key parameter (string): `"chain-name:<7930-hex>"`
-  - Call (using `name = dnsEncode("reverse.cid.eth")`):
+  - Call (using `name = dnsEncode("cid.eth")`, `node = namehash("reverse.cid.eth")`):
     - `resolve(name, encode(text(node, serviceKey)))`
 
 
