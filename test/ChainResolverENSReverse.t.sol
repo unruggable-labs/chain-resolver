@@ -20,6 +20,17 @@ contract ChainResolverENSReverseTest is Test {
     bytes public constant CHAIN_ID = hex"000000010001010a00";
     bytes32 public constant LABEL_HASH = keccak256(bytes(CHAIN_NAME));
 
+    // Precomputed DNS-encoded names
+    // reverse.cid.eth => 0x07 'reverse' 0x03 'cid' 0x03 'eth' 0x00
+    bytes internal constant DNS_REVERSE_CID_ETH =
+        hex"0772657665727365036369640365746800";
+    // optimism.cid.eth => 0x08 'optimism' 0x03 'cid' 0x03 'eth' 0x00
+    bytes internal constant DNS_OPTIMISM_CID_ETH =
+        hex"086f7074696d69736d036369640365746800";
+
+    // Encoded key for reverse text query: "chain-name:" + <7930 hex w/out 0x>
+    string internal constant KEY_CHAIN_NAME = "chain-name:000000010001010a00";
+
     function setUp() public {
         vm.startPrank(admin);
         resolver = new ChainResolver(admin);
@@ -39,8 +50,9 @@ contract ChainResolverENSReverseTest is Test {
 
         vm.stopPrank();
 
-        // Test reverse resolution via resolve function with proper DNS encoding
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
+        // Test reverse resolution via resolve() under reverse.cid.eth (DNS-encoded)
+        // reverse.cid.eth => 0x07 'reverse' 0x03 'cid' 0x03 'eth' 0x00
+        bytes memory name = hex"0772657665727365036369640365746800";
 
         // Manually set a conflicting value for the special key to prove overrides apply
         // Even if a user sets textRecords["chain-name:<hex>"] = "hacked",
@@ -93,5 +105,55 @@ contract ChainResolverENSReverseTest is Test {
         assertEq(resolvedName, "", "Should return empty string for unknown chain ID");
 
         console.log("Successfully returned empty string for unknown chain ID");
+    }
+
+    function test_004____resolve_____________________ReverseCidEthReturnsRegisteredChainName() public {
+        vm.startPrank(admin);
+        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
+        vm.stopPrank();
+
+        // Build calldata for text(bytes32,string)
+        bytes4 TEXT_SELECTOR = bytes4(keccak256("text(bytes32,string)"));
+        bytes memory data = abi.encodeWithSelector(
+            TEXT_SELECTOR,
+            bytes32(0),
+            KEY_CHAIN_NAME
+        );
+
+        // Query under reverse.cid.eth
+        bytes memory out = resolver.resolve(DNS_REVERSE_CID_ETH, data);
+        string memory result = abi.decode(out, (string));
+
+        assertEq(result, CHAIN_NAME, "reverse.cid.eth should return chain name");
+    }
+
+    function test_005____resolve_____________________NonReverseContextReturnsStoredTextRecord() public {
+        vm.startPrank(admin);
+        resolver.register(CHAIN_NAME, user1, CHAIN_ID);
+        vm.stopPrank();
+
+        // Store a text record for this label and the reverse key
+        string memory fallbackVal = "fallback-value";
+        vm.startPrank(user1);
+        resolver.setText(LABEL_HASH, KEY_CHAIN_NAME, fallbackVal);
+        vm.stopPrank();
+
+        // Build calldata for text(bytes32,string)
+        bytes4 TEXT_SELECTOR = bytes4(keccak256("text(bytes32,string)"));
+        bytes memory data = abi.encodeWithSelector(
+            TEXT_SELECTOR,
+            bytes32(0),
+            KEY_CHAIN_NAME
+        );
+
+        // Query under optimism.cid.eth (not reverse.cid.eth)
+        bytes memory out = resolver.resolve(DNS_OPTIMISM_CID_ETH, data);
+        string memory result = abi.decode(out, (string));
+
+        assertEq(
+            result,
+            fallbackVal,
+            "non-reverse context should return stored text record value"
+        );
     }
 }

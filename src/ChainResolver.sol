@@ -39,6 +39,9 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     string public constant CHAIN_ID_KEY = "chain-id";
     string public constant CHAIN_NAME_PREFIX = "chain-name:";
 
+    // Reverse root reference name for exact matching
+    string private constant REVERSE_CID_ETH = "reverse.cid.eth";
+
     // Chain data storage
     mapping(bytes32 _labelhash => bytes _chainId) internal chainIds;
     mapping(bytes _chainId => string _chainName) internal chainNames;
@@ -87,7 +90,9 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         } else if (selector == TEXT_SELECTOR) {
             // text(bytes32,string) - decode key and return text value
             (, string memory key) = abi.decode(data[4:], (bytes32, string));
-            string memory value = _getTextWithOverrides(labelhash, key);
+            // Only allow reverse chain-name: lookups when name is reverse.cid.eth
+            bool isReverseCidRoot = _isReverseCidRootName(name);
+            string memory value = _getTextWithOverrides(labelhash, key, isReverseCidRoot);
             return abi.encode(value);
         } else if (selector == DATA_SELECTOR) {
             // data(bytes32,string) - decode key and return data value
@@ -264,7 +269,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @return The text record value (with special handling for chain-id and chain-name:).
      */
     function getText(bytes32 _labelhash, string calldata _key) external view returns (string memory) {
-        return _getTextWithOverrides(_labelhash, _key);
+        return _getTextWithOverrides(_labelhash, _key, false);
     }
 
     /**
@@ -341,7 +346,11 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @param _key The text record key
      * @return The text record value (with overrides for chain-id and chain-name:)
      */
-    function _getTextWithOverrides(bytes32 _labelhash, string memory _key) internal view returns (string memory) {
+    function _getTextWithOverrides(bytes32 _labelhash, string memory _key, bool _reverseContext)
+        internal
+        view
+        returns (string memory)
+    {
         // Special case for "chain-id" text record
         // When client requests text record with key "chain-id", return the chain's ERC-7930 identifier as hex string
         // Note: Resolving ERC-7930 chain IDs via data record (raw bytes) is preferred, but text record is included for compatibility with ENSIP-5
@@ -357,6 +366,10 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         bytes memory keyBytes = bytes(_key);
         bytes memory keyPrefixBytes = bytes(CHAIN_NAME_PREFIX);
         if (_startsWith(keyBytes, keyPrefixBytes)) {
+            // Only allow reverse mapping when resolving under reverse.<namespace>.eth
+            if (!_reverseContext) {
+                return textRecords[_labelhash][_key];
+            }
             // Extract the chain ID hex string from after the "chain-name:" prefix
             // Example: "chain-name:0x000000010001010a00" -> "0x000000010001010a00"
             string memory chainIdPart = _substring(_key, keyPrefixBytes.length, keyBytes.length);
@@ -385,6 +398,14 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
 
         // Default: return stored data record
         return dataRecords[_labelhash][_key];
+    }
+
+    /**
+     * @notice Returns true if the DNS-encoded `name` equals reverse.cid.eth
+     */
+    function _isReverseCidRootName(bytes memory name) internal pure returns (bool) {
+        // Compare against canonical DNS-encoding of "reverse.cid.eth"
+        return keccak256(name) == keccak256(NameCoder.encode(REVERSE_CID_ETH));
     }
 
     /**

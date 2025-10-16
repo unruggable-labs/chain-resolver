@@ -111,41 +111,18 @@ async function main() {
       }
     }
 
-    // Reverse via text selector: data key 'chain-name:' + raw 7930
+    // Reverse via text selector using full reverse.cid.eth
     const TIFACE = new Interface(['function text(bytes32,string) view returns (string)']);
-    const RIFACE = new Interface(['function data(bytes32,string) view returns (bytes)']);
-    const keyStr = Buffer.concat([
-      Buffer.from('chain-name:', 'utf8'),
-      Buffer.from(CHAIN_ID)
-    ]).toString('latin1');
+    const reverseDns = dnsEncode('reverse.cid.eth', 255);
+    const ZERO_NODE = '0x' + '0'.repeat(64);
+    const reverseKey = 'chain-name:' + CHAIN_ID_HEX.replace(/^0x/, '');
 
-    section('Reverse Resolve (text)');
-    const tcall = TIFACE.encodeFunctionData('text(bytes32,string)', [LABEL_HASH, keyStr]);
-    const tanswer: string = await resolver.resolve(dnsName, tcall);
-    let textName = '';
-    try {
-      [textName] = TIFACE.decodeFunctionResult('text(bytes32,string)', tanswer);
-    } catch (e) {}
+    section('Reverse Resolve (text via reverse.cid.eth)');
+    const tcall = TIFACE.encodeFunctionData('text(bytes32,string)', [ZERO_NODE, reverseKey]);
+    const tanswer: string = await resolver.resolve(reverseDns, tcall);
+    const [textName] = TIFACE.decodeFunctionResult('text(bytes32,string)', tanswer);
     log('text resolved name', textName);
-
-    section('Reverse Resolve (data)');
-    const rcall = RIFACE.encodeFunctionData('data(bytes32,string)', ['0x' + '0'.repeat(64), keyStr]);
-    const ranswer: string = await resolver.resolve(dnsName, rcall);
-    const [encoded] = RIFACE.decodeFunctionResult('data(bytes32,string)', ranswer);
-    let dataName: string;
-    try {
-      [dataName] = AbiCoder.defaultAbiCoder().decode(['string'], encoded);
-    } catch {
-      dataName = Buffer.from((encoded as string).replace(/^0x/, ''), 'hex').toString('utf8');
-    }
-    log('data resolved name', dataName);
-
-    section('Reverse Resolve (direct)');
-    const direct = await resolver.chainName(CHAIN_ID);
-    log('chainName(bytes)', direct);
-
-    const picked = textName || dataName || direct;
-    if (picked !== label) throw new Error(`Unexpected reverse name: ${picked}`);
+    if (textName !== label) throw new Error(`Unexpected reverse name (text): ${textName}`);
 
     section('Direct Reads');
     const cid = await resolver.chainId(LABEL_HASH);
