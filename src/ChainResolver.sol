@@ -39,9 +39,6 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     string public constant CHAIN_ID_KEY = "chain-id";
     string public constant CHAIN_NAME_PREFIX = "chain-name:";
 
-    // Reverse root reference name for exact matching
-    string private constant REVERSE_CID_ETH = "reverse.cid.eth";
-
     // Chain data storage
     mapping(bytes32 _labelhash => bytes _chainId) internal chainIds;
     mapping(bytes _chainId => string _chainName) internal chainNames;
@@ -88,11 +85,12 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
             bytes memory contentHash = contenthashRecords[labelhash];
             return abi.encode(contentHash);
         } else if (selector == TEXT_SELECTOR) {
-            // text(bytes32,string) - decode key and return text value
-            (, string memory key) = abi.decode(data[4:], (bytes32, string));
-            // Only allow reverse chain-name: lookups when name is reverse.cid.eth
-            bool isReverseCidRoot = _isReverseCidRootName(name);
-            string memory value = _getTextWithOverrides(labelhash, key, isReverseCidRoot);
+            // text(bytes32,string) - decode node + key and return text value
+            (bytes32 node, string memory key) = abi.decode(data[4:], (bytes32, string));
+            // Allow reverse chain-name: lookups only when node == namehash(reverse.<namespace>.eth)
+            // where <namespace>.eth is the ENS name encoded by `name`.
+            bool isReverseContext = _isReverseNodeOfName(name, node);
+            string memory value = _getTextWithOverrides(labelhash, key, isReverseContext);
             return abi.encode(value);
         } else if (selector == DATA_SELECTOR) {
             // data(bytes32,string) - decode key and return data value
@@ -401,11 +399,17 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     }
 
     /**
-     * @notice Returns true if the DNS-encoded `name` equals reverse.cid.eth
+     * @notice Validates reverse context by binding `node` to the namespace in `name`.
+     * @param name DNS-encoded `<namespace>.<tld>` provided to `resolve`.
+     * @param node ENS node for `text(node, key)`; must equal `namehash("reverse." + <namespace>.<tld>)`.
+     * @return True if `node` matches the reverse root for the namespace derived from `name`.
      */
-    function _isReverseCidRootName(bytes memory name) internal pure returns (bool) {
-        // Compare against canonical DNS-encoding of "reverse.cid.eth"
-        return keccak256(name) == keccak256(NameCoder.encode(REVERSE_CID_ETH));
+    function _isReverseNodeOfName(bytes memory name, bytes32 node) internal pure returns (bool) {
+        if (node == bytes32(0)) return false;
+        // Compute directly from `<namespace>.<tld>`; extra leading labels will fail the check.
+        bytes32 base = NameCoder.namehash(name, 0); // namehash('<namespace>.<tld>')
+        bytes32 expected = NameCoder.namehash(base, keccak256("reverse"));
+        return expected == node;
     }
 
     /**

@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
+import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
 import {HexUtils} from "@ensdomains/ens-contracts/contracts/utils/HexUtils.sol";
 
 contract ChainResolverENSReverseTest is Test {
@@ -21,12 +22,8 @@ contract ChainResolverENSReverseTest is Test {
     bytes32 public constant LABEL_HASH = keccak256(bytes(CHAIN_NAME));
 
     // Precomputed DNS-encoded names
-    // reverse.cid.eth => 0x07 'reverse' 0x03 'cid' 0x03 'eth' 0x00
-    bytes internal constant DNS_REVERSE_CID_ETH =
-        hex"0772657665727365036369640365746800";
-    // optimism.cid.eth => 0x08 'optimism' 0x03 'cid' 0x03 'eth' 0x00
-    bytes internal constant DNS_OPTIMISM_CID_ETH =
-        hex"086f7074696d69736d036369640365746800";
+    // cid.eth => 0x03 'cid' 0x03 'eth' 0x00
+    bytes internal constant DNS_CID_ETH = hex"036369640365746800";
 
     // Encoded key for reverse text query: "chain-name:" + <7930 hex w/out 0x>
     string internal constant KEY_CHAIN_NAME = "chain-name:000000010001010a00";
@@ -50,9 +47,10 @@ contract ChainResolverENSReverseTest is Test {
 
         vm.stopPrank();
 
-        // Test reverse resolution via resolve() under reverse.cid.eth (DNS-encoded)
-        // reverse.cid.eth => 0x07 'reverse' 0x03 'cid' 0x03 'eth' 0x00
-        bytes memory name = hex"0772657665727365036369640365746800";
+        // Test reverse resolution via resolve() under namespace root with node-bound reverse context
+        // name = cid.eth; node = namehash("reverse.cid.eth")
+        bytes memory name = DNS_CID_ETH;
+        bytes32 node = NameCoder.namehash(NameCoder.encode("reverse.cid.eth"), 0);
 
         // Manually set a conflicting value for the special key to prove overrides apply
         // Even if a user sets textRecords["chain-name:<hex>"] = "hacked",
@@ -63,7 +61,7 @@ contract ChainResolverENSReverseTest is Test {
         resolver.setText(LABEL_HASH, chainNameKey, "hacked");
         vm.stopPrank();
 
-        bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), LABEL_HASH, chainNameKey);
+        bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), node, chainNameKey);
         bytes memory result = resolver.resolve(name, textData);
         string memory resolvedChainName = abi.decode(result, (string));
 
@@ -112,16 +110,14 @@ contract ChainResolverENSReverseTest is Test {
         resolver.register(CHAIN_NAME, user1, CHAIN_ID);
         vm.stopPrank();
 
-        // Build calldata for text(bytes32,string)
+        // Build calldata for text(bytes32,string) using node-bound reverse context
         bytes4 TEXT_SELECTOR = bytes4(keccak256("text(bytes32,string)"));
         bytes memory data = abi.encodeWithSelector(
-            TEXT_SELECTOR,
-            bytes32(0),
-            KEY_CHAIN_NAME
+            TEXT_SELECTOR, NameCoder.namehash(NameCoder.encode("reverse.cid.eth"), 0), KEY_CHAIN_NAME
         );
 
-        // Query under reverse.cid.eth
-        bytes memory out = resolver.resolve(DNS_REVERSE_CID_ETH, data);
+        // Query under cid.eth with node-bound reverse
+        bytes memory out = resolver.resolve(DNS_CID_ETH, data);
         string memory result = abi.decode(out, (string));
 
         assertEq(result, CHAIN_NAME, "reverse.cid.eth should return chain name");
@@ -140,20 +136,13 @@ contract ChainResolverENSReverseTest is Test {
 
         // Build calldata for text(bytes32,string)
         bytes4 TEXT_SELECTOR = bytes4(keccak256("text(bytes32,string)"));
-        bytes memory data = abi.encodeWithSelector(
-            TEXT_SELECTOR,
-            bytes32(0),
-            KEY_CHAIN_NAME
-        );
+        bytes memory data = abi.encodeWithSelector(TEXT_SELECTOR, bytes32(0), KEY_CHAIN_NAME);
 
-        // Query under optimism.cid.eth (not reverse.cid.eth)
-        bytes memory out = resolver.resolve(DNS_OPTIMISM_CID_ETH, data);
+        // Query under optimism.cid.eth (not reverse.cid.eth) - still non-reverse context
+        bytes memory dnsOptimismCidEth = hex"086f7074696d69736d036369640365746800";
+        bytes memory out = resolver.resolve(dnsOptimismCidEth, data);
         string memory result = abi.decode(out, (string));
 
-        assertEq(
-            result,
-            fallbackVal,
-            "non-reverse context should return stored text record value"
-        );
+        assertEq(result, fallbackVal, "non-reverse context should return stored text record value");
     }
 }

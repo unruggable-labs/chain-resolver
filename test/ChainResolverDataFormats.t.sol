@@ -3,6 +3,7 @@ pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
+import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
 
 contract ChainResolverDataFormatsTest is Test {
     ChainResolver public resolver;
@@ -49,12 +50,9 @@ contract ChainResolverDataFormatsTest is Test {
 
         bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), LABEL_HASH, "chain-id");
 
-        // This should still resolve the chain-id correctly despite extra/odd DNS bytes
-        bytes memory result = resolver.resolve(maliciousName, textData);
-        bytes memory expectedChainId = abi.encode("000000010001010a00"); // Hex string of CHAIN_ID
-        assertEq(result, expectedChainId, "Should resolve chain-id correctly despite extra DNS bytes");
-
-        console.log("Successfully handled complex DNS encoding");
+        // This should revert due to invalid DNS encoding (from _isReverseNodeOfName)
+        vm.expectRevert(abi.encodeWithSelector(NameCoder.DNSDecodingFailed.selector, maliciousName));
+        resolver.resolve(maliciousName, textData);
     }
 
     function test_002____setText_____________________SpecialCharactersAndLongText() public {

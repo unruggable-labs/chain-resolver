@@ -3,7 +3,7 @@
 
 import 'dotenv/config'
 import { Foundry } from '@adraffy/blocksmith'
-import { Contract, Interface, dnsEncode, keccak256, toUtf8Bytes, getBytes, hexlify, AbiCoder } from 'ethers'
+import { Contract, Interface, dnsEncode, keccak256, toUtf8Bytes, getBytes, hexlify, AbiCoder, namehash } from 'ethers'
 
 async function main() {
   const smith = await Foundry.launch({ forge: 'forge', infoLog: true });
@@ -111,15 +111,16 @@ async function main() {
       }
     }
 
-    // Reverse via text selector using full reverse.cid.eth
+    // Reverse via text selector using node-bound reverse context.
+    // name = cid.eth; node = namehash('reverse.cid.eth'); key = 'chain-name:<7930hex>'.
     const TIFACE = new Interface(['function text(bytes32,string) view returns (string)']);
-    const reverseDns = dnsEncode('reverse.cid.eth', 255);
-    const ZERO_NODE = '0x' + '0'.repeat(64);
     const reverseKey = 'chain-name:' + CHAIN_ID_HEX.replace(/^0x/, '');
+    const reverseNode = namehash('reverse.cid.eth');
 
-    section('Reverse Resolve (text via reverse.cid.eth)');
-    const tcall = TIFACE.encodeFunctionData('text(bytes32,string)', [ZERO_NODE, reverseKey]);
-    const tanswer: string = await resolver.resolve(reverseDns, tcall);
+    section('Reverse Resolve (text)');
+    const textCall = TIFACE.encodeFunctionData('text(bytes32,string)', [reverseNode, reverseKey]);
+    const reverseDns = dnsEncode('cid.eth', 255);
+    const tanswer: string = await resolver.resolve(reverseDns, textCall);
     const [textName] = TIFACE.decodeFunctionResult('text(bytes32,string)', tanswer);
     log('text resolved name', textName);
     if (textName !== label) throw new Error(`Unexpected reverse name (text): ${textName}`);
