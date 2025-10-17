@@ -3,7 +3,7 @@
 import 'dotenv/config'
 import { init } from "./libs/init.ts";
 import { initSmith, shutdownSmith, loadDeployment, askQuestion } from "./libs/utils.ts";
-import { Contract, Interface, AbiCoder, dnsEncode, getBytes, hexlify, isHexString } from "ethers";
+import { Contract, Interface, AbiCoder, dnsEncode, getBytes, hexlify, isHexString, namehash } from "ethers";
 
 const { chainId, privateKey } = await init();
 const { deployerWallet, smith, rl } = await initSmith(
@@ -53,15 +53,17 @@ try {
     "function text(bytes32,string) view returns (string)",
   ]);
   const key = 'chain-name:' + Buffer.from(chainIdBytes).toString('hex');
-  // Reverse chain-name lookups are only served when the query name is reverse.<namespace>.eth
-  const dnsName = dnsEncode("reverse.cid.eth", 255);
-  const ZERO_NODE = "0x" + "0".repeat(64);
+  // Reverse chain-name lookups are served only when:
+  // - name = '<namespace>.eth' and
+  // - node = namehash('reverse.<namespace>.eth')
+  const dnsName = dnsEncode("cid.eth", 255);
+  const reverseNode = namehash("reverse.cid.eth");
   
 
   try {
     let textName = '';
     try {
-      const textCalldata = IFACE.encodeFunctionData("text(bytes32,string)", [ZERO_NODE, key]);
+      const textCalldata = IFACE.encodeFunctionData("text(bytes32,string)", [reverseNode, key]);
       const textAnswer: string = await resolver.resolve(dnsName, textCalldata);
       [textName] = IFACE.decodeFunctionResult("text(bytes32,string)", textAnswer) as [string];
     } catch {}

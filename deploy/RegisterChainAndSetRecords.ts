@@ -151,7 +151,7 @@ try {
     [
       "function owner() view returns (address)",
       "function resolve(bytes,bytes) view returns (bytes)",
-      "function register(string,address,bytes) external",
+      "function register(string,string,address,bytes) external",
       "function chainId(bytes32) view returns (bytes)",
       "function chainName(bytes) view returns (string)",
       "function getOwner(bytes32) view returns (address)",
@@ -170,17 +170,19 @@ try {
   console.log("Caller:", deployerWallet.address);
   const label = (await askQuestion(rl, "Chain label (e.g. optimism): ")).trim();
   const labelhash = keccak256(toUtf8Bytes(label));
+  const chainNameIn = (await askQuestion(rl, "Chain name (e.g. Optimism / OP Mainnet): ")).trim();
+  const chainName = chainNameIn || label;
   let cidIn = (await askQuestion(rl, "Chain ID (hex 0x.. or decimal): ")).trim();
   if (!isHexString(cidIn)) cidIn = toBeHex(BigInt(cidIn));
   const ownerIn = (await askQuestion(rl, `Owner [default ${deployerWallet.address}]: `)).trim();
   const owner = ownerIn || deployerWallet.address;
 
   // Register in unified resolver (owner-only)
-  console.log("Registering in ChainResolver...");
+  console.log("Registering in ChainResolver (label + chain name)...");
   let ok = await promptContinueOrExit(rl, "Proceed? (y/n): ");
   if (ok) {
     try {
-      const tx = await resolver.register(label, owner, cidIn);
+      const tx = await resolver.register(label, chainName, owner, cidIn);
       await tx.wait();
       console.log("✓ resolver.register");
     } catch (e: any) {

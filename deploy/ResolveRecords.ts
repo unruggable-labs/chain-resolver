@@ -91,6 +91,13 @@ try {
     console.log('chain-id (data bytes):', cidBytes);
   }
 
+  // chain-name (forward)
+  const printChainName = await askQuestion(rl, "Resolve chain-name (forward)? (y/n): ");
+  if (/^y(es)?$/i.test(printChainName.trim())) {
+    const name = await resolveDecode<string>('text(bytes32,string)', [labelhash, 'chain-name']);
+    console.log('chain-name (forward text):', name || '(empty)');
+  }
+
   // addr(60)
   const wantAddr60 = await askQuestion(rl, 'Resolve addr(60)? (y/n): ');
   if (/^y(es)?$/i.test(wantAddr60.trim())) {

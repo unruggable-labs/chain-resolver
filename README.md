@@ -31,6 +31,9 @@ The ENS field `text(..., "chain-id")` (per [ENSIP‑5](https://docs.ens.domains/
     -  `resolve(name, abi.encodeWithSelector(text(node, "chain-id")))` → returns a hex string.
     - `resolve(name, abi.encodeWithSelector(data(node, "chain-id")))` → returns raw bytes.
 
+Chain name (forward):
+- `resolve(name, abi.encodeWithSelector(text(node, "chain-name")))` → returns the canonical chain name (e.g., "Optimism").
+
 Reverse resolution (7930 → name):
 - Reverse lookups are performed via the ENS text interface and are namespace‑agnostic. They are served when:
   - `name` is the DNS‑encoded namespace root `<namespace>.eth` (for example, `cid.eth`), and
@@ -50,7 +53,8 @@ Core reads and admin (see [src/interfaces/IChainResolver.sol](src/interfaces/ICh
 ```solidity
 function chainId(bytes32 labelhash) external view returns (bytes memory);
 function chainName(bytes calldata chainIdBytes) external view returns (string memory);
-function register(string calldata chainName, address owner, bytes calldata chainId) external; // owner-only
+function register(string calldata label, string calldata chainName, address owner, bytes calldata chainId) external; // owner-only
+function batchRegister(string[] calldata labels, string[] calldata chainNames, address[] calldata owners, bytes[] calldata chainIds) external; // owner-only
 function setLabelOwner(bytes32 labelhash, address owner) external; // label owner or operator
 function setOperator(address operator, bool isOperator) external;   // per-owner operator
 ```
@@ -59,7 +63,7 @@ ENS fields available via `IExtendedResolver.resolve(name,data)`:
 - `addr(bytes32 node)` → address (ETH, coin type 60) — per [ENSIP‑1](https://docs.ens.domains/ensip/1)
 - `addr(bytes32 node,uint256 coinType)` → bytes (raw multi‑coin value) — per [ENSIP‑9](https://docs.ens.domains/ensip/9)
 - `contenthash(bytes32 node)` → bytes — per [ENSIP‑7](https://docs.ens.domains/ensip/7)
-- `text(bytes32 node,string key)` → string — per ENSIP‑5 (with special handling for `"chain-id"` and `"chain-name:"`)
+- `text(bytes32 node,string key)` → string — per ENSIP‑5 (with special handling for `"chain-id"`, `"chain-name"` and `"chain-name:"`)
 - `data(bytes32 node,string key)` → bytes — per ENSIP‑TBD‑19 (with special handling for `"chain-id"`)
 
 ## 7930 Chain Identifier

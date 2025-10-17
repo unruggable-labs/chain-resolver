@@ -16,6 +16,9 @@ import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol
 import {IChainResolver} from "./interfaces/IChainResolver.sol";
 
 contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
+    /// @notice Total number of registered chain labels
+    uint256 public chainCount;
+
     /**
      * @notice Modifier to ensure only the label owner or authorized operator can call the function
      * @param _labelhash The labelhash to check authorization for
@@ -37,13 +40,19 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
 
     // Text record key constants
     string public constant CHAIN_ID_KEY = "chain-id";
+    string public constant CHAIN_NAME_KEY = "chain-name";
     string public constant CHAIN_NAME_PREFIX = "chain-name:";
 
     // Chain data storage
     mapping(bytes32 _labelhash => bytes _chainId) internal chainIds;
     mapping(bytes _chainId => string _chainName) internal chainNames;
+    mapping(bytes32 _labelhash => string _label) internal chainLabels;
     mapping(bytes32 _labelhash => address _owner) internal labelOwners;
     mapping(address _owner => mapping(address _operator => bool _isOperator)) internal operators;
+
+    // Storage for chains
+    bytes32[] private _chainLabelList;
+    mapping(bytes32 _labelhash => bool _isListed) private _listed;
 
     // ENS record storage
     mapping(bytes32 labelhash => mapping(uint256 coinType => bytes value)) private addressRecords;
@@ -127,27 +136,28 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     /**
      * @inheritdoc IChainResolver
      */
-    function register(string calldata _chainName, address _owner, bytes calldata _chainId) external onlyOwner {
-        _register(_chainName, _owner, _chainId);
-    }
-
-    /**
-     * @notice Batch register multiple chains (owner only)
-     * @param _chainNames Array of chain names
-     * @param _owners Array of owners for each chain
-     * @param _chainIds Array of chain IDs
-     */
-    function batchRegister(string[] calldata _chainNames, address[] calldata _owners, bytes[] calldata _chainIds)
+    function register(string calldata _label, string calldata _chainName, address _owner, bytes calldata _chainId)
         external
         onlyOwner
     {
-        uint256 _length = _chainNames.length;
-        if (_length != _owners.length || _length != _chainIds.length) {
+        _register(_label, _chainName, _owner, _chainId);
+    }
+
+    /**
+     * @inheritdoc IChainResolver
+     */
+    function batchRegister(
+        string[] calldata _labels,
+        string[] calldata _chainNames,
+        address[] calldata _owners,
+        bytes[] calldata _chainIds
+    ) external onlyOwner {
+        uint256 _length = _labels.length;
+        if (_length != _chainNames.length || _length != _owners.length || _length != _chainIds.length) {
             revert InvalidDataLength();
         }
-
         for (uint256 i = 0; i < _length; i++) {
-            _register(_chainNames[i], _owners[i], _chainIds[i]);
+            _register(_labels[i], _chainNames[i], _owners[i], _chainIds[i]);
         }
     }
 
@@ -292,20 +302,46 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     // ============ Utility Functions ============
 
     /**
-     * @notice Internal helper function to register a single chain
-     * @param _chainName The chain name
+     * @notice Internal helper function to register a single chain with label + chain name
+     * @param _label The short chain label (e.g., "chain1")
+     * @param _chainName The chain name (e.g., "Chain One")
      * @param _owner The owner address
-     * @param _chainId The chain ID
+     * @param _chainId The chain ID (ERC-7930 bytes)
      */
-    function _register(string calldata _chainName, address _owner, bytes calldata _chainId) internal {
-        bytes32 _labelhash = keccak256(bytes(_chainName));
+    function _register(string calldata _label, string calldata _chainName, address _owner, bytes calldata _chainId)
+        internal
+    {
+        bytes32 _labelhash = keccak256(bytes(_label));
 
         labelOwners[_labelhash] = _owner;
         chainIds[_labelhash] = _chainId;
+        chainLabels[_labelhash] = _label;
         chainNames[_chainId] = _chainName;
+
+        if (!_listed[_labelhash]) {
+            _listed[_labelhash] = true;
+            _chainLabelList.push(_labelhash);
+            unchecked {
+                chainCount += 1;
+            }
+        }
 
         emit LabelOwnerSet(_labelhash, _owner);
         emit RecordSet(_labelhash, _chainId, _chainName);
+    }
+
+    /**
+     * @notice Return the chain label and chain name at a given index.
+     * @param index The index in the chain list
+     * @return chainLabel The short chain label (e.g., "chain1")
+     * @return chainName The chain name (e.g., "Chain One")
+     */
+    function getChainAtIndex(uint256 index) external view returns (string memory chainLabel, string memory chainName) {
+        if (index >= _chainLabelList.length) revert InvalidDataLength();
+        bytes32 lh = _chainLabelList[index];
+        chainLabel = chainLabels[lh];
+        bytes memory cid = chainIds[lh];
+        chainName = chainNames[cid];
     }
 
     /**
@@ -356,6 +392,12 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
             // Get chain ID bytes from internal registry and encode as hex string
             bytes memory chainIdBytes = chainIds[_labelhash];
             return HexUtils.bytesToHex(chainIdBytes);
+        }
+
+        // Forward chain name: "chain-name" returns the canonical chain name for this label
+        if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_NAME_KEY))) {
+            bytes memory chainIdBytes2 = chainIds[_labelhash];
+            return chainNames[chainIdBytes2];
         }
 
         // Check if key starts with "chain-name:" prefix (reverse resolution)
