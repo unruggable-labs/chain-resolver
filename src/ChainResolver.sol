@@ -42,6 +42,8 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     string public constant CHAIN_ID_KEY = "chain-id";
     string public constant CHAIN_NAME_KEY = "chain-name";
     string public constant CHAIN_NAME_PREFIX = "chain-name:";
+    // Reverse root reference name for exact matching
+    string private constant REVERSE_CID_ETH = "reverse.cid.eth";
 
     // Chain data storage
     mapping(bytes32 _labelhash => bytes _chainId) internal chainIds;
