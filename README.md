@@ -15,6 +15,7 @@ This repo contains a single contract — [`ChainResolver.sol`](src/ChainResolver
 - Reverse mapping: `chainId (bytes) → chainName (string)`
 - Per‑label ENS records: `addr(coinType)`, `contenthash`, `text`, and `data`.
 - Ownership and operator permissions per label owner.
+- Enumeration: expose `chainCount()` and `getChainAtIndex(uint256)` so clients can iterate all registered chains and retrieve each label plus its associated chain name without external indexes or off-chain lists.
 
 ### Resolution flow:
 
