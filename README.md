@@ -6,13 +6,13 @@ This repo contains a single contract — [`ChainResolver.sol`](src/ChainResolver
 - Everything is keyed by labelhash (computed as `labelhash = keccak256(bytes(label))`, for example with `label = "optimism"`). This keeps the contract agnostic to the final namespace (`cid.eth`, `on.eth`, `l2.eth`, etc.), so we can change hierarchies later without migrating fields.
 - One source of truth: Ownership, 7930 chain IDs ([ERC‑7930](https://eips.ethereum.org/EIPS/eip-7930)), ENS records, and reverse lookups live in one place.
 - ENSIP‑10 Extended Resolver: Once registered, the chain owner (or an authorised operator) can set ENS fields like addresses, contenthash and other text/data fields. Reads go through the extended resolver entrypoint `resolve(bytes name, bytes data)` (see ENSIP‑10), so clients can call the standard ENS fields - `addr`, `contenthash`, and `text` - to pull chain metadata directly from an ENS name like `optimism.cid.eth`. For available fields and examples, see [Contract Interfaces](#contract-interfaces).
-- Clear forward and reverse: Forward returns a chain’s 7930 identifier; reverse maps 7930 bytes back to the chain name.
+- Clear forward and reverse: Forward returns a chain’s 7930 identifier; reverse maps 7930 bytes back to the chain label.
 
 ## ChainResolver.sol
 
 - The `chainId` bytes follow the 7930 chain identifier format; see [7930 Chain Identifier](#7930-chain-identifier-no-address).
 - Forward mapping: `labelhash → chainId (bytes)`
-- Reverse mapping: `chainId (bytes) → chainName (string)`
+- Reverse mapping: `chainId (bytes) → label (string)`
 - Per‑label ENS records: `addr(coinType)`, `contenthash`, `text`, and `data`.
 - Ownership and operator permissions per label owner.
 - Enumeration: expose `chainCount()` and `getChainAtIndex(uint256)` so clients can iterate all registered chains and retrieve each label plus its associated chain name without external indexes or off-chain lists.
@@ -35,12 +35,12 @@ The ENS field `text(..., "chain-id")` (per [ENSIP‑5](https://docs.ens.domains/
 Chain name (forward):
 - `resolve(name, abi.encodeWithSelector(text(node, "chain-name")))` → returns the canonical chain name (e.g., "Optimism").
 
-Reverse resolution (7930 → name):
+Reverse resolution (7930 → label):
 - Reverse lookups are performed via the ENS text interface and are namespace‑agnostic. They are served when:
   - `name` is the DNS‑encoded reverse root `reverse.<namespace>.eth` (for example, `reverse.cid.eth`), and
   - the `node` argument equals `namehash(name)`.
 
-Pass a key prefixed with `"chain-name:"` and suffixed with the 7930 hex using `text(bytes32 node,string key)` (per ENSIP‑5). This follows the `chain-name:` text key parameter standard (per [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md)). For example:
+Pass a key prefixed with `"chain-name:"` and suffixed with the 7930 hex using `text(bytes32 node,string key)` (per ENSIP‑5). In reverse context this returns the chain label for that 7930 ID. This follows the `chain-name:` text key parameter standard (per [ENSIP‑TBD‑17](https://github.com/nxt3d/ensips/blob/ensip-ideas/ensips/ensip-TBD-17.md)). For example:
 
   - Text key parameter (string): `"chain-name:<7930-hex>"`
   - Call (using `name = dnsEncode("reverse.cid.eth")`, `node = namehash(name)`):
@@ -52,7 +52,9 @@ Pass a key prefixed with `"chain-name:"` and suffixed with the 7930 hex using `t
 Core reads and admin (see [src/interfaces/IChainResolver.sol](src/interfaces/IChainResolver.sol)):
 
 ```solidity
+// Forward: labelhash -> 7930 bytes
 function chainId(bytes32 labelhash) external view returns (bytes memory);
+// Reverse: 7930 bytes -> label
 function chainName(bytes calldata chainIdBytes) external view returns (string memory);
 function register(string calldata label, string calldata chainName, address owner, bytes calldata chainId) external; // owner-only
 function batchRegister(string[] calldata labels, string[] calldata chainNames, address[] calldata owners, bytes[] calldata chainIds) external; // owner-only

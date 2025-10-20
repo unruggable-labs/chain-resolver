@@ -22,10 +22,10 @@ interface IChainResolver {
 
     /// @notice Functions
     /**
-     * @notice Return the canonical chain name for a given ERC-7930 chain identifier.
-     * @dev Maps `chainIdBytes (ERC-7930)` → `chainName` set at registration.
+     * @notice Return the canonical chain label for a given ERC-7930 chain identifier.
+     * @dev Maps `chainIdBytes (ERC-7930)` → `label` set at registration.
      * @param _chainIdBytes The ERC-7930 chain identifier bytes.
-     * @return _chainName The chain name (e.g., "Optimism").
+     * @return _chainName The chain label (e.g., "optimism").
      */
     function chainName(bytes calldata _chainIdBytes) external view returns (string memory _chainName);
 
