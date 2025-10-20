@@ -8,6 +8,13 @@ pragma solidity 0.8.30;
  * @dev Source: https://github.com/unruggable-labs/chain-resolver/tree/main/src/interfaces/IChainResolver.sol
  */
 interface IChainResolver {
+    /// @notice Per-labelhash chain data
+    struct ChainData {
+        bytes chainId; // ERC-7930 identifier bytes
+        string label; // canonical lowercase label
+        string name; // human-readable chain name
+        address owner; // label owner
+    }
     /// @notice Events
     event RecordSet(bytes32 indexed _labelhash, bytes _chainId, string _chainName);
     event LabelOwnerSet(bytes32 indexed _labelhash, address _owner);

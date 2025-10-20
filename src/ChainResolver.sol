@@ -44,10 +44,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     string public constant CHAIN_NAME_PREFIX = "chain-name:";
 
     // Chain data storage
-    mapping(bytes32 _labelhash => bytes _chainId) internal idByLabelhash;
-    mapping(bytes32 _labelhash => string _label) internal labelByLabelhash;
-    mapping(bytes32 _labelhash => string _chainName) internal chainNameByLabelhash;
-    mapping(bytes32 _labelhash => address _owner) internal labelOwners;
+    mapping(bytes32 _labelhash => IChainResolver.ChainData data) internal chainData;
     mapping(bytes _chainId => string _label) internal labelById;
     mapping(address _owner => mapping(address _operator => bool _isOperator)) internal operators;
 
@@ -131,7 +128,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @inheritdoc IChainResolver
      */
     function chainId(bytes32 _labelhash) external view returns (bytes memory _chainId) {
-        _chainId = idByLabelhash[_labelhash];
+        _chainId = chainData[_labelhash].chainId;
     }
 
     /**
@@ -166,7 +163,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @inheritdoc IChainResolver
      */
     function setLabelOwner(bytes32 _labelhash, address _owner) external onlyAuthorized(_labelhash) {
-        labelOwners[_labelhash] = _owner;
+        chainData[_labelhash].owner = _owner;
         emit LabelOwnerSet(_labelhash, _owner);
     }
 
@@ -182,7 +179,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @inheritdoc IChainResolver
      */
     function isAuthorized(bytes32 _labelhash, address _address) external view returns (bool _authorized) {
-        address _owner = labelOwners[_labelhash];
+        address _owner = chainData[_labelhash].owner;
         return _owner == _address || operators[_owner][_address];
     }
 
@@ -297,7 +294,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @return The owner address.
      */
     function getOwner(bytes32 _labelhash) external view returns (address) {
-        return labelOwners[_labelhash];
+        return chainData[_labelhash].owner;
     }
 
     // ============ Utility Functions ============
@@ -314,10 +311,10 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     {
         bytes32 _labelhash = keccak256(bytes(_label));
 
-        labelOwners[_labelhash] = _owner;
-        idByLabelhash[_labelhash] = _chainId;
-        labelByLabelhash[_labelhash] = _label;
-        chainNameByLabelhash[_labelhash] = _chainName;
+        chainData[_labelhash].owner = _owner;
+        chainData[_labelhash].chainId = _chainId;
+        chainData[_labelhash].label = _label;
+        chainData[_labelhash].name = _chainName;
         labelById[_chainId] = _label;
 
         if (!_listed[_labelhash]) {
@@ -345,8 +342,8 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     {
         if (_index >= _chainLabelList.length) revert InvalidDataLength();
         bytes32 labelhash = _chainLabelList[_index];
-        _label = labelByLabelhash[labelhash];
-        _chainName = chainNameByLabelhash[labelhash];
+        _label = chainData[labelhash].label;
+        _chainName = chainData[labelhash].name;
     }
 
     /**
@@ -395,13 +392,13 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         // Note: Resolving ERC-7930 chain IDs via data record (raw bytes) is preferred, but text record is included for compatibility with ENSIP-5
         if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_ID_KEY))) {
             // Get chain ID bytes from internal registry and encode as hex string
-            bytes memory chainIdBytes = idByLabelhash[_labelhash];
+            bytes memory chainIdBytes = chainData[_labelhash].chainId;
             return HexUtils.bytesToHex(chainIdBytes);
         }
 
         // Forward chain name: "chain-name" returns the canonical chain name for this label
         if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_NAME_KEY))) {
-            return chainNameByLabelhash[_labelhash];
+            return chainData[_labelhash].name;
         }
 
         // Check if key starts with "chain-name:" prefix (reverse resolution)
@@ -437,7 +434,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     function _getDataWithOverrides(bytes32 _labelhash, string memory _key) internal view returns (bytes memory) {
         // Special case for "chain-id" data record: return raw ERC-7930 bytes
         if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_ID_KEY))) {
-            return idByLabelhash[_labelhash];
+            return chainData[_labelhash].chainId;
         }
 
         // Default: return stored data record
@@ -496,7 +493,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @param _labelhash The labelhash to check.
      */
     function _authenticateCaller(address _caller, bytes32 _labelhash) internal view {
-        address _owner = labelOwners[_labelhash];
+        address _owner = chainData[_labelhash].owner;
         if (_owner != _caller && !operators[_owner][_caller]) {
             revert NotAuthorized(_caller, _labelhash);
         }
