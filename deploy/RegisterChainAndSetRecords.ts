@@ -146,12 +146,11 @@ try {
     process.exit(1);
   }
 
-  const resolver = new Contract(
-    resolverAddress,
-    [
+    const resolver = new Contract(
+      resolverAddress,
+      [
       "function owner() view returns (address)",
       "function resolve(bytes,bytes) view returns (bytes)",
-      "function register(string,string,address,bytes) external",
       "function chainId(bytes32) view returns (bytes)",
       "function chainName(bytes) view returns (string)",
       "function getOwner(bytes32) view returns (address)",
@@ -159,10 +158,11 @@ try {
       "function setAddr(bytes32,uint256,bytes) external",
       "function setContenthash(bytes32,bytes) external",
       "function setText(bytes32,string,string) external",
-      "function setData(bytes32,string,bytes) external",
-    ],
-    deployerWallet
-  );
+        "function setData(bytes32,string,bytes) external",
+        "function register((string,string,address,bytes)) external",
+      ],
+      deployerWallet
+    );
 
   // Inputs
   console.log("Using ChainResolver:", resolverAddress);
@@ -182,7 +182,7 @@ try {
   let ok = await promptContinueOrExit(rl, "Proceed? (y/n): ");
   if (ok) {
     try {
-      const tx = await resolver.register(label, chainName, owner, cidIn);
+      const tx = await resolver.register([label, chainName, owner, cidIn]);
       await tx.wait();
       console.log("✓ resolver.register");
     } catch (e: any) {
