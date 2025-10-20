@@ -300,7 +300,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     {
         bytes32 _labelhash = keccak256(bytes(_label));
 
-        chainData[_labelhash] = IChainResolver.ChainData({
+        chainData[_labelhash] = ChainData({
             label: _label,
             chainName: _chainName,
             owner: _owner,
