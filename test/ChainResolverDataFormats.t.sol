@@ -3,10 +3,12 @@ pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
+import "../src/ChainRegistry.sol";
 import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
 
 contract ChainResolverDataFormatsTest is Test {
     ChainResolver public resolver;
+    ChainRegistry public registry;
 
     address public admin = address(0x1);
     address public user1 = address(0x2);
@@ -21,7 +23,8 @@ contract ChainResolverDataFormatsTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        resolver = new ChainResolver(admin);
+        registry = new ChainRegistry(admin);
+        resolver = new ChainResolver(admin, address(registry));
         vm.stopPrank();
     }
 

@@ -3,10 +3,12 @@ pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
+import "../src/ChainRegistry.sol";
 import "../src/interfaces/IChainResolver.sol";
 
 contract ChainResolverRegistryTest is Test {
     ChainResolver public resolver;
+    ChainRegistry public registry;
 
     address public admin = address(0x1);
     address public user1 = address(0x2);
@@ -28,7 +30,8 @@ contract ChainResolverRegistryTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        resolver = new ChainResolver(admin);
+        registry = new ChainRegistry(admin);
+        resolver = new ChainResolver(admin, address(registry));
         vm.stopPrank();
     }
 
@@ -80,25 +83,17 @@ contract ChainResolverRegistryTest is Test {
 
         vm.stopPrank();
 
-        // User1 transfers ownership to user2
+        // User1 tries to transfer ownership to user2 - should revert
         vm.startPrank(user1);
+        vm.expectRevert(abi.encodeWithSelector(ChainResolver.UseRegistryForOwnershipManagement.selector));
         resolver.setLabelOwner(LABEL_HASH, user2);
 
-        // Verify transfer
-        assertEq(resolver.getOwner(LABEL_HASH), user2, "User2 should now own the label");
+        // Verify original ownership is unchanged
+        assertEq(resolver.getOwner(LABEL_HASH), user1, "Original owner should remain");
 
         vm.stopPrank();
 
-        // User2 should now be the owner
-        vm.startPrank(user2);
-
-        // Test that new owner can perform authorized actions
-        resolver.setLabelOwner(LABEL_HASH, user1); // Transfer back to user1
-        assertEq(resolver.getOwner(LABEL_HASH), user1, "New owner should be able to transfer ownership");
-
-        vm.stopPrank();
-
-        console.log("Successfully transferred label ownership");
+        console.log("Successfully prevented ownership transfer - use registry for ownership management");
     }
 
     function test_004____batchRegister_______________SuccessfulBatchRegistration() public {

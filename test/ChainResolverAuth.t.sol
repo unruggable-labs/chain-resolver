@@ -3,9 +3,11 @@ pragma solidity ^0.8.27;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
+import "../src/ChainRegistry.sol";
 
 contract ChainResolverAuthTest is Test {
     ChainResolver public resolver;
+    ChainRegistry public registry;
 
     address public admin = address(0x1);
     address public user1 = address(0x2);
@@ -19,7 +21,8 @@ contract ChainResolverAuthTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        resolver = new ChainResolver(admin);
+        registry = new ChainRegistry(admin);
+        resolver = new ChainResolver(admin, address(registry));
         vm.stopPrank();
     }
 
@@ -63,7 +66,7 @@ contract ChainResolverAuthTest is Test {
         // Attacker tries to transfer ownership
         vm.startPrank(attacker);
 
-        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
+        vm.expectRevert(abi.encodeWithSelector(ChainResolver.UseRegistryForOwnershipManagement.selector));
         resolver.setLabelOwner(LABEL_HASH, attacker);
 
         vm.stopPrank();
@@ -172,10 +175,10 @@ contract ChainResolverAuthTest is Test {
         // Operator management scenarios (add/remove per-owner operators)
         vm.startPrank(user1);
 
-        // Set multiple operators
-        resolver.setOperator(user2, true);
-        resolver.setOperator(attacker, true);
-        resolver.setOperator(address(this), true);
+        // Set multiple operators directly on the registry
+        registry.setOperator(user2, true);
+        registry.setOperator(attacker, true);
+        registry.setOperator(address(this), true);
 
         // Verify all are authorized
         assertTrue(resolver.isAuthorized(LABEL_HASH, user2), "User2 should be authorized");
@@ -187,7 +190,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(user1);
 
         // User1 removes attacker
-        resolver.setOperator(attacker, false);
+        registry.setOperator(attacker, false);
 
         // Assert label owner removed label authorization
         assertFalse(resolver.isAuthorized(LABEL_HASH, attacker));
@@ -196,7 +199,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(user2);
 
         // User2 tries to set new operator (this works because setOperator is per-caller)
-        resolver.setOperator(address(0x777), true);
+        registry.setOperator(address(0x777), true);
         // But this doesn't make address(0x777) authorized for the label hash
         assertFalse(
             resolver.isAuthorized(LABEL_HASH, address(0x777)), "New operator should not be authorized for label hash"
