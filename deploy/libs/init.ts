@@ -5,13 +5,19 @@
  */
 
 import { parseArgs, setOrDie } from "./utils.ts";
-import { CHAIN_MAP } from "./constants.ts";
+import { CHAIN_MAP, type ChainInfo } from "./constants.ts";
+
 import 'dotenv/config'
 
+export type InitData = {
+    args: Map<string, string>
+    chainInfo: ChainInfo,
+    privateKey?: string,
+}
 
-export async function init() {
+export async function init(): Promise<InitData> {
 
-    // Get the deployment arguments
+    // Get the deployment command line arguments
     const requiredArguments = ['chain'];
     const args: Map<string, string> = await parseArgs(requiredArguments)
         .catch(
@@ -23,25 +29,23 @@ export async function init() {
 
     console.log('Arguments: ', args);
 
-    let chainName;
-    let chainId;
-    let privateKey;
+    const chainArg = args.get('chain')!;
 
     // Loop over all known chains and see if we have a PK env variable set
-    CHAIN_MAP.forEach((value, key) => {
+    const chainInfo = CHAIN_MAP.get(chainArg);
 
-    const pkKey = `${value.name.toUpperCase().replace('-', '_')}_PK`;
-    value['privateKey'] = process.env[pkKey];
-
-    if (value.name === args.get('chain')) {
-        chainName = value.name;
-        chainId = value.chain;
-        privateKey = value['privateKey'];
+    if (!chainInfo) {
+        throw Error(`No chain found for the identifier ${chainArg}`);
     }
-    });
+    
+    const pkKey = `${chainInfo.name.toUpperCase().replace('-', '_')}_PK`;
+    const privateKey = process.env[pkKey];
 
-    setOrDie(chainId, 'Chain ID');
     setOrDie(privateKey, 'Private Key');
 
-    return { args, chainName, chainId, privateKey };
+    return { 
+        args, 
+        chainInfo,
+        privateKey 
+    };
 }

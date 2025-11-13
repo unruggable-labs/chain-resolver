@@ -1,0 +1,9 @@
+- Should the events and errors be put in the spec?
+- Should chainName, chainLabel etc be in the spec? i say no
+- should we allow updates?
+- Are the encodings in resolve correct?
+- theres no way of setting 3rd level names. only way would be moving everything to use namehash
+- check concat(CHAIN_NAME_PREFIX, _interoperableAddress)
+- do we want natspec?
+- do args have _ . make sure consistent
+- events need to emit the node. also add in text record event

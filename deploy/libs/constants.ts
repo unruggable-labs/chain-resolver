@@ -8,24 +8,25 @@ import 'dotenv/config'
 
 // Type for a specific chain
 export type ChainInfo = {
-    readonly chain: number;
+    readonly id: number;
     readonly name: string;
     readonly rpc: string;
+    privateKey?: string;
 };
 
-export const CHAIN_MAP = new Map<number, ChainInfo>(
+export const CHAIN_MAP = new Map<string, ChainInfo>(
     [
         {
-            chain: 1,
+            id: 1,
             name: 'mainnet',
             rpc: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
         },
         {
-            chain: 11155111,
+            id: 11155111,
             name: 'sepolia',
             rpc: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
         },
     ]
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map((x) => [x.chain, x])
+    .map((x) => [x.name, x])
 );

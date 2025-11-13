@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.25;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
@@ -38,11 +38,11 @@ contract ChainResolverEdgeCasesTest is Test {
         bytes32 emptyLabelHash = keccak256(bytes(emptyName));
 
         // This should work - empty string is valid
-        resolver.register(IChainResolver.ChainData({label: emptyName, chainName: emptyName, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: emptyName, chainName: emptyName, owner: user1, interoperableAddress: CHAIN_ID}));
 
         // Verify registration
-        assertEq(resolver.getOwner(emptyLabelHash), user1, "Empty chain name should be registrable");
-        assertEq(resolver.chainId(emptyLabelHash), CHAIN_ID, "Chain ID should be set for empty name");
+        assertEq(resolver.getChainAdmin(emptyLabelHash), user1, "Empty chain name should be registrable");
+        assertEq(resolver.interoperableAddress(emptyLabelHash), CHAIN_ID, "Chain ID should be set for empty name");
 
         vm.stopPrank();
 
@@ -58,11 +58,11 @@ contract ChainResolverEdgeCasesTest is Test {
         bytes32 longLabelHash = keccak256(bytes(longName));
 
         // This should work - long names are valid
-        resolver.register(IChainResolver.ChainData({label: longName, chainName: longName, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: longName, chainName: longName, owner: user1, interoperableAddress: CHAIN_ID}));
 
         // Verify registration
-        assertEq(resolver.getOwner(longLabelHash), user1, "Long chain name should be registrable");
-        assertEq(resolver.chainId(longLabelHash), CHAIN_ID, "Chain ID should be set for long name");
+        assertEq(resolver.getChainAdmin(longLabelHash), user1, "Long chain name should be registrable");
+        assertEq(resolver.interoperableAddress(longLabelHash), CHAIN_ID, "Chain ID should be set for long name");
         assertEq(resolver.chainName(CHAIN_ID), longName, "Long chain name correctly reverse resolves");
 
         vm.stopPrank();
@@ -76,11 +76,11 @@ contract ChainResolverEdgeCasesTest is Test {
         // Try to register with empty chain ID
         bytes memory emptyChainId = "";
 
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: emptyChainId}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: emptyChainId}));
 
         // Verify registration
-        assertEq(resolver.getOwner(LABEL_HASH), user1, "Owner should be set");
-        assertEq(resolver.chainId(LABEL_HASH), emptyChainId, "Empty chain ID should be stored");
+        assertEq(resolver.getChainAdmin(LABEL_HASH), user1, "Owner should be set");
+        assertEq(resolver.interoperableAddress(LABEL_HASH), emptyChainId, "Empty chain ID should be stored");
         assertEq(resolver.chainName(emptyChainId), CHAIN_NAME, "Chain name should be stored");
 
         vm.stopPrank();
@@ -97,11 +97,11 @@ contract ChainResolverEdgeCasesTest is Test {
             longChainId[i] = bytes1(uint8(i % 256));
         }
 
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: longChainId}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: longChainId}));
 
         // Verify registration
-        assertEq(resolver.getOwner(LABEL_HASH), user1, "Owner should be set");
-        assertEq(resolver.chainId(LABEL_HASH), longChainId, "Long chain ID should be stored");
+        assertEq(resolver.getChainAdmin(LABEL_HASH), user1, "Owner should be set");
+        assertEq(resolver.interoperableAddress(LABEL_HASH), longChainId, "Long chain ID should be stored");
         assertEq(resolver.chainName(longChainId), CHAIN_NAME, "Chain name should be stored");
 
         vm.stopPrank();
@@ -111,7 +111,7 @@ contract ChainResolverEdgeCasesTest is Test {
 
     function test_005____resolve_____________________UnknownSelector() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         // Test resolve with unknown selector
@@ -167,7 +167,7 @@ contract ChainResolverEdgeCasesTest is Test {
 
     function test_007____bytesToAddress_______________RevertsOnInvalidLength() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -189,7 +189,7 @@ contract ChainResolverEdgeCasesTest is Test {
 
     function test_008____setAddr_____________________NonEthereumCoinType() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -217,7 +217,7 @@ contract ChainResolverEdgeCasesTest is Test {
 
     function test_009____startsWith__________________NoOverrideForDataKeysShorterThanPrefix() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -240,7 +240,7 @@ contract ChainResolverEdgeCasesTest is Test {
 
     function test_010____startsWith__________________NoOverrideForPrefixMismatch() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -263,14 +263,14 @@ contract ChainResolverEdgeCasesTest is Test {
 
     function test_011____bytesToAddress_______________ValidAddressConversion() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         vm.startPrank(user1);
 
         // Test bytesToAddress with valid data through setAddr
         address testAddr = address(0x1234567890123456789012345678901234567890);
-        resolver.setAddr(LABEL_HASH, testAddr);
+        resolver.setAddr(LABEL_HASH, 60, abi.encodePacked(testAddr));
 
         // Now resolve it to trigger bytesToAddress with valid data
         bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
@@ -288,7 +288,7 @@ contract ChainResolverEdgeCasesTest is Test {
 
     function test_012____authenticateCaller___________OwnerIsCaller() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         // Test _authenticateCaller when owner is the caller
@@ -304,7 +304,7 @@ contract ChainResolverEdgeCasesTest is Test {
 
     function test_013____resolve_____________________EmptyCoinTypeAddress() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         // Test resolve with ADDR_COINTYPE_SELECTOR when no address is set
@@ -320,7 +320,7 @@ contract ChainResolverEdgeCasesTest is Test {
 
     function test_014____resolve_____________________EmptyAddressRecord() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         // Test resolve with ADDR_SELECTOR when no address is set
@@ -338,7 +338,7 @@ contract ChainResolverEdgeCasesTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 

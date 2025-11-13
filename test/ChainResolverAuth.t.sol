@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.25;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
@@ -13,10 +13,13 @@ contract ChainResolverAuthTest is Test {
     address public user2 = address(0x3);
     address public attacker = address(0x999);
 
+    // Coin type constants
+    uint256 public constant ETHEREUM_COIN_TYPE = 60;
+
     // Test data - using 7930 chain ID format
     string public constant LABEL = "optimism";
     string public constant CHAIN_NAME = "optimism";
-    bytes public constant CHAIN_ID = hex"00010001010a00";
+    bytes public constant CHAIN_INTEROPERABLE_ADDRESS = hex"00010001010a00";
     bytes32 public constant LABEL_HASH = keccak256(bytes(LABEL));
 
     function setUp() public {
@@ -36,7 +39,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain legitimately
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
@@ -44,7 +47,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(attacker);
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, attacker));
-        resolver.register(IChainResolver.ChainData({label: "attacker-label", chainName: "attacker-label", owner: attacker, chainId: hex"0101"}));
+        resolver.register(IChainResolver.ChainData({label: "attacker-label", chainName: "attacker-label", owner: attacker, interoperableAddress: hex"0101"}));
 
         vm.stopPrank();
 
@@ -58,20 +61,20 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
         // Attacker tries to transfer ownership
         vm.startPrank(attacker);
 
-        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
-        resolver.setLabelOwner(LABEL_HASH, attacker);
+        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotChainOwner.selector, attacker, LABEL_HASH));
+        resolver.setChainAdmin(LABEL_HASH, attacker);
 
         vm.stopPrank();
 
         // Verify original ownership is intact
-        assertEq(resolver.getOwner(LABEL_HASH), user1, "Original owner should remain");
+        assertEq(resolver.getChainAdmin(LABEL_HASH), user1, "Original owner should remain");
 
         console.log("Successfully prevented unauthorized ownership transfer");
     }
@@ -80,15 +83,15 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
         // Attacker tries to set address records
         vm.startPrank(attacker);
 
-        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
-        resolver.setAddr(LABEL_HASH, attacker);
+        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotChainOwner.selector, attacker, LABEL_HASH));
+        resolver.setAddr(LABEL_HASH, ETHEREUM_COIN_TYPE, abi.encodePacked(attacker));
 
         vm.stopPrank();
 
@@ -99,14 +102,14 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
         // Attacker tries to set text records
         vm.startPrank(attacker);
 
-        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
+        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotChainOwner.selector, attacker, LABEL_HASH));
         resolver.setText(LABEL_HASH, "website", "https://hacked.com");
 
         vm.stopPrank();
@@ -121,14 +124,14 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
         // Attacker tries to set data records
         vm.startPrank(attacker);
 
-        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
+        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotChainOwner.selector, attacker, LABEL_HASH));
         resolver.setData(LABEL_HASH, "custom", hex"deadbeef");
 
         vm.stopPrank();
@@ -143,14 +146,14 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
         // Attacker tries to set content hash
         vm.startPrank(attacker);
 
-        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotAuthorized.selector, attacker, LABEL_HASH));
+        vm.expectRevert(abi.encodeWithSelector(IChainResolver.NotChainOwner.selector, attacker, LABEL_HASH));
         resolver.setContenthash(
             LABEL_HASH, hex"e30101701220deadbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
         );
@@ -161,51 +164,5 @@ contract ChainResolverAuthTest is Test {
         assertEq(resolver.getContenthash(LABEL_HASH), "", "No content hash should be set");
 
         console.log("Successfully prevented unauthorized content hash setting");
-    }
-
-    function test_007____setOperator_________________AuthorizationLogic() public {
-        vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
-
-        vm.stopPrank();
-
-        // Operator management scenarios (add/remove per-owner operators)
-        vm.startPrank(user1);
-
-        // Set multiple operators
-        resolver.setOperator(user2, true);
-        resolver.setOperator(attacker, true);
-        resolver.setOperator(address(this), true);
-
-        // Verify all are authorized
-        assertTrue(resolver.isAuthorized(LABEL_HASH, user2), "User2 should be authorized");
-        assertTrue(resolver.isAuthorized(LABEL_HASH, attacker), "Attacker should be authorized");
-        assertTrue(resolver.isAuthorized(LABEL_HASH, address(this)), "Contract should be authorized");
-
-        // Test operator interactions
-        vm.stopPrank();
-        vm.startPrank(user1);
-
-        // User1 removes attacker
-        resolver.setOperator(attacker, false);
-
-        // Assert label owner removed label authorization
-        assertFalse(resolver.isAuthorized(LABEL_HASH, attacker));
-        vm.stopPrank();
-
-        vm.startPrank(user2);
-
-        // User2 tries to set new operator (this works because setOperator is per-caller)
-        resolver.setOperator(address(0x777), true);
-        // But this doesn't make address(0x777) authorized for the label hash
-        assertFalse(
-            resolver.isAuthorized(LABEL_HASH, address(0x777)), "New operator should not be authorized for label hash"
-        );
-
-        vm.stopPrank();
-
-        console.log("Successfully handled operator management");
     }
 }

@@ -28,9 +28,15 @@ export async function parseArgs(
     const args = process.argv.slice(2); // Skip the first two arguments (node and script path)
     const parsedArgs = new Map<string, string>(); // Use a Map to store the parsed arguments
 
-    args.forEach((arg) => {
+    args.forEach((arg: string) => {
       // Split argument into key and value
       const [key, value] = arg.split("=");
+
+      if (!key) {
+        reject(new Error(`Argument key is required. Format key=value`));
+        return;
+      }
+
       const argKey = key.replace(/^--/, ""); // Remove leading '--' from argument name
 
       if (!value) {

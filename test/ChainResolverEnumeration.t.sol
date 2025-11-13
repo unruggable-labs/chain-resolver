@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.25;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
@@ -31,16 +31,16 @@ contract ChainResolverEnumerationTest is Test {
     function test_001____enumeration_____________________SingleInsertAndUpdate() public {
         vm.startPrank(admin);
         // First insert
-        resolver.register(IChainResolver.ChainData({label: "optimism", chainName: "Optimism", owner: user1, chainId: OP_ID}));
+        resolver.register(IChainResolver.ChainData({label: "optimism", chainName: "Optimism", owner: user1, interoperableAddress: OP_ID}));
         assertEq(resolver.chainCount(), 1, "chainCount should be 1 after first insert");
         // Verify index 0
-        (string memory lbl0, string memory name0) = resolver.getChainAtIndex(0);
+        (string memory lbl0, string memory name0, bytes memory i0) = resolver.getChainAtIndex(0);
         assertEq(lbl0, "optimism");
         assertEq(name0, "Optimism");
         // Update same label with new owner + name + id
-        resolver.register(IChainResolver.ChainData({label: "optimism", chainName: "OP Mainnet", owner: user2, chainId: OP_ID}));
+        resolver.register(IChainResolver.ChainData({label: "optimism", chainName: "OP Mainnet", owner: user2, interoperableAddress: OP_ID}));
         assertEq(resolver.chainCount(), 1, "chainCount should not increment on update");
-        (string memory lbl1, string memory name1) = resolver.getChainAtIndex(0);
+        (string memory lbl1, string memory name1, bytes memory i1) = resolver.getChainAtIndex(0);
         assertEq(lbl1, "optimism");
         assertEq(name1, "OP Mainnet");
         vm.stopPrank();
@@ -51,8 +51,8 @@ contract ChainResolverEnumerationTest is Test {
 
         // Build batch structs
         IChainResolver.ChainData[] memory items = new IChainResolver.ChainData[](2);
-        items[0] = IChainResolver.ChainData({label: "optimism", chainName: "Optimism", owner: user1, chainId: OP_ID});
-        items[1] = IChainResolver.ChainData({label: "arbitrum", chainName: "Arbitrum", owner: user2, chainId: ARB_ID});
+        items[0] = IChainResolver.ChainData({label: "optimism", chainName: "Optimism", owner: user1, interoperableAddress: OP_ID});
+        items[1] = IChainResolver.ChainData({label: "arbitrum", chainName: "Arbitrum", owner: user2, interoperableAddress: ARB_ID});
 
         // Register in a single batch
         resolver.batchRegister(items);
@@ -61,8 +61,8 @@ contract ChainResolverEnumerationTest is Test {
         assertEq(resolver.chainCount(), 2, "chainCount should equal number of unique labels");
 
         // Verify enumeration order matches insertion order
-        (string memory l0, string memory n0) = resolver.getChainAtIndex(0);
-        (string memory l1, string memory n1) = resolver.getChainAtIndex(1);
+        (string memory l0, string memory n0, bytes memory i0) = resolver.getChainAtIndex(0);
+        (string memory l1, string memory n1, bytes memory i1) = resolver.getChainAtIndex(1);
         assertEq(l0, "optimism");
         assertEq(n0, "Optimism");
         assertEq(l1, "arbitrum");
@@ -75,11 +75,11 @@ contract ChainResolverEnumerationTest is Test {
         vm.startPrank(admin);
 
         // Seed with a single entry
-        resolver.register(IChainResolver.ChainData({label: "optimism", chainName: "Optimism", owner: user1, chainId: OP_ID}));
+        resolver.register(IChainResolver.ChainData({label: "optimism", chainName: "Optimism", owner: user1, interoperableAddress: OP_ID}));
         vm.stopPrank();
 
         // Index 1 is out-of-bounds; expect revert
-        vm.expectRevert(IChainResolver.InvalidDataLength.selector);
+        vm.expectRevert(IChainResolver.IndexOutOfRange.selector);
         resolver.getChainAtIndex(1);
     }
 }

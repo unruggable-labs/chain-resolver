@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.25;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
@@ -35,7 +35,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -59,7 +59,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -97,7 +97,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -141,7 +141,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -162,7 +162,7 @@ contract ChainResolverDataFormatsTest is Test {
         coinTypes[3] = 999999; // Custom coin type
 
         // EVM examples: ETH via convenience, others via bytes
-        resolver.setAddr(LABEL_HASH, testAddresses[0]); // coinType 60
+        resolver.setAddr(LABEL_HASH, 60, abi.encodePacked(testAddresses[0])); // coinType 60
         resolver.setAddr(LABEL_HASH, coinTypes[1], abi.encodePacked(testAddresses[1]));
         resolver.setAddr(LABEL_HASH, coinTypes[2], abi.encodePacked(testAddresses[2]));
         resolver.setAddr(LABEL_HASH, coinTypes[3], abi.encodePacked(testAddresses[3]));
@@ -211,7 +211,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -285,16 +285,16 @@ contract ChainResolverDataFormatsTest is Test {
         // Register all test cases
         for (uint256 i = 0; i < testNames.length; i++) {
             bytes32 labelHash = keccak256(bytes(testNames[i]));
-            resolver.register(IChainResolver.ChainData({label: testNames[i], chainName: testNames[i], owner: testOwners[i], chainId: testChainIds[i]}));
+            resolver.register(IChainResolver.ChainData({label: testNames[i], chainName: testNames[i], owner: testOwners[i], interoperableAddress: testChainIds[i]}));
 
             // Verify registration
             assertEq(
-                resolver.getOwner(labelHash),
+                resolver.getChainAdmin(labelHash),
                 testOwners[i],
                 string(abi.encodePacked("Owner ", vm.toString(i), " should be set correctly"))
             );
             assertEq(
-                resolver.chainId(labelHash),
+                resolver.interoperableAddress(labelHash),
                 testChainIds[i],
                 string(abi.encodePacked("Chain ID ", vm.toString(i), " should be set correctly"))
             );
@@ -309,7 +309,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 

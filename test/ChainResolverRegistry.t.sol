@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.25;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
@@ -41,12 +41,12 @@ contract ChainResolverRegistryTest is Test {
         vm.startPrank(admin);
 
         // Register a chain (label and chain name)
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         // Verify registration
         assertEq(resolver.owner(), admin, "Admin should be contract owner");
-        assertEq(resolver.getOwner(LABEL_HASH), user1, "User1 should own the label");
-        assertEq(resolver.chainId(LABEL_HASH), CHAIN_ID, "Chain ID should be set correctly");
+        assertEq(resolver.getChainAdmin(LABEL_HASH), user1, "User1 should own the label");
+        assertEq(resolver.interoperableAddress(LABEL_HASH), CHAIN_ID, "Chain ID should be set correctly");
         assertEq(resolver.chainName(CHAIN_ID), CHAIN_NAME, "Chain name should be set correctly");
 
         vm.stopPrank();
@@ -59,15 +59,15 @@ contract ChainResolverRegistryTest is Test {
         vm.startPrank(admin);
 
         // Register a chain first time
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         // Try to register the same chain again - should succeed (overwrites existing registration)
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user2, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user2, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
         // Verify second registration overwrote the first
-        assertEq(resolver.getOwner(LABEL_HASH), user2, "Second owner should overwrite first");
+        assertEq(resolver.getChainAdmin(LABEL_HASH), user2, "Second owner should overwrite first");
 
         console.log("Correctly allowed duplicate chain registration (overwrite)");
     }
@@ -76,16 +76,16 @@ contract ChainResolverRegistryTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
         // User1 transfers ownership to user2
         vm.startPrank(user1);
-        resolver.setLabelOwner(LABEL_HASH, user2);
+        resolver.setChainAdmin(LABEL_HASH, user2);
 
         // Verify transfer
-        assertEq(resolver.getOwner(LABEL_HASH), user2, "User2 should now own the label");
+        assertEq(resolver.getChainAdmin(LABEL_HASH), user2, "User2 should now own the label");
 
         vm.stopPrank();
 
@@ -93,8 +93,8 @@ contract ChainResolverRegistryTest is Test {
         vm.startPrank(user2);
 
         // Test that new owner can perform authorized actions
-        resolver.setLabelOwner(LABEL_HASH, user1); // Transfer back to user1
-        assertEq(resolver.getOwner(LABEL_HASH), user1, "New owner should be able to transfer ownership");
+        resolver.setChainAdmin(LABEL_HASH, user1); // Transfer back to user1
+        assertEq(resolver.getChainAdmin(LABEL_HASH), user1, "New owner should be able to transfer ownership");
 
         vm.stopPrank();
 
@@ -110,23 +110,23 @@ contract ChainResolverRegistryTest is Test {
             label: "optimism",
             chainName: "optimism",
             owner: user1,
-            chainId: hex"000000010001010a00"
+            interoperableAddress: hex"000000010001010a00"
         });
         items[1] = IChainResolver.ChainData({
             label: "arbitrum",
             chainName: "arbitrum",
             owner: user2,
-            chainId: hex"000000010001016600"
+            interoperableAddress: hex"000000010001016600"
         });
 
         // Register batch
         resolver.batchRegister(items);
 
         // Verify registrations
-        assertEq(resolver.getOwner(keccak256(bytes("optimism"))), user1);
-        assertEq(resolver.getOwner(keccak256(bytes("arbitrum"))), user2);
-        assertEq(resolver.chainId(keccak256(bytes("optimism"))), items[0].chainId);
-        assertEq(resolver.chainId(keccak256(bytes("arbitrum"))), items[1].chainId);
+        assertEq(resolver.getChainAdmin(keccak256(bytes("optimism"))), user1);
+        assertEq(resolver.getChainAdmin(keccak256(bytes("arbitrum"))), user2);
+        assertEq(resolver.interoperableAddress(keccak256(bytes("optimism"))), items[0].interoperableAddress);
+        assertEq(resolver.interoperableAddress(keccak256(bytes("arbitrum"))), items[1].interoperableAddress);
 
         vm.stopPrank();
 
@@ -155,15 +155,15 @@ contract ChainResolverRegistryTest is Test {
             label: "optimism",
             chainName: "optimism",
             owner: user1,
-            chainId: hex"000000010001010a00"
+            interoperableAddress: hex"000000010001010a00"
         });
 
         // Register single item
         resolver.batchRegister(one);
 
         // Verify registration
-        assertEq(resolver.getOwner(keccak256(bytes("optimism"))), user1);
-        assertEq(resolver.chainId(keccak256(bytes("optimism"))), one[0].chainId);
+        assertEq(resolver.getChainAdmin(keccak256(bytes("optimism"))), user1);
+        assertEq(resolver.interoperableAddress(keccak256(bytes("optimism"))), one[0].interoperableAddress);
 
         vm.stopPrank();
 

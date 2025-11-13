@@ -16,15 +16,16 @@ import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol
 import {IChainResolver} from "./interfaces/IChainResolver.sol";
 
 contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
-    /// @notice Total number of registered chain labels
-    uint256 public chainCount;
 
     /**
-     * @notice Modifier to ensure only the label owner or authorized operator can call the function
+     * @notice Modifier to ensure only the chain owner can call the function
      * @param _labelhash The labelhash to check authorization for
      */
-    modifier onlyAuthorized(bytes32 _labelhash) {
-        _authenticateCaller(msg.sender, _labelhash);
+    modifier onlyChainOwner(bytes32 _labelhash) {
+        address _owner = chainData[_labelhash].owner;
+        if (_owner != _msgSender()) {
+            revert NotChainOwner(_msgSender(), _labelhash);
+        }
         _;
     }
 
@@ -39,22 +40,23 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     uint256 public constant ETHEREUM_COIN_TYPE = 60;
 
     // Text record key constants
-    string public constant CHAIN_ID_KEY = "chain-id";
-    string public constant CHAIN_NAME_KEY = "chain-name";
+    string public constant INTEROPERABLE_ADDRESS_KEY = "interoperable-address";
     string public constant CHAIN_NAME_PREFIX = "chain-name:";
+    bytes32 public constant REVERSE_LABELHASH = keccak256("reverse");
 
     // Chain data storage
-    mapping(bytes32 _labelhash => ChainData data) internal chainData;
-    mapping(bytes _chainId => string _label) internal labelById;
-    mapping(address _owner => mapping(address _operator => bool _isOperator)) internal operators;
+    mapping(bytes32 labelhash => ChainData data) internal chainData;
+    mapping(bytes interoperableAddress => string label) internal labelByInteroperableAddress;
 
-    // Storage for chains
-    bytes32[] private _chainLabelList;
-    mapping(bytes32 _labelhash => bool _isListed) private _listed;
+    // Discoverability
+    // Total number of registered chains
+    uint256 public chainCount;
+    // Known labelhashes
+    bytes32[] private labelhashList;
 
     // ENS record storage
     mapping(bytes32 labelhash => mapping(uint256 coinType => bytes value)) private addressRecords;
-    mapping(bytes32 labelhash => bytes contentHash) private contenthashRecords;
+    mapping(bytes32 labelhash => bytes contenthash) private contenthashRecords;
     mapping(bytes32 labelhash => mapping(string key => string value)) private textRecords;
     mapping(bytes32 labelhash => mapping(string key => bytes data)) private dataRecords;
 
@@ -64,6 +66,15 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      */
     constructor(address _owner) Ownable(_owner) {}
 
+    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
+        return interfaceId == type(IERC165).interfaceId || interfaceId == type(IExtendedResolver).interfaceId
+            || interfaceId == type(IChainResolver).interfaceId;
+    }
+
+    //////
+    /// RESOLUTION
+    //////
+
     /**
      * @notice Resolve data for a DNS-encoded name using ENSIP-10 interface.
      * @param name The DNS-encoded name.
@@ -71,38 +82,38 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @return The resolved data based on the method selector.
      */
     function resolve(bytes calldata name, bytes calldata data) external view override returns (bytes memory) {
-        // Extract the first label from the DNS-encoded name
+        
+        // Extract the first labelhash from the DNS-encoded name
         (bytes32 labelhash,,,) = NameCoder.readLabel(name, 0, true);
 
         // Get the method selector (first 4 bytes)
         bytes4 selector = bytes4(data);
 
         if (selector == ADDR_SELECTOR) {
-            bytes memory v = addressRecords[labelhash][ETHEREUM_COIN_TYPE];
+            // addr(bytes32)
+            bytes memory v = _getAddr(labelhash, ETHEREUM_COIN_TYPE);            
             if (v.length == 0) {
-                return abi.encode(payable(0));
+                return abi.encode(address(0));
             }
             return abi.encode(bytesToAddress(v));
         } else if (selector == ADDR_COINTYPE_SELECTOR) {
+            // addr(bytes32,uint256)
             (, uint256 coinType) = abi.decode(data[4:], (bytes32, uint256));
-            bytes memory a = addressRecords[labelhash][coinType];
+            bytes memory a = _getAddr(labelhash, coinType);
             return abi.encode(a);
         } else if (selector == CONTENTHASH_SELECTOR) {
-            // contenthash(bytes32) - return content hash
-            bytes memory contentHash = contenthashRecords[labelhash];
-            return abi.encode(contentHash);
+            // contenthash(bytes32)
+            bytes memory contenthash = _getContenthash(labelhash);
+            return abi.encode(contenthash);
         } else if (selector == TEXT_SELECTOR) {
-            // text(bytes32,string) - decode node + key and return text value
-            (bytes32 node, string memory key) = abi.decode(data[4:], (bytes32, string));
-            // Allow reverse chain-name: lookups only when `name` is `reverse.<namespace>.eth`
-            // and `node == namehash(name)` per ENSIP-10.
-            bool isReverseContext = isReverseNode(name, node);
-            string memory value = _getTextWithOverrides(labelhash, key, isReverseContext);
+            // text(bytes32,string)
+            (, string memory key) = abi.decode(data[4:], (bytes32, string));
+            string memory value = _getText(labelhash, key);
             return abi.encode(value);
         } else if (selector == DATA_SELECTOR) {
-            // data(bytes32,string) - decode key and return data value
+            // data(bytes32,string)
             (, string memory keyStr) = abi.decode(data[4:], (bytes32, string));
-            bytes memory dataValue = _getDataWithOverrides(labelhash, keyStr);
+            bytes memory dataValue = _getData(labelhash, keyStr);
             return abi.encode(dataValue);
         }
 
@@ -110,108 +121,39 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         return abi.encode("");
     }
 
-    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
-        return interfaceId == type(IERC165).interfaceId || interfaceId == type(IExtendedResolver).interfaceId
-            || interfaceId == type(IChainResolver).interfaceId;
-    }
+    //////
+    /// SETTERS
+    //////
 
-    // ============ Chain Registry Functions ============
+    function setChainAdmin(bytes32 _labelhash, address _owner) external onlyChainOwner(_labelhash) {
 
-    /**
-     * @inheritdoc IChainResolver
-     */
-    function chainName(bytes calldata _chainIdBytes) external view returns (string memory _chainName) {
-        _chainName = labelById[_chainIdBytes];
-    }
-
-    /**
-     * @inheritdoc IChainResolver
-     */
-    function chainId(bytes32 _labelhash) external view returns (bytes memory _chainId) {
-        _chainId = chainData[_labelhash].chainId;
-    }
-
-    /**
-     * @inheritdoc IChainResolver
-     */
-    function register(ChainData calldata data) external onlyOwner {
-        _register(data.label, data.chainName, data.owner, data.chainId);
-    }
-
-    /**
-     * @inheritdoc IChainResolver
-     */
-    function batchRegister(ChainData[] calldata items) external onlyOwner {
-        uint256 _length = items.length;
-        for (uint256 i = 0; i < _length; i++) {
-            _register(items[i].label, items[i].chainName, items[i].owner, items[i].chainId);
+        if (_labelhash == REVERSE_LABELHASH) {
+            revert ReverseNodeOwnershipBlock();
         }
-    }
 
-    /**
-     * @inheritdoc IChainResolver
-     */
-    function setLabelOwner(bytes32 _labelhash, address _owner) external onlyAuthorized(_labelhash) {
         chainData[_labelhash].owner = _owner;
-        emit LabelOwnerSet(_labelhash, _owner);
+        emit ChainAdminSet(_labelhash, _owner);
     }
 
     /**
-     * @inheritdoc IChainResolver
-     */
-    function setOperator(address _operator, bool _isOperator) external {
-        operators[msg.sender][_operator] = _isOperator;
-        emit OperatorSet(msg.sender, _operator, _isOperator);
-    }
-
-    /**
-     * @inheritdoc IChainResolver
-     */
-    function isAuthorized(bytes32 _labelhash, address _address) external view returns (bool _authorized) {
-        address _owner = chainData[_labelhash].owner;
-        return _owner == _address || operators[_owner][_address];
-    }
-
-    // ============ ENS Resolver Functions ============
-
-    /**
-     * @notice Set the ETH address (coin type 60) for a labelhash.
-     * @param _labelhash The labelhash to update.
-     * @param _addr The EVM address to set.
-     */
-    function setAddr(bytes32 _labelhash, address _addr) external onlyAuthorized(_labelhash) {
-        addressRecords[_labelhash][ETHEREUM_COIN_TYPE] = abi.encodePacked(_addr);
-        emit AddrChanged(_labelhash, _addr);
-    }
-
-    /**
-     * @notice Set a multi-coin address for a given coin type.
+     * @notice EXTERNAL Set the address for a given coinType.
      * @param _labelhash The labelhash to update.
      * @param _coinType The coin type (per ENSIP-11).
      * @param _value The raw address bytes encoded for that coin type.
      */
     function setAddr(bytes32 _labelhash, uint256 _coinType, bytes calldata _value)
         external
-        onlyAuthorized(_labelhash)
+        onlyChainOwner(_labelhash)
     {
         addressRecords[_labelhash][_coinType] = _value;
         emit AddressChanged(_labelhash, _coinType, _value);
         if (_coinType == ETHEREUM_COIN_TYPE) {
             emit AddrChanged(_labelhash, bytesToAddress(_value));
-        }
-    }
-
-    /**
-     * @notice Set the content hash for a labelhash.
-     * @param _labelhash The labelhash to update.
-     * @param _hash The content hash to set.
-     */
-    function setContenthash(bytes32 _labelhash, bytes calldata _hash) external onlyAuthorized(_labelhash) {
-        contenthashRecords[_labelhash] = _hash;
-    }
+        }    }
 
     /**
      * @notice Set a text record for a labelhash.
+     * @dev EXTERNAL - blocks immutable keys
      * @param _labelhash The labelhash to update.
      * @param _key The text record key.
      * @param _value The text record value.
@@ -219,23 +161,87 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      */
     function setText(bytes32 _labelhash, string calldata _key, string calldata _value)
         external
-        onlyAuthorized(_labelhash)
+        onlyChainOwner(_labelhash)
+    {
+
+        if (keccak256(bytes(_key)) == keccak256(bytes(INTEROPERABLE_ADDRESS_KEY))) {
+            revert ImmutableTextKey(_labelhash, _key);
+        }
+
+        _setText(_labelhash, _key, _value);
+    }
+
+    /**
+     * @notice INTERNAL Set a text record for a labelhash.
+     * @param _labelhash The labelhash to update.
+     * @param _key The text record key.
+     * @param _value The text record value.
+     * @dev Note: "chain-id" text record will be stored but not used - resolve() overrides it with internal registry value.
+     */
+    function _setText(bytes32 _labelhash, string memory _key, string memory _value)
+        internal
     {
         textRecords[_labelhash][_key] = _value;
+        //emit TextChanged(_labelhash, _key, keccak256(_key), keccak256(_value));
+    }
+
+    /**
+     * @notice Set the contenthash for a labelhash.
+     * @param _labelhash The labelhash to update.
+     * @param _contenthash The contenthash to set.
+     */
+    function setContenthash(bytes32 _labelhash, bytes calldata _contenthash) 
+        external 
+        onlyChainOwner(_labelhash) 
+    {
+        contenthashRecords[_labelhash] = _contenthash;
     }
 
     /**
      * @notice Set a data record for a labelhash.
+     * @dev EXTERNAL - blocks immutable keys
      * @param _labelhash The labelhash to update.
      * @param _key The data record key.
      * @param _data The data record value.
      */
     function setData(bytes32 _labelhash, string calldata _key, bytes calldata _data)
         external
-        onlyAuthorized(_labelhash)
+        onlyChainOwner(_labelhash)
+    {
+        if (keccak256(bytes(_key)) == keccak256(bytes(INTEROPERABLE_ADDRESS_KEY))) {
+            revert ImmutableDataKey(_labelhash, _key);
+        }
+
+        _setData(_labelhash, _key, _data);
+    }
+
+    /**
+     * @notice INTERNAL Set a data record for a labelhash.
+     * @param _labelhash The labelhash to update.
+     * @param _key The data record key.
+     * @param _data The data record value.
+     */
+    function _setData(bytes32 _labelhash, string memory _key, bytes memory _data)
+        internal
     {
         dataRecords[_labelhash][_key] = _data;
-        emit DataChanged(_labelhash, keccak256(bytes(_key)), keccak256(_data));
+        emit DataChanged(_labelhash, _key, keccak256(bytes(_key)), keccak256(_data));
+    }
+
+    //////
+    /// GETTERS
+    //////
+
+    function chainLabel(bytes calldata _interoperableAddress) external view returns (string memory) {
+        return _getText(REVERSE_LABELHASH, concat(CHAIN_NAME_PREFIX, _interoperableAddress));
+    }
+
+    function chainName(bytes calldata _interoperableAddress) external view returns (string memory) {
+        return chainData[keccak256(bytes(labelByInteroperableAddress[_interoperableAddress]))].chainName;
+    }
+
+    function interoperableAddress(bytes32 _labelhash) external view returns (bytes memory) {
+        return _getData(_labelhash, INTEROPERABLE_ADDRESS_KEY);
     }
 
     /**
@@ -245,16 +251,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @return The address for this label and coin type.
      */
     function getAddr(bytes32 _labelhash, uint256 _coinType) external view returns (bytes memory) {
-        return addressRecords[_labelhash][_coinType];
-    }
-
-    /**
-     * @notice Get the content hash for a labelhash.
-     * @param _labelhash The labelhash to query.
-     * @return The content hash for this label.
-     */
-    function getContenthash(bytes32 _labelhash) external view returns (bytes memory) {
-        return contenthashRecords[_labelhash];
+        return _getAddr(_labelhash, _coinType);
     }
 
     /**
@@ -264,7 +261,16 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @return The text record value (with special handling for chain-id and chain-name:).
      */
     function getText(bytes32 _labelhash, string calldata _key) external view returns (string memory) {
-        return _getTextWithOverrides(_labelhash, _key, false);
+        return _getText(_labelhash, _key);
+    }
+
+    /**
+     * @notice Get the content hash for a labelhash.
+     * @param _labelhash The labelhash to query.
+     * @return The content hash for this label.
+     */
+    function getContenthash(bytes32 _labelhash) external view returns (bytes memory) {
+        return _getContenthash(_labelhash);
     }
 
     /**
@@ -274,195 +280,153 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @return The data record value (with special handling for chain-id).
      */
     function getData(bytes32 _labelhash, string calldata _key) external view returns (bytes memory) {
-        return _getDataWithOverrides(_labelhash, _key);
+        return _getData(_labelhash, _key);
     }
 
     /**
-     * @notice Get the owner of a labelhash.
+     * @notice Get the admin for a chain
      * @param _labelhash The labelhash to query.
      * @return The owner address.
      */
-    function getOwner(bytes32 _labelhash) external view returns (address) {
+    function getChainAdmin(bytes32 _labelhash) external view returns (address) {
         return chainData[_labelhash].owner;
     }
 
-    // ============ Utility Functions ============
+    //////
+    /// REGISTRATION
+    //////
+
+    function register(ChainData calldata data) external onlyOwner {
+        _register(data.label, data.chainName, data.owner, data.interoperableAddress);
+    }
+
+    function batchRegister(ChainData[] calldata items) external onlyOwner {
+        uint256 _length = items.length;
+        for (uint256 i = 0; i < _length; i++) {
+            _register(items[i].label, items[i].chainName, items[i].owner, items[i].interoperableAddress);
+        }
+    }
 
     /**
-     * @notice Internal helper function to register a single chain with label + chain name
+     * @notice Internal helper function to register an individual chain
      * @param _label The short chain label (e.g., "optimism")
      * @param _chainName The chain name (e.g., "Optimism")
      * @param _owner The owner address
-     * @param _chainId The chain ID (ERC-7930 bytes)
+     * @param _interoperableAddress The Interoperable Address (ERC-7930)
      */
-    function _register(string calldata _label, string calldata _chainName, address _owner, bytes calldata _chainId)
+    function _register(string calldata _label, string calldata _chainName, address _owner, bytes calldata _interoperableAddress)
         internal
     {
         bytes32 _labelhash = keccak256(bytes(_label));
 
-        chainData[_labelhash] = ChainData({
-            label: _label,
-            chainName: _chainName,
-            owner: _owner,
-            chainId: _chainId
-        });
-        labelById[_chainId] = _label;
+        bool isUpdate = chainData[_labelhash].owner != address(0);
 
-        if (!_listed[_labelhash]) {
-            _listed[_labelhash] = true;
-            _chainLabelList.push(_labelhash);
+        chainData[_labelhash].chainName = _chainName;
+        chainData[_labelhash].owner = _owner;
+
+        _setData(_labelhash, INTEROPERABLE_ADDRESS_KEY, _interoperableAddress);
+        _setText(REVERSE_LABELHASH, concat(CHAIN_NAME_PREFIX, _interoperableAddress), _label);
+
+        // Map the Interoperable Address back to the chain label (for reverse resolution)
+        labelByInteroperableAddress[_interoperableAddress] = _label;
+
+        if (!isUpdate) {
+            labelhashList.push(_labelhash);
             unchecked {
                 chainCount += 1;
             }
         }
 
-        emit LabelOwnerSet(_labelhash, _owner);
-        emit RecordSet(_labelhash, _chainId, _chainName);
+        emit ChainAdminSet(_labelhash, _owner);
+        emit ChainRegistered(_labelhash, _chainName, _interoperableAddress);
     }
+
+    //////
+    /// DISCOVERABILITY
+    //////
 
     /**
      * @notice Return the chain label and chain name at a given index.
      * @param _index The index in the chain list
      * @return _label The short chain label (e.g., "optimism")
      * @return _chainName The chain name (e.g., "Optimism")
+     * @return _interoperableAddress The Interoperable Addres (ERC-7930)
      */
     function getChainAtIndex(uint256 _index)
         external
         view
-        returns (string memory _label, string memory _chainName)
+        returns (string memory _label, string memory _chainName, bytes memory _interoperableAddress)
     {
-        if (_index >= _chainLabelList.length) revert InvalidDataLength();
-        bytes32 labelhash = _chainLabelList[_index];
-        _label = chainData[labelhash].label;
+        if (_index >= labelhashList.length) revert IndexOutOfRange();
+        bytes32 labelhash = labelhashList[_index];
         _chainName = chainData[labelhash].chainName;
+        _interoperableAddress = _getData(labelhash, INTEROPERABLE_ADDRESS_KEY);
+        _label = _getText(REVERSE_LABELHASH, concat(CHAIN_NAME_PREFIX, _interoperableAddress));
     }
 
+    //////
+    /// INTERNAL Getters
+    //////
+
     /**
-     * @notice Check if bytes starts with a prefix
-     * @param data The bytes to check
-     * @param prefix The prefix to look for
-     * @return True if data starts with prefix
+     * @notice INTERNAL function for getting address records for a specific coin type.
+     * @param _labelhash The labelhash to query.
+     * @param _coinType The coin type (default: 60 for Ethereum).
+     * @return The address for this label and coin type.
      */
-    function _startsWith(bytes memory data, bytes memory prefix) internal pure returns (bool) {
-        if (data.length < prefix.length) return false;
-        for (uint256 i = 0; i < prefix.length; i++) {
-            if (data[i] != prefix[i]) return false;
-        }
-        return true;
+    function _getAddr(bytes32 _labelhash, uint256 _coinType) internal view returns (bytes memory) {
+        return addressRecords[_labelhash][_coinType];
     }
 
     /**
-     * @notice Extract substring from string
-     * @param str The string to extract from
-     * @param start The start index
-     * @param end The end index
-     * @return The extracted substring
-     */
-    function _substring(string memory str, uint256 start, uint256 end) internal pure returns (string memory) {
-        bytes memory strBytes = bytes(str);
-        bytes memory result = new bytes(end - start);
-        for (uint256 i = start; i < end; i++) {
-            result[i - start] = strBytes[i];
-        }
-        return string(result);
-    }
-
-    /**
-     * @notice Internal function to handle text record keys with overrides
+     * @notice INTERNAL function for getting text records
      * @param _labelhash The labelhash to query
      * @param _key The text record key
-     * @return The text record value (with overrides for chain-id and chain-name:)
+     * @return The text record value
      */
-    function _getTextWithOverrides(bytes32 _labelhash, string memory _key, bool _reverseContext)
+    function _getText(bytes32 _labelhash, string memory _key)
         internal
         view
         returns (string memory)
     {
-        // Special case for "chain-id" text record
-        // When client requests text record with key "chain-id", return the chain's ERC-7930 identifier as hex string
-        // Note: Resolving ERC-7930 chain IDs via data record (raw bytes) is preferred, but text record is included for compatibility with ENSIP-5
-        if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_ID_KEY))) {
-            // Get chain ID bytes from internal registry and encode as hex string
-            bytes memory chainIdBytes = chainData[_labelhash].chainId;
-            return HexUtils.bytesToHex(chainIdBytes);
-        }
-
-        // Forward chain name: "chain-name" returns the canonical chain name for this label
-        if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_NAME_KEY))) {
-            return chainData[_labelhash].chainName;
-        }
-
-        // Check if key starts with "chain-name:" prefix (reverse resolution)
-        // This enables reverse lookup: given an ERC-7930 chain ID, find the chain label
-        // Format: "chain-name:<ERC-7930-hex-string>" (no 0x prefix)
-        bytes memory keyBytes = bytes(_key);
-        bytes memory keyPrefixBytes = bytes(CHAIN_NAME_PREFIX);
-        if (_startsWith(keyBytes, keyPrefixBytes)) {
-            // Only allow reverse mapping when resolving under reverse.<namespace>.eth
-            if (!_reverseContext) {
-                return textRecords[_labelhash][_key];
-            }
-            // Extract the chain ID hex string from after the "chain-name:" prefix
-            // Example: "chain-name:000000010001010a00" -> "000000010001010a00"
-            string memory chainIdPart = _substring(_key, keyPrefixBytes.length, keyBytes.length);
-            // Convert hex string to bytes for lookup in labelById mapping
-            (bytes memory chainIdBytes,) = HexUtils.hexToBytes(bytes(chainIdPart), 0, bytes(chainIdPart).length);
-            // Return the chain label associated with this chain ID
-            return labelById[chainIdBytes];
-        }
-
-        // Default: return stored text record
-        // For all other keys, return the value stored in the textRecords mapping
         return textRecords[_labelhash][_key];
     }
 
     /**
-     * @notice Internal function to handle data record keys with overrides
+     * @notice INTERNAL function for getting a contenthash
+     * @param _labelhash The labelhash to query
+     * @return The contenthash value
+     */
+    function _getContenthash(bytes32 _labelhash)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return contenthashRecords[_labelhash];
+    }
+
+    /**
+     * @notice INTERNAL function to handle data record keys with overrides
      * @param _labelhash The labelhash to query
      * @param _key The data record key
      * @return The data record value (with override for chain-id)
      */
-    function _getDataWithOverrides(bytes32 _labelhash, string memory _key) internal view returns (bytes memory) {
-        // Special case for "chain-id" data record: return raw ERC-7930 bytes
-        if (keccak256(abi.encodePacked(_key)) == keccak256(abi.encodePacked(CHAIN_ID_KEY))) {
-            return chainData[_labelhash].chainId;
-        }
-
-        // Default: return stored data record
+    function _getData(bytes32 _labelhash, string memory _key) internal view returns (bytes memory) {
         return dataRecords[_labelhash][_key];
     }
 
+    //////
+    /// HELPERS
+    //////
+
     /**
-     * @notice Validates node-bound reverse per ENSIP-10 using full name.
-     * @param name DNS-encoded `reverse.<namespace>.eth` provided to `resolve`.
-     * @param node ENS node passed to `text(node, key)`; must equal `namehash(name)`.
-     * @return True if `name` has exactly three labels (reverse.*.eth) and `node` matches.
+     * @notice Concatenates a string with bytes into a single string.
+     * @param _str The string prefix.
+     * @param _data The bytes to append.
+     * @return The concatenated string.
      */
-    function isReverseNode(bytes memory name, bytes32 node) internal pure returns (bool) {
-        if (node == bytes32(0)) return false;
-
-        uint256 offset = 0;
-        bytes32 labelHash;
-        uint8 labelLen;
-
-        // 1st label: reverse
-        (labelHash, offset, labelLen,) = NameCoder.readLabel(name, 0, true);
-        if (labelLen == 0 || labelHash != keccak256("reverse")) return false;
-
-        // 2nd label: <namespace>
-        (, offset, labelLen,) = NameCoder.readLabel(name, offset, true);
-        if (labelLen == 0) return false;
-
-        // 3rd label: eth
-        (labelHash, offset, labelLen,) = NameCoder.readLabel(name, offset, true);
-        if (labelLen == 0 || labelHash != keccak256("eth")) return false;
-
-        // Next must be root; readLabel will revert on junk-at-end
-        (,, labelLen,) = NameCoder.readLabel(name, offset, true);
-        if (labelLen != 0) return false;
-
-        // Bind node to full name
-        return NameCoder.namehash(name, 0) == node;
+    function concat(string memory _str, bytes memory _data) internal pure returns (string memory) {
+        return string(abi.encodePacked(_str, _data));
     }
 
     /**
@@ -475,18 +439,6 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         require(b.length == 20);
         assembly {
             a := div(mload(add(b, 32)), exp(256, 12))
-        }
-    }
-
-    /**
-     * @notice Authenticates the caller for a given labelhash.
-     * @param _caller The address to check.
-     * @param _labelhash The labelhash to check.
-     */
-    function _authenticateCaller(address _caller, bytes32 _labelhash) internal view {
-        address _owner = chainData[_labelhash].owner;
-        if (_owner != _caller && !operators[_owner][_caller]) {
-            revert NotAuthorized(_caller, _labelhash);
         }
     }
 }

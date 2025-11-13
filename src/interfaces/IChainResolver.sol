@@ -1,87 +1,84 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.30;
+pragma solidity ^0.8.25;
 
 /**
  * @title IChainResolver
  * @author @unruggable-labs, @defi-wonderland
- * @notice Interface for the ChainResolver that manages chain data using labelhashes
+ * @notice Interface for the ChainResolver contract specified in ERC-7828
  * @dev Source: https://github.com/unruggable-labs/chain-resolver/tree/main/src/interfaces/IChainResolver.sol
  */
 interface IChainResolver {
-    /// @notice Per-labelhash chain data
-    struct ChainData {
-        string label; // canonical lowercase label
-        string chainName; // human-readable chain name
-        address owner; // label owner
-        bytes chainId; // ERC-7930 identifier bytes
-    }
-    /// @notice Events
-    event RecordSet(bytes32 indexed _labelhash, bytes _chainId, string _chainName);
-    event LabelOwnerSet(bytes32 indexed _labelhash, address _owner);
-    event OperatorSet(address indexed _owner, address indexed _operator, bool _isOperator);
-    event AddrChanged(bytes32 indexed _labelhash, address _owner);
-    event AddressChanged(bytes32 indexed node, uint256 coinType, bytes newAddress);
-    event DataChanged(bytes32 node, bytes32 indexed keyHash, bytes32 indexed dataHash);
 
-    /// @notice Errors
-    error InvalidDataLength();
-    error NotAuthorized(address _caller, bytes32 _labelhash);
+    // Container for chain data
+    struct ChainData {
+        string label; // short chain label (e.g., "optimism")
+        string chainName; // human-readable formatted chain name
+        address owner; // label owner
+        bytes interoperableAddress; // ERC-7930 Interoperable Address
+    }
+
+    // Events
+    event ChainRegistered(bytes32 indexed _labelhash, string _chainName, bytes _chainId);
+    event ChainAdminSet(bytes32 indexed _labelhash, address _owner);
+
+    // ENSIP-1
+    event AddrChanged(bytes32 indexed _labelhash, address _owner);
+    // ENSIP-9
+    event AddressChanged(bytes32 indexed node, uint256 coinType, bytes newAddress);
+    // ENSIP-24
+    event DataChanged(bytes32 node, string key, bytes32 indexed keyHash, bytes32 indexed dataHash);
+
+    // Errors
+    // There is no registered chain at that index
+    error IndexOutOfRange();
+    // Only the chain owner can edit associated records
+    error NotChainOwner(address _caller, bytes32 _labelhash);
+    // Some keys are immutable, e.g, the 'interoperable-address' data key, and the 
+    error ImmutableDataKey(bytes32 _labelhash, string key);
+    error ImmutableTextKey(bytes32 _labelhash, string key);
+
+    // The `reverse.<namespace>.eth` node is special and can not be owned
+    error ReverseNodeOwnershipBlock();
 
     /// @notice Functions
-    /**
-     * @notice Return the canonical chain label for a given ERC-7930 chain identifier.
-     * @dev
-     * - Despite the function name `chainName(...)`, this returns the canonical label (e.g., "optimism").
-     * - Rationale: the label is the identifier used in our ENS context and is also commonly referred to as
-     *   a "chain name" in interop contexts. We keep the function name for compatibility while returning the label.
-     * - Maps `chainIdBytes (ERC-7930)` → `label` set at registration.
-     * @param _chainIdBytes The ERC-7930 chain identifier bytes.
-     * @return _chainName The chain label (e.g., "optimism").
-     */
-    function chainName(bytes calldata _chainIdBytes) external view returns (string memory _chainName);
 
     /**
-     * @notice Return the ERC-7930 chain identifier bytes for a given labelhash.
+     * @notice Return the canonical chain label for a given ERC-7930 Interoperable Address.
+     * @param _interoperableAddress The ERC-7930 Interoperable Address.
+     * @return _chainLabel The chain label (e.g., "optimism").
+     */
+    function chainLabel(bytes calldata _interoperableAddress) external view returns (string memory _chainLabel);
+
+    /**
+     * @notice Return the human readable chain name for a given ERC-7930 Interoperable Address.
+     * @param _interoperableAddress The ERC-7930 Interoperable Address.
+     * @return _chainName The chain name (e.g., "Optimism").
+     */
+    function chainName(bytes calldata _interoperableAddress) external view returns (string memory _chainName);
+
+    /**
+     * @notice Return the ERC-7930 Interoperable Address bytes for a given labelhash.
      * @param _labelhash The ENS labelhash `keccak256(bytes(label))`.
-     * @return _chainId The ERC-7930 chain identifier bytes.
+     * @return _interoperableAddress The ERC-7930 Interoperable Address.
      */
-    function chainId(bytes32 _labelhash) external view returns (bytes memory _chainId);
+    function interoperableAddress(bytes32 _labelhash) external view returns (bytes memory _interoperableAddress);
 
     /**
-     * @notice Register or update a chain entry with explicit label and chain name (owner-only).
-     * @dev
-     * - Emits `LabelOwnerSet` and `RecordSet` on insert/update.
-     * - Re-registering an existing label updates owner, chainId, and chainName.
-     * - Enumeration: `chainCount` increments only on first insert.
-     * @param data The ChainData struct
+     * @notice Register or update a chain entry
+     * @param _data The ChainData struct
      */
-    function register(ChainData calldata data) external;
+    function register(ChainData calldata _data) external;
 
     /**
-     * @notice Batch register or update multiple chains (owner-only).
-     * @param items Array of ChainData structs.
+     * @notice Batch register or update multiple chains.
+     * @param _items Array of ChainData structs.
      */
-    function batchRegister(ChainData[] calldata items) external;
+    function batchRegister(ChainData[] calldata _items) external;
 
     /**
-     * @notice Set or transfer the owner of a label. Callable by current owner or an approved operator.
+     * @notice Set or transfer the administrator of a label (chain).
      * @param _labelhash The ENS labelhash to update.
      * @param _owner The new owner address.
      */
-    function setLabelOwner(bytes32 _labelhash, address _owner) external;
-
-    /**
-     * @notice Grant or revoke operator approval scoped to `msg.sender`.
-     * @param _operator The operator address.
-     * @param _isOperator True to grant approval; false to revoke.
-     */
-    function setOperator(address _operator, bool _isOperator) external;
-
-    /**
-     * @notice Check whether an address is authorized to manage a label.
-     * @param _labelhash The labelhash to check.
-     * @param _address The address to test.
-     * @return _authorized True if `_address` is the owner or an approved operator for the owner.
-     */
-    function isAuthorized(bytes32 _labelhash, address _address) external view returns (bool _authorized);
+    function setChainAdmin(bytes32 _labelhash, address _owner) external;
 }

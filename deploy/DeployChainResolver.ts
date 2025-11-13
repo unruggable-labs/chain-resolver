@@ -14,66 +14,103 @@ import {
 import { init } from "./libs/init.ts";
 import { isAddress } from "ethers";
 
+// The contract we are deploying
+const CONTRACT_NAME = "ChainResolver";
+
 // Initialize deployment
-const { chainId, privateKey } = await init();
+const { chainInfo, privateKey } = await init();
 
 // Launch blocksmith
 const { deployerWallet, smith, rl } = await initSmith(
-  typeof chainId === "number" ? chainId : Number(chainId),
+  chainInfo.id,
   privateKey
 );
+
+if (!deployerWallet || !deployerWallet.provider) {
+  throw Error("No valid deployment wallet");
+}
 
 let resolverAddress: string | undefined;
 
 // Try to reuse existing deployment
 try {
-  const existingResolver = await loadDeployment(chainId, "ChainResolver");
-  const found = existingResolver.target as string;
-  const code = await deployerWallet.provider.getCode(found);
+  const existingResolver = await loadDeployment(chainInfo.id, CONTRACT_NAME);
+  const deployedAddress = existingResolver.target as string;
+
+  const code = await deployerWallet.provider.getCode(deployedAddress);
   if (code && code !== "0x") {
     const useExisting = await promptContinueOrExit(
       rl,
-      `ChainResolver found at ${found}. Use this? (y/n)`
+      `${CONTRACT_NAME} found at ${deployedAddress}. Use this? (y/n)`
     );
     if (useExisting) {
-      resolverAddress = found;
+      resolverAddress = deployedAddress;
     }
   }
 } catch {}
 
 if (!resolverAddress) {
-  const shouldDeploy = await promptContinueOrExit(rl, "Deploy ChainResolver? (y/n)");
+
+  const shouldDeploy = await promptContinueOrExit(
+    rl, 
+    `Deploy ${CONTRACT_NAME} ? (y/n)`
+  );
+
   if (shouldDeploy) {
+
     const defaultOwner = deployerWallet.address;
-    const ownerIn = (await askQuestion(rl, `Owner address [default ${defaultOwner}]: `)).trim();
-    // Treat empty, 'y', or 'yes' as accept default; otherwise validate address
     let owner = defaultOwner;
-    if (ownerIn && !/^y(es)?$/i.test(ownerIn)) {
-      owner = isAddress(ownerIn) ? ownerIn : defaultOwner;
-      if (owner === defaultOwner) {
-        console.log(`[Warn] Invalid owner input '${ownerIn}'. Using default ${defaultOwner}`);
+
+    const useDefaultInput = (await askQuestion(
+      rl, 
+      `The owner of the deployed contract will be: ${defaultOwner}. Is this correct?`
+    )).trim();
+
+    if (/^y(es)?$/i.test(useDefaultInput)) {
+
+      // do nothing
+
+    } else {
+
+      const ownerAddressInput = (await askQuestion(
+        rl, 
+        `Enter the address that should own this contract: `
+      )).trim();
+
+      if (!isAddress(ownerAddressInput)) {
+        throw Error("Invalid address input")
       }
+
+      owner = ownerAddressInput;
     }
 
     const args: any[] = [owner];
     const libs = {};
+    const deploymentPrefix = "[Resolver]";
+
     const { contract, already } = await deployContract(
       smith,
       deployerWallet,
-      "ChainResolver",
+      CONTRACT_NAME,
       args,
       libs,
-      "[Resolver]"
+      deploymentPrefix
     );
+
+    // If the contract has already been deployed, blow up if different constructor args were used
     if (already) constructorCheck(contract.constructorArgs, args);
     resolverAddress = contract.target as string;
 
-    const shouldVerify = await promptContinueOrExit(rl, "Verify ChainResolver? (y/n)");
+    const shouldVerify = await promptContinueOrExit(
+      rl, 
+      `Verify ${CONTRACT_NAME}? (y/n)`
+    );
+
     if (shouldVerify) {
       await verifyContract(
-        chainId,
+        chainInfo.id,
         contract,
-        "ChainResolver",
+        CONTRACT_NAME,
         contract.constructorArgs,
         libs,
         smith
@@ -83,6 +120,6 @@ if (!resolverAddress) {
 }
 
 console.log("\n=== Deployment Summary ===");
-console.log(`Resolver:        ${resolverAddress ?? "(none)"}`);
+console.log(`${CONTRACT_NAME}: ${resolverAddress ?? "(none)"}`);
 
 await shutdownSmith(rl, smith);

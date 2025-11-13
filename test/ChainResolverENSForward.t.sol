@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.25;
 
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
@@ -35,7 +35,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -43,7 +43,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(user1);
 
         address testAddr = address(0x123);
-        resolver.setAddr(LABEL_HASH, testAddr); // ETH coin type
+        resolver.setAddr(LABEL_HASH, 60, abi.encodePacked(testAddr)); // ETH coin type
 
         // Verify address record (packed 20-byte value)
         bytes memory ethVal = resolver.getAddr(LABEL_HASH, 60);
@@ -58,7 +58,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -81,7 +81,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -90,7 +90,7 @@ contract ChainResolverENSForwardTest is Test {
 
         bytes memory testData = hex"deadbeef";
         vm.expectEmit(true, true, false, true);
-        emit IChainResolver.DataChanged(LABEL_HASH, keccak256(bytes("custom")), keccak256(testData));
+        emit IChainResolver.DataChanged(LABEL_HASH, "custom", keccak256(bytes("custom")), keccak256(testData));
         resolver.setData(LABEL_HASH, "custom", testData);
 
         // Verify data record
@@ -105,7 +105,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -123,11 +123,11 @@ contract ChainResolverENSForwardTest is Test {
         console.log("Successfully set content hash");
     }
 
-    function test_005____resolve_____________________ResolvesChainIdTextRecord() public {
+    function test_005____setText_____________________RevertsOnImmutableKey() public {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -135,34 +135,22 @@ contract ChainResolverENSForwardTest is Test {
         // Even if a user sets textRecords["chain-id"] = "hacked",
         // _getTextWithOverrides ignores it and returns the canonical hex from internal mapping.
         vm.startPrank(user1);
-        resolver.setText(LABEL_HASH, "chain-id", "hacked");
+        vm.expectRevert();
+        resolver.setText(LABEL_HASH, "interoperable-address", "hacked");
         vm.stopPrank();
-
-        // Test resolve function for chain-id text record with proper DNS encoding
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), LABEL_HASH, "chain-id");
-        bytes memory result = resolver.resolve(name, textData);
-        string memory resolvedChainId = abi.decode(result, (string));
-
-        // Should return hex representation of chain ID (without 0x prefix)
-        string memory expectedHex = "00010001010a00";
-        assertEq(resolvedChainId, expectedHex, "Override should return canonical chain-id, ignoring stored text");
-
-        console.log("Successfully resolved chain-id text record");
-        console.log("Resolved chain ID:", resolvedChainId);
     }
 
     function test_006____resolve_____________________ResolvesChainIdDataRecord() public {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
         // Test resolve function for chain-id data record (raw bytes) with proper DNS encoding
         bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory data = abi.encodeWithSelector(resolver.DATA_SELECTOR(), LABEL_HASH, "chain-id");
+        bytes memory data = abi.encodeWithSelector(resolver.DATA_SELECTOR(), LABEL_HASH, "interoperable-address");
         bytes memory result = resolver.resolve(name, data);
         bytes memory resolvedChainIdBytes = abi.decode(result, (bytes));
 
@@ -176,7 +164,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -202,7 +190,7 @@ contract ChainResolverENSForwardTest is Test {
 
     function test_008____setAddr_____________________RevertsOnInvalidEthBytes() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         // Attempt to set ETH address using bytes with invalid length should revert
@@ -233,7 +221,7 @@ contract ChainResolverENSForwardTest is Test {
 
     function test_010____resolve_____________________ContentHashSelector() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -258,7 +246,7 @@ contract ChainResolverENSForwardTest is Test {
 
     function test_011____resolve_____________________CustomTextRecords() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, chainId: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         // User1 sets a custom text record
