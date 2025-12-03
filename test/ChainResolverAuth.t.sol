@@ -39,7 +39,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain legitimately
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
@@ -47,7 +47,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(attacker);
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, attacker));
-        resolver.register(IChainResolver.ChainData({label: "attacker-label", chainName: "attacker-label", owner: attacker, interoperableAddress: hex"0101"}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: "attacker-label", chainName: "attacker-label", owner: attacker, interoperableAddress: hex"0101"}));
 
         vm.stopPrank();
 
@@ -61,7 +61,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
@@ -83,7 +83,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
@@ -102,7 +102,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
@@ -124,7 +124,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 
@@ -146,7 +146,7 @@ contract ChainResolverAuthTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_INTEROPERABLE_ADDRESS}));
 
         vm.stopPrank();
 

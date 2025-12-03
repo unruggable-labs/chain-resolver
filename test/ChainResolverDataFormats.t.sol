@@ -35,7 +35,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -59,7 +59,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -97,7 +97,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -141,7 +141,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -211,7 +211,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -285,7 +285,7 @@ contract ChainResolverDataFormatsTest is Test {
         // Register all test cases
         for (uint256 i = 0; i < testNames.length; i++) {
             bytes32 labelHash = keccak256(bytes(testNames[i]));
-            resolver.register(IChainResolver.ChainData({label: testNames[i], chainName: testNames[i], owner: testOwners[i], interoperableAddress: testChainIds[i]}));
+            resolver.register(IChainResolver.ChainRegistrationData({label: testNames[i], chainName: testNames[i], owner: testOwners[i], interoperableAddress: testChainIds[i]}));
 
             // Verify registration
             assertEq(
@@ -309,7 +309,7 @@ contract ChainResolverDataFormatsTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 

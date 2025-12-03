@@ -9,8 +9,8 @@ pragma solidity ^0.8.25;
  */
 interface IChainResolver {
 
-    // Container for chain data
-    struct ChainData {
+    // Container for chain registration data
+    struct ChainRegistrationData {
         string label; // short chain label (e.g., "optimism")
         string chainName; // human-readable formatted chain name
         address owner; // label owner
@@ -65,15 +65,15 @@ interface IChainResolver {
 
     /**
      * @notice Register or update a chain entry
-     * @param _data The ChainData struct
+     * @param _data The ChainRegistrationData struct
      */
-    function register(ChainData calldata _data) external;
+    function register(ChainRegistrationData calldata _data) external;
 
     /**
      * @notice Batch register or update multiple chains.
-     * @param _items Array of ChainData structs.
+     * @param _items Array of ChainRegistrationData structs.
      */
-    function batchRegister(ChainData[] calldata _items) external;
+    function batchRegister(ChainRegistrationData[] calldata _items) external;
 
     /**
      * @notice Set or transfer the administrator of a label (chain).

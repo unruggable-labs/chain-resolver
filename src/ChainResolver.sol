@@ -15,6 +15,13 @@ import {IExtendedResolver} from "@ensdomains/ens-contracts/contracts/resolvers/p
 import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
 import {IChainResolver} from "./interfaces/IChainResolver.sol";
 
+event TextChanged(
+    bytes32 indexed node,
+    string indexed indexedKey,
+    string key,
+    string value
+);
+
 contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
 
     /**
@@ -22,7 +29,8 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @param _labelhash The labelhash to check authorization for
      */
     modifier onlyChainOwner(bytes32 _labelhash) {
-        address _owner = chainData[_labelhash].owner;
+        bytes memory ownerData = _getData(_labelhash, CHAIN_OWNER_DATA_KEY);
+        address _owner = ownerData.length > 0 ? abi.decode(ownerData, (address)) : address(0);
         if (_owner != _msgSender()) {
             revert NotChainOwner(_msgSender(), _labelhash);
         }
@@ -39,13 +47,16 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     // Coin type constants
     uint256 public constant ETHEREUM_COIN_TYPE = 60;
 
+    // Data record key constants
+    string public constant INTEROPERABLE_ADDRESS_DATA_KEY = "interoperable-address";
+    string public constant CHAIN_NAME_DATA_KEY = "chain-name";
+    string public constant CHAIN_OWNER_DATA_KEY = "chain-owner";
+
     // Text record key constants
-    string public constant INTEROPERABLE_ADDRESS_KEY = "interoperable-address";
-    string public constant CHAIN_NAME_PREFIX = "chain-name:";
+    string public constant CHAIN_LABEL_PREFIX = "chain-label:";
     bytes32 public constant REVERSE_LABELHASH = keccak256("reverse");
 
     // Chain data storage
-    mapping(bytes32 labelhash => ChainData data) internal chainData;
     mapping(bytes interoperableAddress => string label) internal labelByInteroperableAddress;
 
     // Discoverability
@@ -131,7 +142,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
             revert ReverseNodeOwnershipBlock();
         }
 
-        chainData[_labelhash].owner = _owner;
+        _setData(_labelhash, CHAIN_OWNER_DATA_KEY, abi.encode(_owner));
         emit ChainAdminSet(_labelhash, _owner);
     }
 
@@ -164,7 +175,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         onlyChainOwner(_labelhash)
     {
 
-        if (keccak256(bytes(_key)) == keccak256(bytes(INTEROPERABLE_ADDRESS_KEY))) {
+        if (keccak256(bytes(_key)) == keccak256(bytes(INTEROPERABLE_ADDRESS_DATA_KEY))) {
             revert ImmutableTextKey(_labelhash, _key);
         }
 
@@ -182,7 +193,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         internal
     {
         textRecords[_labelhash][_key] = _value;
-        //emit TextChanged(_labelhash, _key, keccak256(_key), keccak256(_value));
+        emit TextChanged(_labelhash, _key, _key, _value);
     }
 
     /**
@@ -208,7 +219,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         external
         onlyChainOwner(_labelhash)
     {
-        if (keccak256(bytes(_key)) == keccak256(bytes(INTEROPERABLE_ADDRESS_KEY))) {
+        if (keccak256(bytes(_key)) == keccak256(bytes(INTEROPERABLE_ADDRESS_DATA_KEY))) {
             revert ImmutableDataKey(_labelhash, _key);
         }
 
@@ -233,15 +244,18 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     //////
 
     function chainLabel(bytes calldata _interoperableAddress) external view returns (string memory) {
-        return _getText(REVERSE_LABELHASH, concat(CHAIN_NAME_PREFIX, _interoperableAddress));
+        return _getText(REVERSE_LABELHASH, concat(CHAIN_LABEL_PREFIX, _interoperableAddress));
     }
 
     function chainName(bytes calldata _interoperableAddress) external view returns (string memory) {
-        return chainData[keccak256(bytes(labelByInteroperableAddress[_interoperableAddress]))].chainName;
+        string memory _label = _getText(REVERSE_LABELHASH, concat(CHAIN_LABEL_PREFIX, _interoperableAddress));
+        bytes32 _labelhash = keccak256(bytes(_label));
+        bytes memory data = _getData(_labelhash, CHAIN_NAME_DATA_KEY);
+        return data.length > 0 ? abi.decode(data, (string)) : "";
     }
 
     function interoperableAddress(bytes32 _labelhash) external view returns (bytes memory) {
-        return _getData(_labelhash, INTEROPERABLE_ADDRESS_KEY);
+        return _getData(_labelhash, INTEROPERABLE_ADDRESS_DATA_KEY);
     }
 
     /**
@@ -289,21 +303,22 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @return The owner address.
      */
     function getChainAdmin(bytes32 _labelhash) external view returns (address) {
-        return chainData[_labelhash].owner;
+        bytes memory ownerData = _getData(_labelhash, CHAIN_OWNER_DATA_KEY);
+        return ownerData.length > 0 ? abi.decode(ownerData, (address)) : address(0);
     }
 
     //////
     /// REGISTRATION
     //////
 
-    function register(ChainData calldata data) external onlyOwner {
+    function register(ChainRegistrationData calldata data) external onlyOwner {
         _register(data.label, data.chainName, data.owner, data.interoperableAddress);
     }
 
-    function batchRegister(ChainData[] calldata items) external onlyOwner {
-        uint256 _length = items.length;
+    function batchRegister(ChainRegistrationData[] calldata data) external onlyOwner {
+        uint256 _length = data.length;
         for (uint256 i = 0; i < _length; i++) {
-            _register(items[i].label, items[i].chainName, items[i].owner, items[i].interoperableAddress);
+            _register(data[i].label, data[i].chainName, data[i].owner, data[i].interoperableAddress);
         }
     }
 
@@ -319,13 +334,13 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     {
         bytes32 _labelhash = keccak256(bytes(_label));
 
-        bool isUpdate = chainData[_labelhash].owner != address(0);
+        bool isUpdate = _getData(_labelhash, CHAIN_OWNER_DATA_KEY).length > 0;
+        
+        _setData(_labelhash, CHAIN_NAME_DATA_KEY, abi.encode(_chainName));
+        _setData(_labelhash, CHAIN_OWNER_DATA_KEY, abi.encode(_owner));
 
-        chainData[_labelhash].chainName = _chainName;
-        chainData[_labelhash].owner = _owner;
-
-        _setData(_labelhash, INTEROPERABLE_ADDRESS_KEY, _interoperableAddress);
-        _setText(REVERSE_LABELHASH, concat(CHAIN_NAME_PREFIX, _interoperableAddress), _label);
+        _setData(_labelhash, INTEROPERABLE_ADDRESS_DATA_KEY, _interoperableAddress);
+        _setText(REVERSE_LABELHASH, concat(CHAIN_LABEL_PREFIX, _interoperableAddress), _label);
 
         // Map the Interoperable Address back to the chain label (for reverse resolution)
         labelByInteroperableAddress[_interoperableAddress] = _label;
@@ -359,9 +374,10 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     {
         if (_index >= labelhashList.length) revert IndexOutOfRange();
         bytes32 labelhash = labelhashList[_index];
-        _chainName = chainData[labelhash].chainName;
-        _interoperableAddress = _getData(labelhash, INTEROPERABLE_ADDRESS_KEY);
-        _label = _getText(REVERSE_LABELHASH, concat(CHAIN_NAME_PREFIX, _interoperableAddress));
+        bytes memory nameData = _getData(labelhash, CHAIN_NAME_DATA_KEY);
+        _chainName = nameData.length > 0 ? abi.decode(nameData, (string)) : "";
+        _interoperableAddress = _getData(labelhash, INTEROPERABLE_ADDRESS_DATA_KEY);
+        _label = _getText(REVERSE_LABELHASH, concat(CHAIN_LABEL_PREFIX, _interoperableAddress));
     }
 
     //////
@@ -420,13 +436,28 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     //////
 
     /**
-     * @notice Concatenates a string with bytes into a single string.
+     * @notice Concatenates a string with bytes (as hex string) into a single string.
      * @param _str The string prefix.
-     * @param _data The bytes to append.
+     * @param _data The bytes to append as hex.
      * @return The concatenated string.
      */
     function concat(string memory _str, bytes memory _data) internal pure returns (string memory) {
-        return string(abi.encodePacked(_str, _data));
+        return string(abi.encodePacked(_str, bytesToHexString(_data)));
+    }
+
+    /**
+     * @notice Converts bytes to a hex string (without 0x prefix).
+     * @param _data The bytes to convert.
+     * @return The hex string representation.
+     */
+    function bytesToHexString(bytes memory _data) internal pure returns (string memory) {
+        bytes memory hexChars = "0123456789abcdef";
+        bytes memory result = new bytes(_data.length * 2);
+        for (uint256 i = 0; i < _data.length; i++) {
+            result[i * 2] = hexChars[uint8(_data[i] >> 4)];
+            result[i * 2 + 1] = hexChars[uint8(_data[i] & 0x0f)];
+        }
+        return string(result);
     }
 
     /**

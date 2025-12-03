@@ -35,7 +35,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -58,7 +58,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -81,7 +81,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -105,7 +105,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -127,7 +127,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -144,7 +144,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -164,7 +164,7 @@ contract ChainResolverENSForwardTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -190,7 +190,7 @@ contract ChainResolverENSForwardTest is Test {
 
     function test_008____setAddr_____________________RevertsOnInvalidEthBytes() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         // Attempt to set ETH address using bytes with invalid length should revert
@@ -221,7 +221,7 @@ contract ChainResolverENSForwardTest is Test {
 
     function test_010____resolve_____________________ContentHashSelector() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -246,7 +246,7 @@ contract ChainResolverENSForwardTest is Test {
 
     function test_011____resolve_____________________CustomTextRecords() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         // User1 sets a custom text record

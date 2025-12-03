@@ -41,7 +41,7 @@ contract ChainResolverRegistryTest is Test {
         vm.startPrank(admin);
 
         // Register a chain (label and chain name)
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         // Verify registration
         assertEq(resolver.owner(), admin, "Admin should be contract owner");
@@ -59,10 +59,10 @@ contract ChainResolverRegistryTest is Test {
         vm.startPrank(admin);
 
         // Register a chain first time
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         // Try to register the same chain again - should succeed (overwrites existing registration)
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user2, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user2, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -76,7 +76,7 @@ contract ChainResolverRegistryTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -105,14 +105,14 @@ contract ChainResolverRegistryTest is Test {
         vm.startPrank(admin);
 
         // Prepare batch data
-        IChainResolver.ChainData[] memory items = new IChainResolver.ChainData[](2);
-        items[0] = IChainResolver.ChainData({
+        IChainResolver.ChainRegistrationData[] memory items = new IChainResolver.ChainRegistrationData[](2);
+        items[0] = IChainResolver.ChainRegistrationData({
             label: "optimism",
             chainName: "optimism",
             owner: user1,
             interoperableAddress: hex"000000010001010a00"
         });
-        items[1] = IChainResolver.ChainData({
+        items[1] = IChainResolver.ChainRegistrationData({
             label: "arbitrum",
             chainName: "arbitrum",
             owner: user2,
@@ -137,7 +137,7 @@ contract ChainResolverRegistryTest is Test {
         vm.startPrank(admin);
 
         // Prepare empty items
-        IChainResolver.ChainData[] memory items0 = new IChainResolver.ChainData[](0);
+        IChainResolver.ChainRegistrationData[] memory items0 = new IChainResolver.ChainRegistrationData[](0);
         // Should not revert with empty arrays
         resolver.batchRegister(items0);
 
@@ -150,8 +150,8 @@ contract ChainResolverRegistryTest is Test {
         vm.startPrank(admin);
 
         // Prepare single item batch
-        IChainResolver.ChainData[] memory one = new IChainResolver.ChainData[](1);
-        one[0] = IChainResolver.ChainData({
+        IChainResolver.ChainRegistrationData[] memory one = new IChainResolver.ChainRegistrationData[](1);
+        one[0] = IChainResolver.ChainRegistrationData({
             label: "optimism",
             chainName: "optimism",
             owner: user1,

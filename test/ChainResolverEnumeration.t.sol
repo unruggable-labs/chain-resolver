@@ -31,14 +31,14 @@ contract ChainResolverEnumerationTest is Test {
     function test_001____enumeration_____________________SingleInsertAndUpdate() public {
         vm.startPrank(admin);
         // First insert
-        resolver.register(IChainResolver.ChainData({label: "optimism", chainName: "Optimism", owner: user1, interoperableAddress: OP_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: "optimism", chainName: "Optimism", owner: user1, interoperableAddress: OP_ID}));
         assertEq(resolver.chainCount(), 1, "chainCount should be 1 after first insert");
         // Verify index 0
         (string memory lbl0, string memory name0, bytes memory i0) = resolver.getChainAtIndex(0);
         assertEq(lbl0, "optimism");
         assertEq(name0, "Optimism");
         // Update same label with new owner + name + id
-        resolver.register(IChainResolver.ChainData({label: "optimism", chainName: "OP Mainnet", owner: user2, interoperableAddress: OP_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: "optimism", chainName: "OP Mainnet", owner: user2, interoperableAddress: OP_ID}));
         assertEq(resolver.chainCount(), 1, "chainCount should not increment on update");
         (string memory lbl1, string memory name1, bytes memory i1) = resolver.getChainAtIndex(0);
         assertEq(lbl1, "optimism");
@@ -50,9 +50,9 @@ contract ChainResolverEnumerationTest is Test {
         vm.startPrank(admin);
 
         // Build batch structs
-        IChainResolver.ChainData[] memory items = new IChainResolver.ChainData[](2);
-        items[0] = IChainResolver.ChainData({label: "optimism", chainName: "Optimism", owner: user1, interoperableAddress: OP_ID});
-        items[1] = IChainResolver.ChainData({label: "arbitrum", chainName: "Arbitrum", owner: user2, interoperableAddress: ARB_ID});
+        IChainResolver.ChainRegistrationData[] memory items = new IChainResolver.ChainRegistrationData[](2);
+        items[0] = IChainResolver.ChainRegistrationData({label: "optimism", chainName: "Optimism", owner: user1, interoperableAddress: OP_ID});
+        items[1] = IChainResolver.ChainRegistrationData({label: "arbitrum", chainName: "Arbitrum", owner: user2, interoperableAddress: ARB_ID});
 
         // Register in a single batch
         resolver.batchRegister(items);
@@ -75,7 +75,7 @@ contract ChainResolverEnumerationTest is Test {
         vm.startPrank(admin);
 
         // Seed with a single entry
-        resolver.register(IChainResolver.ChainData({label: "optimism", chainName: "Optimism", owner: user1, interoperableAddress: OP_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: "optimism", chainName: "Optimism", owner: user1, interoperableAddress: OP_ID}));
         vm.stopPrank();
 
         // Index 1 is out-of-bounds; expect revert

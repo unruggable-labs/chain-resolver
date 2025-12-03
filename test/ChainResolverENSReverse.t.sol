@@ -8,6 +8,9 @@ import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol
 import {HexUtils} from "@ensdomains/ens-contracts/contracts/utils/HexUtils.sol";
 
 contract ChainResolverENSReverseTest is Test {
+
+    string public constant CHAIN_LABEL_PREFIX = "chain-label:";
+
     ChainResolver public resolver;
 
     address public admin = address(0x1);
@@ -27,8 +30,8 @@ contract ChainResolverENSReverseTest is Test {
     // cid.eth => 0x03 'cid' 0x03 'eth' 0x00
     bytes internal constant DNS_CID_ETH = hex"036369640365746800";
 
-    // Encoded key for reverse text query: "chain-name:" + <7930 hex (no 0x prefix)>
-    string internal constant KEY_CHAIN_NAME = "chain-name:00010001010a00";
+    // Encoded key for reverse text query: "chain-label:" + <7930 hex (no 0x prefix)>
+    string internal constant KEY_CHAIN_NAME = "chain-label:00010001010a00";
 
     function setUp() public {
         vm.startPrank(admin);
@@ -45,7 +48,7 @@ contract ChainResolverENSReverseTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -54,9 +57,7 @@ contract ChainResolverENSReverseTest is Test {
         bytes memory name = NameCoder.encode("reverse.cid.eth");
         bytes32 node = NameCoder.namehash(name, 0);
 
-        string memory chainNameKey = string(abi.encodePacked("chain-name:", CHAIN_ID));
-
-        bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), node, chainNameKey);
+        bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), node, KEY_CHAIN_NAME);
         bytes memory result = resolver.resolve(name, textData);
         string memory resolvedChainName = abi.decode(result, (string));
 
@@ -71,7 +72,7 @@ contract ChainResolverENSReverseTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -88,7 +89,7 @@ contract ChainResolverENSReverseTest is Test {
         vm.startPrank(admin);
 
         // Register a chain
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
 
         vm.stopPrank();
 
@@ -103,14 +104,13 @@ contract ChainResolverENSReverseTest is Test {
 
     function test_004____resolve_____________________ReverseCidEthReturnsRegisteredChainName() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         // Build calldata for text(bytes32,string) using node-bound reverse context
         bytes4 TEXT_SELECTOR = resolver.TEXT_SELECTOR();
         bytes memory name = NameCoder.encode("reverse.cid.eth");
-        string memory key = string(abi.encodePacked("chain-name:", CHAIN_ID));
-        bytes memory data = abi.encodeWithSelector(TEXT_SELECTOR, NameCoder.namehash(name, 0), key);
+        bytes memory data = abi.encodeWithSelector(TEXT_SELECTOR, NameCoder.namehash(name, 0), KEY_CHAIN_NAME);
 
         // Query under reverse.cid.eth with node-bound reverse
         bytes memory out = resolver.resolve(name, data);
@@ -122,7 +122,7 @@ contract ChainResolverENSReverseTest is Test {
 
     function test_005____resolve_____________________NonReverseContextReturnsStoredTextRecord() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
         vm.stopPrank();
 
         // Store a text record for this label and the reverse key
