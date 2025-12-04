@@ -12,6 +12,18 @@ const hex = (b: any) => {
   try { return hexlify(b); } catch { return String(b); }
 };
 
+// Log all events from a transaction receipt
+const logEvents = (receipt: any, contract: Contract) => {
+  for (const logEntry of receipt.logs) {
+    try {
+      const event = contract.interface.parseLog(logEntry);
+      if (event) console.log("Event", event.name, event.args);
+    } catch (e) {
+      // not an event from this interface
+    }
+  }
+};
+
 // The resolver contract
 const RESOLVER_FILE_NAME = 'ChainResolver.sol';
 
@@ -19,8 +31,6 @@ const ETHEREUM_COIN_TYPE = 60;
 
 // Data record key constants
 const INTEROPERABLE_ADDRESS_DATA_KEY = 'interoperable-address';
-const CHAIN_NAME_DATA_KEY = 'chain-name';
-const CHAIN_OWNER_DATA_KEY = 'chain-owner';
 
 // Text record prefix for reverse resolving 7930 chain ID
 const CHAIN_LABEL_PREFIX = 'chain-label:';
@@ -59,17 +69,7 @@ async function main() {
   section('Register test chain data');
   const tx = await resolverContract.register!([label, label, deployer, chainIdAsBytes]);
   const receipt = await tx.wait();
-
-  // Log the events for debugging
-  for (const log of receipt.logs) {
-    try {
-      const event = castedContract.interface.parseLog(log);
-      if (event) console.log("Event", event.name, event.args);
-    } catch (e) {
-      // not an event from this interface
-    }
-  }
-
+  logEvents(receipt, castedContract);
   log('Registration successful');
 
   
@@ -138,7 +138,108 @@ async function main() {
   log('label', label.length);
   if (cname !== label) throw new Error('chainName() mismatch');
 
-  console.log('✓ Blocksmith Foundry test passed');
+  // =====================
+  // ALIAS SYSTEM TESTING
+  // =====================
+  section('Alias System');
+  
+  const alias = 'op';
+  const aliasHash = keccak256(toUtf8Bytes(alias));
+  log('Registering alias', alias, '→', label);
+  
+  // Register the alias (op → optimism)
+  const aliasTx = await resolverContract.registerAlias!(alias, labelHash);
+  const aliasReceipt = await aliasTx.wait();
+  logEvents(aliasReceipt, castedContract);
+  
+  // Verify the alias was registered
+  const canonical = await resolverContract.getCanonicalLabelhash!(aliasHash);
+  if (canonical !== labelHash) {
+    throw new Error(`Alias not registered correctly: got=${canonical} want=${labelHash}`);
+  }
+  log('Alias registered successfully');
+
+  // Test: Read interoperable address through alias
+  section('Alias - Read through alias');
+  const aliasInteropAddr = await resolverContract.interoperableAddress!(aliasHash);
+  if (hexlify(aliasInteropAddr) !== chainIdAsHex) {
+    throw new Error(`Alias interoperableAddress mismatch: got=${hexlify(aliasInteropAddr)} want=${chainIdAsHex}`);
+  }
+  log('interoperableAddress via alias ✓');
+
+  // Test: Read chain admin through alias
+  const aliasAdmin = await resolverContract.getChainAdmin!(aliasHash);
+  if (aliasAdmin.toLowerCase() !== deployer.toLowerCase()) {
+    throw new Error(`Alias admin mismatch: got=${aliasAdmin} want=${deployer}`);
+  }
+  log('getChainAdmin via alias ✓');
+
+  // Test: Resolve via ENSIP-10 through alias DNS name
+  section('Alias - ENSIP-10 Resolution');
+  const aliasEnsName = `${alias}.cid.eth`;
+  const aliasDnsEncodedName = dnsEncode(aliasEnsName, 255);
+  const aliasNamehash = namehash(aliasEnsName);
+  
+  const aliasDataCalldata = ENSIP_24_INTERFACE.encodeFunctionData('data(bytes32,string)', [aliasNamehash, INTEROPERABLE_ADDRESS_DATA_KEY]);
+  const aliasDataResponse: string = await resolverContract.resolve!(aliasDnsEncodedName, aliasDataCalldata);
+  const [aliasCidBytes] = ENSIP_24_INTERFACE.decodeFunctionResult('data(bytes32,string)', aliasDataResponse);
+  if (hex(aliasCidBytes) !== chainIdAsHex) {
+    throw new Error(`Alias resolve data mismatch: got=${hex(aliasCidBytes)} want=${chainIdAsHex}`);
+  }
+  log('resolve(op.cid.eth, data) ✓');
+
+  // Test: Read address record through alias
+  const aliasAddrCall = ADDR_INTERFACE.encodeFunctionData('addr(bytes32)', [aliasHash]);
+  const aliasAddrResponse: string = await resolverContract.resolve!(aliasDnsEncodedName, aliasAddrCall);
+  const [aliasAddr] = ADDR_INTERFACE.decodeFunctionResult('addr(bytes32)', aliasAddrResponse);
+  if (aliasAddr.toLowerCase() !== testAddress.toLowerCase()) {
+    throw new Error(`Alias addr mismatch: got=${aliasAddr} want=${testAddress}`);
+  }
+  log('resolve(op.cid.eth, addr) ✓');
+
+  // Test: Set text record through alias (should work since we own the canonical)
+  section('Alias - Write through alias');
+  const setTextViaAlias = castedContract.getFunction('setText(bytes32,string,string)');
+  const aliasTextTx = await setTextViaAlias(aliasHash, 'description', 'Set via alias');
+  const aliasTextReceipt = await aliasTextTx.wait();
+  logEvents(aliasTextReceipt, castedContract);
+  log('setText via alias ✓');
+
+  // Verify the text record was set on canonical
+  const textViaCanonical = await resolverContract.getText!(labelHash, 'description');
+  if (textViaCanonical !== 'Set via alias') {
+    throw new Error(`Text not set on canonical: got=${textViaCanonical} want='Set via alias'`);
+  }
+  log('Text record accessible via canonical ✓');
+
+  // Also verify readable via alias
+  const textViaAlias = await resolverContract.getText!(aliasHash, 'description');
+  if (textViaAlias !== 'Set via alias') {
+    throw new Error(`Text not readable via alias: got=${textViaAlias} want='Set via alias'`);
+  }
+  log('Text record accessible via alias ✓');
+
+  // Test: Remove alias
+  section('Alias - Remove');
+  const removeAliasTx = await resolverContract.removeAlias!(alias);
+  const removeAliasReceipt = await removeAliasTx.wait();
+  logEvents(removeAliasReceipt, castedContract);
+
+  // Verify alias is removed
+  const removedCanonical = await resolverContract.getCanonicalLabelhash!(aliasHash);
+  if (removedCanonical !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+    throw new Error(`Alias not removed: got=${removedCanonical}`);
+  }
+  log('Alias removed successfully ✓');
+
+  // Verify reading via removed alias now returns empty (alias treated as its own labelhash)
+  const removedAliasInteropAddr = await resolverContract.interoperableAddress!(aliasHash);
+  if (removedAliasInteropAddr !== '0x') {
+    throw new Error(`Removed alias should return empty: got=${removedAliasInteropAddr}`);
+  }
+  log('Removed alias returns empty data ✓');
+
+  console.log('\n✓ All Blocksmith tests passed (including alias system)');
 }
 
 main().catch((e) => {

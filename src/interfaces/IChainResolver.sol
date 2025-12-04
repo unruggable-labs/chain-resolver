@@ -20,6 +20,8 @@ interface IChainResolver {
     // Events
     event ChainRegistered(bytes32 indexed _labelhash, string _chainName, bytes _chainId);
     event ChainAdminSet(bytes32 indexed _labelhash, address _owner);
+    event AliasRegistered(bytes32 indexed _aliasHash, bytes32 indexed _canonicalLabelhash, string _alias);
+    event AliasRemoved(bytes32 indexed _aliasHash, bytes32 indexed _canonicalLabelhash, string _alias);
 
     // ENSIP-1
     event AddrChanged(bytes32 indexed _labelhash, address _owner);
@@ -81,4 +83,24 @@ interface IChainResolver {
      * @param _owner The new owner address.
      */
     function setChainAdmin(bytes32 _labelhash, address _owner) external;
+
+    /**
+     * @notice Register an alias that points to a canonical labelhash.
+     * @param _alias The alias string (e.g., "op").
+     * @param _canonicalLabelhash The canonical labelhash to point to.
+     */
+    function registerAlias(string calldata _alias, bytes32 _canonicalLabelhash) external;
+
+    /**
+     * @notice Remove an alias.
+     * @param _alias The alias string to remove.
+     */
+    function removeAlias(string calldata _alias) external;
+
+    /**
+     * @notice Get the canonical labelhash for an alias.
+     * @param _labelhash The labelhash to check.
+     * @return The canonical labelhash, or bytes32(0) if not an alias.
+     */
+    function getCanonicalLabelhash(bytes32 _labelhash) external view returns (bytes32);
 }

@@ -29,8 +29,8 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @param _labelhash The labelhash to check authorization for
      */
     modifier onlyChainOwner(bytes32 _labelhash) {
-        bytes memory ownerData = _getData(_labelhash, CHAIN_OWNER_DATA_KEY);
-        address _owner = ownerData.length > 0 ? abi.decode(ownerData, (address)) : address(0);
+        bytes32 canonical = _resolveLabelhash(_labelhash);
+        address _owner = chainOwners[canonical];
         if (_owner != _msgSender()) {
             revert NotChainOwner(_msgSender(), _labelhash);
         }
@@ -49,15 +49,19 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
 
     // Data record key constants
     string public constant INTEROPERABLE_ADDRESS_DATA_KEY = "interoperable-address";
-    string public constant CHAIN_NAME_DATA_KEY = "chain-name";
-    string public constant CHAIN_OWNER_DATA_KEY = "chain-owner";
+    bytes32 private constant INTEROPERABLE_ADDRESS_DATA_KEY_HASH = keccak256("interoperable-address");
 
     // Text record key constants
     string public constant CHAIN_LABEL_PREFIX = "chain-label:";
     bytes32 public constant REVERSE_LABELHASH = keccak256("reverse");
 
     // Chain data storage
+    mapping(bytes32 labelhash => address owner) private chainOwners;
+    mapping(bytes32 labelhash => string name) private chainNames;
     mapping(bytes interoperableAddress => string label) internal labelByInteroperableAddress;
+
+    // Alias system: alias labelhash → canonical labelhash
+    mapping(bytes32 => bytes32) private aliasOf;
 
     // Discoverability
     // Total number of registered chains
@@ -137,13 +141,14 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     //////
 
     function setChainAdmin(bytes32 _labelhash, address _owner) external onlyChainOwner(_labelhash) {
+        bytes32 canonical = _resolveLabelhash(_labelhash);
 
-        if (_labelhash == REVERSE_LABELHASH) {
+        if (canonical == REVERSE_LABELHASH) {
             revert ReverseNodeOwnershipBlock();
         }
 
-        _setData(_labelhash, CHAIN_OWNER_DATA_KEY, abi.encode(_owner));
-        emit ChainAdminSet(_labelhash, _owner);
+        chainOwners[canonical] = _owner;
+        emit ChainAdminSet(canonical, _owner);
     }
 
     /**
@@ -156,11 +161,13 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         external
         onlyChainOwner(_labelhash)
     {
-        addressRecords[_labelhash][_coinType] = _value;
-        emit AddressChanged(_labelhash, _coinType, _value);
+        bytes32 canonical = _resolveLabelhash(_labelhash);
+        addressRecords[canonical][_coinType] = _value;
+        emit AddressChanged(canonical, _coinType, _value);
         if (_coinType == ETHEREUM_COIN_TYPE) {
-            emit AddrChanged(_labelhash, bytesToAddress(_value));
-        }    }
+            emit AddrChanged(canonical, bytesToAddress(_value));
+        }
+    }
 
     /**
      * @notice Set a text record for a labelhash.
@@ -175,11 +182,11 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         onlyChainOwner(_labelhash)
     {
 
-        if (keccak256(bytes(_key)) == keccak256(bytes(INTEROPERABLE_ADDRESS_DATA_KEY))) {
+        if (keccak256(bytes(_key)) == INTEROPERABLE_ADDRESS_DATA_KEY_HASH) {
             revert ImmutableTextKey(_labelhash, _key);
         }
 
-        _setText(_labelhash, _key, _value);
+        _setText(_resolveLabelhash(_labelhash), _key, _value);
     }
 
     /**
@@ -205,7 +212,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         external 
         onlyChainOwner(_labelhash) 
     {
-        contenthashRecords[_labelhash] = _contenthash;
+        contenthashRecords[_resolveLabelhash(_labelhash)] = _contenthash;
     }
 
     /**
@@ -219,11 +226,11 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         external
         onlyChainOwner(_labelhash)
     {
-        if (keccak256(bytes(_key)) == keccak256(bytes(INTEROPERABLE_ADDRESS_DATA_KEY))) {
+        if (keccak256(bytes(_key)) == INTEROPERABLE_ADDRESS_DATA_KEY_HASH) {
             revert ImmutableDataKey(_labelhash, _key);
         }
 
-        _setData(_labelhash, _key, _data);
+        _setData(_resolveLabelhash(_labelhash), _key, _data);
     }
 
     /**
@@ -250,12 +257,11 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     function chainName(bytes calldata _interoperableAddress) external view returns (string memory) {
         string memory _label = _getText(REVERSE_LABELHASH, concat(CHAIN_LABEL_PREFIX, _interoperableAddress));
         bytes32 _labelhash = keccak256(bytes(_label));
-        bytes memory data = _getData(_labelhash, CHAIN_NAME_DATA_KEY);
-        return data.length > 0 ? abi.decode(data, (string)) : "";
+        return chainNames[_resolveLabelhash(_labelhash)];
     }
 
     function interoperableAddress(bytes32 _labelhash) external view returns (bytes memory) {
-        return _getData(_labelhash, INTEROPERABLE_ADDRESS_DATA_KEY);
+        return _getData(_resolveLabelhash(_labelhash), INTEROPERABLE_ADDRESS_DATA_KEY);
     }
 
     /**
@@ -303,8 +309,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @return The owner address.
      */
     function getChainAdmin(bytes32 _labelhash) external view returns (address) {
-        bytes memory ownerData = _getData(_labelhash, CHAIN_OWNER_DATA_KEY);
-        return ownerData.length > 0 ? abi.decode(ownerData, (address)) : address(0);
+        return chainOwners[_resolveLabelhash(_labelhash)];
     }
 
     //////
@@ -323,6 +328,46 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     }
 
     /**
+     * @notice Register an alias that points to a canonical labelhash.
+     * @param _alias The alias string (e.g., "op").
+     * @param _canonicalLabelhash The canonical labelhash to point to (e.g., keccak256("optimism")).
+     */
+    function registerAlias(string calldata _alias, bytes32 _canonicalLabelhash) external onlyOwner {
+        bytes32 aliasHash = keccak256(bytes(_alias));
+        
+        // Prevent alias chains (op → optimism → something-else)
+        require(aliasOf[_canonicalLabelhash] == bytes32(0), "Cannot alias to an alias");
+        
+        // Ensure canonical is actually registered
+        require(chainOwners[_canonicalLabelhash] != address(0), "Canonical not registered");
+        
+        aliasOf[aliasHash] = _canonicalLabelhash;
+        emit AliasRegistered(aliasHash, _canonicalLabelhash, _alias);
+    }
+
+    /**
+     * @notice Remove an alias.
+     * @param _alias The alias string to remove.
+     */
+    function removeAlias(string calldata _alias) external onlyOwner {
+        bytes32 aliasHash = keccak256(bytes(_alias));
+        bytes32 canonical = aliasOf[aliasHash];
+        require(canonical != bytes32(0), "Alias does not exist");
+        
+        delete aliasOf[aliasHash];
+        emit AliasRemoved(aliasHash, canonical, _alias);
+    }
+
+    /**
+     * @notice Get the canonical labelhash for an alias.
+     * @param _labelhash The labelhash to check.
+     * @return The canonical labelhash, or bytes32(0) if not an alias.
+     */
+    function getCanonicalLabelhash(bytes32 _labelhash) external view returns (bytes32) {
+        return aliasOf[_labelhash];
+    }
+
+    /**
      * @notice Internal helper function to register an individual chain
      * @param _label The short chain label (e.g., "optimism")
      * @param _chainName The chain name (e.g., "Optimism")
@@ -334,10 +379,10 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     {
         bytes32 _labelhash = keccak256(bytes(_label));
 
-        bool isUpdate = _getData(_labelhash, CHAIN_OWNER_DATA_KEY).length > 0;
+        bool isUpdate = chainOwners[_labelhash] != address(0);
         
-        _setData(_labelhash, CHAIN_NAME_DATA_KEY, abi.encode(_chainName));
-        _setData(_labelhash, CHAIN_OWNER_DATA_KEY, abi.encode(_owner));
+        chainNames[_labelhash] = _chainName;
+        chainOwners[_labelhash] = _owner;
 
         _setData(_labelhash, INTEROPERABLE_ADDRESS_DATA_KEY, _interoperableAddress);
         _setText(REVERSE_LABELHASH, concat(CHAIN_LABEL_PREFIX, _interoperableAddress), _label);
@@ -374,8 +419,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     {
         if (_index >= labelhashList.length) revert IndexOutOfRange();
         bytes32 labelhash = labelhashList[_index];
-        bytes memory nameData = _getData(labelhash, CHAIN_NAME_DATA_KEY);
-        _chainName = nameData.length > 0 ? abi.decode(nameData, (string)) : "";
+        _chainName = chainNames[labelhash];
         _interoperableAddress = _getData(labelhash, INTEROPERABLE_ADDRESS_DATA_KEY);
         _label = _getText(REVERSE_LABELHASH, concat(CHAIN_LABEL_PREFIX, _interoperableAddress));
     }
@@ -385,13 +429,23 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     //////
 
     /**
+     * @notice Resolves an alias to its canonical labelhash, or returns the input if not an alias.
+     * @param _labelhash The labelhash to resolve.
+     * @return The canonical labelhash.
+     */
+    function _resolveLabelhash(bytes32 _labelhash) internal view returns (bytes32) {
+        bytes32 canonical = aliasOf[_labelhash];
+        return canonical == bytes32(0) ? _labelhash : canonical;
+    }
+
+    /**
      * @notice INTERNAL function for getting address records for a specific coin type.
      * @param _labelhash The labelhash to query.
      * @param _coinType The coin type (default: 60 for Ethereum).
      * @return The address for this label and coin type.
      */
     function _getAddr(bytes32 _labelhash, uint256 _coinType) internal view returns (bytes memory) {
-        return addressRecords[_labelhash][_coinType];
+        return addressRecords[_resolveLabelhash(_labelhash)][_coinType];
     }
 
     /**
@@ -405,7 +459,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         view
         returns (string memory)
     {
-        return textRecords[_labelhash][_key];
+        return textRecords[_resolveLabelhash(_labelhash)][_key];
     }
 
     /**
@@ -418,7 +472,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         view
         returns (bytes memory)
     {
-        return contenthashRecords[_labelhash];
+        return contenthashRecords[_resolveLabelhash(_labelhash)];
     }
 
     /**
@@ -428,7 +482,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
      * @return The data record value (with override for chain-id)
      */
     function _getData(bytes32 _labelhash, string memory _key) internal view returns (bytes memory) {
-        return dataRecords[_labelhash][_key];
+        return dataRecords[_resolveLabelhash(_labelhash)][_key];
     }
 
     //////
