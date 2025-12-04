@@ -1,15 +1,28 @@
-// Blocksmith local simulation for unified ChainResolver
-// Usage: bun run test/ChainResolver.foundry.ts
+// Local simulation of ChainResolver functionality
+// Usage: bun run test/ChainResolver.blocksmith.ts
 
-import 'dotenv/config'
-import { Foundry } from '@adraffy/blocksmith'
-import { Contract, Interface, dnsEncode, keccak256, toUtf8Bytes, getBytes, hexlify, namehash } from 'ethers'
+import "dotenv/config";
+import { Foundry } from "@adraffy/blocksmith";
+import {
+  Contract,
+  Interface,
+  dnsEncode,
+  keccak256,
+  toUtf8Bytes,
+  getBytes,
+  hexlify,
+  namehash,
+} from "ethers";
 
 // Helper functions
-const log = (...a: any[]) => console.log('[blocksmith]', ...a);
+const log = (...a: any[]) => console.log("[blocksmith]", ...a);
 const section = (name: string) => console.log(`\n=== ${name} ===`);
 const hex = (b: any) => {
-  try { return hexlify(b); } catch { return String(b); }
+  try {
+    return hexlify(b);
+  } catch {
+    return String(b);
+  }
 };
 
 // Log all events from a transaction receipt
@@ -25,223 +38,355 @@ const logEvents = (receipt: any, contract: Contract) => {
 };
 
 // The resolver contract
-const RESOLVER_FILE_NAME = 'ChainResolver.sol';
+const RESOLVER_FILE_NAME = "ChainResolver.sol";
 
 const ETHEREUM_COIN_TYPE = 60;
 
 // Data record key constants
-const INTEROPERABLE_ADDRESS_DATA_KEY = 'interoperable-address';
+const INTEROPERABLE_ADDRESS_DATA_KEY = "interoperable-address";
 
 // Text record prefix for reverse resolving 7930 chain ID
-const CHAIN_LABEL_PREFIX = 'chain-label:';
+// See ERC-7828
+const CHAIN_LABEL_PREFIX = "chain-label:";
+
+// Test data
+const TEST_LABEL = "optimism";
+const TEST_CHAIN_NAME = "Optimism";
+const TEST_LABELHASH = keccak256(toUtf8Bytes(TEST_LABEL));
+const INTEROPERABLE_ADDRESS_AS_HEX = "0x00010001010a00";
+const INTEROPERABLE_ADDRESS_AS_BYTES = getBytes(INTEROPERABLE_ADDRESS_AS_HEX);
+const SECOND_LEVEL_DOMAIN = "cid.eth";
+const TEST_RESOLUTION_ADDRESS = "0x000000000000000000000000000000000000dEaD";
+const TEST_OTHER_COIN_TYPE = 123;
+const TEST_RESOLUTION_ADDRESS_TWO = "0x0000000000000000000000000000000000000abc";
+const REVERSE_NAME = `reverse.${SECOND_LEVEL_DOMAIN}.eth`;
+const REVERSE_NAME_DNS_ENCODED = dnsEncode(REVERSE_NAME, 255);
+const REVERSE_NODE = namehash(REVERSE_NAME);
+const TEST_ALIAS = "op";
+const TEST_ALIAS_LABELHASH = keccak256(toUtf8Bytes(TEST_ALIAS));
+const TEST_DESCRIPTION_TEXT = "Set via alias";
+const TEST_ALIAS_ENS_NAME = `${TEST_ALIAS}.${SECOND_LEVEL_DOMAIN}.eth`;
+const TEST_ALIAS_DNS_ENCODED = dnsEncode(TEST_ALIAS_ENS_NAME, 255);
+const TEST_ALIAS_NAMEHASH = namehash(TEST_ALIAS_ENS_NAME);
+
+
+// Interfaces
+
+// https://docs.ens.domains/ensip/5
+const ENSIP_5_INTERFACE = new Interface([
+  "function text(bytes32,string) view returns (string)",
+]);
+
+// https://docs.ens.domains/ensip/9
+const ENSIP_9_INTERFACE = new Interface([
+  "function addr(bytes32,uint256) view returns (bytes)",
+]);
+
+// https://docs.ens.domains/ensip/24
+const ENSIP_24_INTERFACE = new Interface([
+  "function data(bytes32,string) view returns (bytes)",
+]);
+
 
 async function main() {
-  const smith = await Foundry.launch({ forge: 'forge', infoLog: true });
-  const wallet = smith.requireWallet('admin');
+  const smith = await Foundry.launch({ forge: "forge", infoLog: true });
+  const wallet = smith.requireWallet("admin");
 
-  section('Launch (local Foundry)');
-  log('wallet', wallet.address);
+  section("Launch (local Foundry)");
+  log("wallet", wallet.address);
 
-  // 1) Deploy ChainResolver(owner, parentNamehash)
+  // Deploy ChainResolver via ERC1967Proxy
   const deployer = wallet.address;
-  const parentNamehash = namehash('cid.eth');
-  section(`Deploy ${RESOLVER_FILE_NAME}`);
-  log('Deployer address', deployer);
-  log('Parent namehash (cid.eth)', parentNamehash);
-  const resolverContract = await smith.deploy({
+  const parentNamehash = namehash(SECOND_LEVEL_DOMAIN);
+  section(`Deploy ${RESOLVER_FILE_NAME} (via proxy)`);
+  log("Deployer address", deployer);
+  log(`Parent namehash (${SECOND_LEVEL_DOMAIN})`, parentNamehash);
+
+  // Deploy implementation
+  const implementationContract = await smith.deploy({
     from: wallet,
     file: RESOLVER_FILE_NAME,
-    args: [deployer, parentNamehash],
+    args: [],
   });
-  const castedContract = resolverContract as unknown as Contract;
-  log('Deployed resolver contract address', resolverContract.target);
-  
-  // Test data
-  const label = 'optimism';
-  const labelHash = keccak256(toUtf8Bytes(label));
-  const chainIdAsHex = '0x00010001010a00';
-  const chainIdAsBytes = getBytes(chainIdAsHex);
+  log("Implementation deployed at", implementationContract.target);
 
-  section('Inputs');
-  log('label', label);
-  log('labelHash', labelHash);
-  log('chainId (hex)', chainIdAsHex);
+  // Encode initialize call
+  const initInterface = new Interface(["function initialize(address,bytes32)"]);
+  const initData = initInterface.encodeFunctionData("initialize", [
+    deployer,
+    parentNamehash,
+  ]);
 
-  // 2) Register the test chain
-  section('Register test chain data');
-  const tx = await resolverContract.register!([label, label, deployer, chainIdAsBytes]);
+  // Deploy proxy pointing to implementation
+  const proxyContract = await smith.deploy({
+    from: wallet,
+    import: "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+    args: [implementationContract.target, initData],
+  });
+  log("Proxy deployed at", proxyContract.target);
+
+  // Cast proxy as ChainResolver for interaction
+  // Use any to allow dynamic function access on the proxy
+  const resolverContract = (implementationContract as any).attach(
+    proxyContract.target
+  ) as any;
+  const castedContract = resolverContract as Contract;
+  log("Resolver (via proxy) address", proxyContract.target);
+
+  // Register the test chain
+  section("Register test chain data");
+  const tx = await resolverContract.register!([
+    TEST_LABEL,
+    TEST_CHAIN_NAME,
+    deployer,
+    INTEROPERABLE_ADDRESS_AS_BYTES,
+  ]);
   const receipt = await tx.wait();
   logEvents(receipt, castedContract);
-  log('Registration successful');
+  log("Registration successful");
 
-  
-
-  // 3. Test Forward Resolution of ERC-7930 _Interoperable Address_
-  const ensName = `${label}.cid.eth`;
+  // Test Forward Resolution of ERC-7930 _Interoperable Address_
+  const ensName = `${TEST_LABEL}.${SECOND_LEVEL_DOMAIN}`;
   const nameNamehash = namehash(ensName);
   const dnsEncodedName = dnsEncode(ensName, 255);
 
-  const ENSIP_24_INTERFACE = new Interface(['function data(bytes32,string) view returns (bytes)']);
-  const dataCalldata = ENSIP_24_INTERFACE.encodeFunctionData('data(bytes32,string)', [nameNamehash, INTEROPERABLE_ADDRESS_DATA_KEY]);
-  const dataResponse: string = await resolverContract.resolve!(dnsEncodedName, dataCalldata);
-  const [cidBytes] = ENSIP_24_INTERFACE.decodeFunctionResult('data(bytes32,string)', dataResponse);
-  if (hex(cidBytes) !== chainIdAsHex) {
-    throw new Error(`Unexpected chain-id bytes: got=${hex(cidBytes)} want=${chainIdAsHex}`);
+  const dataCalldata = ENSIP_24_INTERFACE.encodeFunctionData(
+    "data(bytes32,string)",
+    [nameNamehash, INTEROPERABLE_ADDRESS_DATA_KEY]
+  );
+  const dataResponse: string = await resolverContract.resolve!(
+    dnsEncodedName,
+    dataCalldata
+  );
+  const [interopableAddressBytes] = ENSIP_24_INTERFACE.decodeFunctionResult(
+    "data(bytes32,string)",
+    dataResponse
+  );
+
+  // Ethers returns a hex representation of the bytes
+  if (interopableAddressBytes !== INTEROPERABLE_ADDRESS_AS_HEX) {
+    throw new Error(
+      `Unexpected Interoperable Address bytes`
+    );
   }
-  
 
   // Set and read an ETH address (coinType 60)
-  const testAddress = '0x000000000000000000000000000000000000dEaD';
-  const ADDR_INTERFACE = new Interface(['function addr(bytes32) view returns (address)']);
-  const setAddr60 = castedContract.getFunction('setAddr(bytes32,uint256,bytes)');
-  await (await setAddr60(labelHash, ETHEREUM_COIN_TYPE, testAddress)).wait();
-  const call60 = ADDR_INTERFACE.encodeFunctionData('addr(bytes32)', [labelHash]);
-  const ans60: string = await resolverContract.resolve!(dnsEncodedName, call60);
-  const [got60] = ADDR_INTERFACE.decodeFunctionResult('addr(bytes32)', ans60);
-  if (got60.toLowerCase() !== testAddress.toLowerCase()) {
-    throw new Error(`Unexpected ETH addr: got=${got60} want=${testAddress}`);
-  }
-    
-  const anotherTestAddress = '0x0000000000000000000000000000000000000abc';
-  const ENSIP_9_INTERFACE = new Interface(['function addr(bytes32,uint256) view returns (bytes)']);
-  const setAddrBytes = castedContract.getFunction('setAddr(bytes32,uint256,bytes)');
-  await (await setAddrBytes(labelHash, 137n, getBytes(anotherTestAddress))).wait();
-  const acall = ENSIP_9_INTERFACE.encodeFunctionData('addr(bytes32,uint256)', [labelHash, 137n]);
-  const aanswer: string = await resolverContract.resolve!(dnsEncodedName, acall);
-  const [rawBytes] = ENSIP_9_INTERFACE.decodeFunctionResult('addr(bytes32,uint256)', aanswer);
-  if (hex(rawBytes) !== hex(getBytes(anotherTestAddress))) {
-    throw new Error(`Unexpected multi-coin addr: got=${hex(rawBytes)} want=${hex(getBytes(anotherTestAddress))}`);
+  const ADDR_INTERFACE = new Interface([
+    "function addr(bytes32) view returns (address)",
+  ]);
+
+  const setAddrTx = await castedContract.setAddr!(TEST_LABELHASH, ETHEREUM_COIN_TYPE, TEST_RESOLUTION_ADDRESS);
+  const setAddrReceipt = await setAddrTx.wait();
+  logEvents(setAddrReceipt, castedContract);
+
+  const addrCalldata = ADDR_INTERFACE.encodeFunctionData("addr(bytes32)", [
+    TEST_LABELHASH,
+  ]);
+  const addrResponse = await resolverContract.resolve!(dnsEncodedName, addrCalldata);
+  const [resolvedAddress] = ADDR_INTERFACE.decodeFunctionResult("addr(bytes32)", addrResponse);
+  if (resolvedAddress.toLowerCase() !== TEST_RESOLUTION_ADDRESS.toLowerCase()) {
+    throw new Error(`Unexpected ETH address`);
   }
 
-  // Reverse via text selector using ENSIP-10 full name binding.
-  // name = reverse.cid.eth; node = namehash(name); key = 'chain-label:<7930hex>'.
-  const ENSIP_5_INTERFACE = new Interface(['function text(bytes32,string) view returns (string)']);
-  const reverseKey = `${CHAIN_LABEL_PREFIX}${chainIdAsHex.replace(/^0x/, '')}`;
-  const reverseName = 'reverse.cid.eth';
-  const reverseNode = namehash(reverseName);
+  // Set and read another address (arbitrary coinType)
+  const setOtherAddrTx = await castedContract.setAddr!(TEST_LABELHASH, TEST_OTHER_COIN_TYPE, TEST_RESOLUTION_ADDRESS_TWO);
+  const setOtherAddrReceipt = await setOtherAddrTx.wait();
+  logEvents(setOtherAddrReceipt, castedContract);
 
-  console.log('reverseKey', reverseKey);
-  section('Reverse Resolve (text)');
-  const textCall = ENSIP_5_INTERFACE.encodeFunctionData('text(bytes32,string)', [reverseNode, reverseKey]);
-  const reverseDns = dnsEncode(reverseName, 255);
-  const tanswer: string = await resolverContract.resolve!(reverseDns, textCall);
-  console.log('tanswer', tanswer);
-  const [textName] = ENSIP_5_INTERFACE.decodeFunctionResult('text(bytes32,string)', tanswer);
-  log('text resolved name', textName);
-  if (textName !== label) throw new Error(`Unexpected reverse name (text): ${textName}`);
+  const anotherAddrCalldata = ENSIP_9_INTERFACE.encodeFunctionData("addr(bytes32,uint256)", [
+    TEST_LABELHASH,
+    TEST_OTHER_COIN_TYPE,
+  ]);
+  const anotherAddrResponse = await resolverContract.resolve!(dnsEncodedName, anotherAddrCalldata);
+  console.log("anotherAddrResponse", anotherAddrResponse);
+  const [anotherResolvedAddress] = ENSIP_9_INTERFACE.decodeFunctionResult("addr(bytes32,uint256)", anotherAddrResponse);
+  if (anotherResolvedAddress.toLowerCase() !== TEST_RESOLUTION_ADDRESS_TWO.toLowerCase()) {
+    console.log("anotherResolvedAddress", anotherResolvedAddress);
+    console.log("TEST_RESOLUTION_ADDRESS_TWO", TEST_RESOLUTION_ADDRESS_TWO);
 
-  section('Direct Reads');
-  const cid = await resolverContract.interoperableAddress!(labelHash);
-  log('chainId(bytes)', cid);
-  if (hexlify(cid) !== chainIdAsHex) throw new Error('chainId() mismatch');
+    throw new Error(`Unexpected OTHER address`);
+  }
 
-  const cname = await resolverContract.chainName!(cid);
-  log('chainName(bytes)', cname.toString().length, cname);
-  log('label', label.length);
-  if (cname !== label) throw new Error('chainName() mismatch');
 
-  // =====================
-  // ALIAS SYSTEM TESTING
-  // =====================
-  section('Alias System');
-  
-  const alias = 'op';
-  const aliasHash = keccak256(toUtf8Bytes(alias));
-  log('Registering alias', alias, '→', label);
-  
+  // Test reverse resolution - discerning the chain label from the interoperable address
+  // Get the text record for key, 'chain-label:<7930hex>' for `reverse.${SECOND_LEVEL_DOMAIN}.eth`
+  const reverseKey = `${CHAIN_LABEL_PREFIX}${INTEROPERABLE_ADDRESS_AS_HEX.replace(/^0x/, "")}`;
+
+  section("Reverse Resolve (text)");
+  const textCalldata = ENSIP_5_INTERFACE.encodeFunctionData(
+    "text(bytes32,string)",
+    [REVERSE_NODE, reverseKey]
+  );
+  const textResponse: string = await resolverContract.resolve!(REVERSE_NAME_DNS_ENCODED, textCalldata);
+  const [chainLabel] = ENSIP_5_INTERFACE.decodeFunctionResult(
+    "text(bytes32,string)",
+    textResponse
+  );
+  log("Chain label", chainLabel);
+  if (chainLabel !== TEST_LABEL)
+    throw new Error(`Unexpected chain label`);
+
+  // Getter tests
+  section("Getter tests");
+  const interoperableAddress = await resolverContract.interoperableAddress!(TEST_LABELHASH);
+  log("Interoperable address", interoperableAddress);
+  if (interoperableAddress !== INTEROPERABLE_ADDRESS_AS_HEX) {
+    throw new Error("Interoperable Address mismatch");
+  }
+
+  const chainName = await resolverContract.chainName!(interoperableAddress);
+  log("Chain name", chainName);
+  if (chainName !== TEST_CHAIN_NAME) {
+    throw new Error("Chain name mismatch");
+  }
+
+  // Alias tests
+  section("Alias tests");
+  log("Registering alias", TEST_ALIAS, "→", TEST_LABEL);
+
   // Register the alias (op → optimism)
-  const aliasTx = await resolverContract.registerAlias!(alias, labelHash);
+  const aliasTx = await resolverContract.registerAlias!(TEST_ALIAS, TEST_LABELHASH);
   const aliasReceipt = await aliasTx.wait();
   logEvents(aliasReceipt, castedContract);
-  
+
   // Verify the alias was registered
-  const canonical = await resolverContract.getCanonicalLabelhash!(aliasHash);
-  if (canonical !== labelHash) {
-    throw new Error(`Alias not registered correctly: got=${canonical} want=${labelHash}`);
+  const canonical = await resolverContract.getCanonicalLabelhash!(TEST_ALIAS_LABELHASH);
+  if (canonical !== TEST_LABELHASH) {
+    throw new Error(
+      `Alias not registered correctly`
+    );
   }
-  log('Alias registered successfully');
+  log("Alias registered successfully");
 
-  // Test: Read interoperable address through alias
-  section('Alias - Read through alias');
-  const aliasInteropAddr = await resolverContract.interoperableAddress!(aliasHash);
-  if (hexlify(aliasInteropAddr) !== chainIdAsHex) {
-    throw new Error(`Alias interoperableAddress mismatch: got=${hexlify(aliasInteropAddr)} want=${chainIdAsHex}`);
+  // Read Interoperable Address through getter using alias
+  section("Alias - Read through alias");
+  const aliasInteropAddr = await resolverContract.interoperableAddress!(
+    TEST_ALIAS_LABELHASH
+  );
+  if (hexlify(aliasInteropAddr) !== INTEROPERABLE_ADDRESS_AS_HEX) {
+    throw new Error(
+      `Alias interoperableAddress mismatch: got=${hexlify(
+        aliasInteropAddr
+      )} want=${INTEROPERABLE_ADDRESS_AS_HEX}`
+    );
   }
-  log('interoperableAddress via alias ✓');
+  log("interoperableAddress via alias ✓");
 
-  // Test: Read chain admin through alias
-  const aliasAdmin = await resolverContract.getChainAdmin!(aliasHash);
+  // Read chain admin through alias
+  const aliasAdmin = await resolverContract.getChainAdmin!(TEST_ALIAS_LABELHASH);
   if (aliasAdmin.toLowerCase() !== deployer.toLowerCase()) {
     throw new Error(`Alias admin mismatch: got=${aliasAdmin} want=${deployer}`);
   }
-  log('getChainAdmin via alias ✓');
+  log("getChainAdmin via alias ✓");
 
-  // Test: Resolve via ENSIP-10 through alias DNS name
-  section('Alias - ENSIP-10 Resolution');
-  const aliasEnsName = `${alias}.cid.eth`;
-  const aliasDnsEncodedName = dnsEncode(aliasEnsName, 255);
-  const aliasNamehash = namehash(aliasEnsName);
-  
-  const aliasDataCalldata = ENSIP_24_INTERFACE.encodeFunctionData('data(bytes32,string)', [aliasNamehash, INTEROPERABLE_ADDRESS_DATA_KEY]);
-  const aliasDataResponse: string = await resolverContract.resolve!(aliasDnsEncodedName, aliasDataCalldata);
-  const [aliasCidBytes] = ENSIP_24_INTERFACE.decodeFunctionResult('data(bytes32,string)', aliasDataResponse);
-  if (hex(aliasCidBytes) !== chainIdAsHex) {
-    throw new Error(`Alias resolve data mismatch: got=${hex(aliasCidBytes)} want=${chainIdAsHex}`);
+  // Resolve Interoperable Address through ENSIP-24 using alias
+  const aliasDataCalldata = ENSIP_24_INTERFACE.encodeFunctionData(
+    "data(bytes32,string)",
+    [TEST_ALIAS_NAMEHASH, INTEROPERABLE_ADDRESS_DATA_KEY]
+  );
+  const aliasDataResponse: string = await resolverContract.resolve!(
+    TEST_ALIAS_DNS_ENCODED,
+    aliasDataCalldata
+  );
+  const [aliasCidBytes] = ENSIP_24_INTERFACE.decodeFunctionResult(
+    "data(bytes32,string)",
+    aliasDataResponse
+  );
+  if (hex(aliasCidBytes) !== INTEROPERABLE_ADDRESS_AS_HEX) {
+    throw new Error(
+      `Alias resolve data mismatch: got=${hex(
+        aliasCidBytes
+      )} want=${INTEROPERABLE_ADDRESS_AS_HEX}`
+    );
   }
-  log('resolve(op.cid.eth, data) ✓');
+  log(`resolve(${TEST_ALIAS}.${SECOND_LEVEL_DOMAIN}.eth, data) ✓`);
 
-  // Test: Read address record through alias
-  const aliasAddrCall = ADDR_INTERFACE.encodeFunctionData('addr(bytes32)', [aliasHash]);
-  const aliasAddrResponse: string = await resolverContract.resolve!(aliasDnsEncodedName, aliasAddrCall);
-  const [aliasAddr] = ADDR_INTERFACE.decodeFunctionResult('addr(bytes32)', aliasAddrResponse);
-  if (aliasAddr.toLowerCase() !== testAddress.toLowerCase()) {
-    throw new Error(`Alias addr mismatch: got=${aliasAddr} want=${testAddress}`);
+  // Read address record through alias
+  const aliasAddrCall = ADDR_INTERFACE.encodeFunctionData("addr(bytes32)", [
+    TEST_ALIAS_LABELHASH,
+  ]);
+  const aliasAddrResponse: string = await resolverContract.resolve!(
+    TEST_ALIAS_DNS_ENCODED,
+    aliasAddrCall
+  );
+  const [aliasAddr] = ADDR_INTERFACE.decodeFunctionResult(
+    "addr(bytes32)",
+    aliasAddrResponse
+  );
+  if (aliasAddr.toLowerCase() !== TEST_RESOLUTION_ADDRESS.toLowerCase()) {
+    throw new Error(
+      `Alias addr mismatch`
+    );
   }
-  log('resolve(op.cid.eth, addr) ✓');
+  log(`resolve(${TEST_ALIAS}.${SECOND_LEVEL_DOMAIN}.eth, addr) ✓`);
 
-  // Test: Set text record through alias (should work since we own the canonical)
-  section('Alias - Write through alias');
-  const setTextViaAlias = castedContract.getFunction('setText(bytes32,string,string)');
-  const aliasTextTx = await setTextViaAlias(aliasHash, 'description', 'Set via alias');
+  // Set text record through alias (should work since we own the canonical)
+  section("Alias - Write through alias");
+  const setTextViaAlias = castedContract.getFunction(
+    "setText(bytes32,string,string)"
+  );
+  const aliasTextTx = await setTextViaAlias(
+    TEST_ALIAS_LABELHASH,
+    "description",
+    TEST_DESCRIPTION_TEXT
+  );
   const aliasTextReceipt = await aliasTextTx.wait();
   logEvents(aliasTextReceipt, castedContract);
-  log('setText via alias ✓');
+  log("setText via alias ✓");
 
   // Verify the text record was set on canonical
-  const textViaCanonical = await resolverContract.getText!(labelHash, 'description');
-  if (textViaCanonical !== 'Set via alias') {
-    throw new Error(`Text not set on canonical: got=${textViaCanonical} want='Set via alias'`);
+  const textViaCanonical = await resolverContract.getText!(
+    TEST_LABELHASH,
+    "description"
+  );
+  if (textViaCanonical !== TEST_DESCRIPTION_TEXT) {
+    throw new Error(
+      `Text not set on canonical: got=${textViaCanonical} want='Set via alias'`
+    );
   }
-  log('Text record accessible via canonical ✓');
+  log("Text record accessible via canonical ✓");
 
   // Also verify readable via alias
-  const textViaAlias = await resolverContract.getText!(aliasHash, 'description');
-  if (textViaAlias !== 'Set via alias') {
-    throw new Error(`Text not readable via alias: got=${textViaAlias} want='Set via alias'`);
+  const textViaAlias = await resolverContract.getText!(
+    TEST_ALIAS_LABELHASH,
+    "description"
+  );
+  if (textViaAlias !== TEST_DESCRIPTION_TEXT) {
+    throw new Error(
+      `Text not readable via alias`
+    );
   }
-  log('Text record accessible via alias ✓');
+  log("Text record accessible via alias ✓");
 
-  // Test: Remove alias
-  section('Alias - Remove');
-  const removeAliasTx = await resolverContract.removeAlias!(alias);
+  //Remove alias
+  const removeAliasTx = await resolverContract.removeAlias!(TEST_ALIAS);
   const removeAliasReceipt = await removeAliasTx.wait();
   logEvents(removeAliasReceipt, castedContract);
 
   // Verify alias is removed
-  const removedCanonical = await resolverContract.getCanonicalLabelhash!(aliasHash);
-  if (removedCanonical !== '0x0000000000000000000000000000000000000000000000000000000000000000') {
+  const removedCanonical = await resolverContract.getCanonicalLabelhash!(
+    TEST_ALIAS_LABELHASH
+  );
+  if (
+    removedCanonical !==
+    "0x0000000000000000000000000000000000000000000000000000000000000000"
+  ) {
     throw new Error(`Alias not removed: got=${removedCanonical}`);
   }
-  log('Alias removed successfully ✓');
+  log("Alias removed successfully ✓");
 
   // Verify reading via removed alias now returns empty (alias treated as its own labelhash)
-  const removedAliasInteropAddr = await resolverContract.interoperableAddress!(aliasHash);
-  if (removedAliasInteropAddr !== '0x') {
-    throw new Error(`Removed alias should return empty: got=${removedAliasInteropAddr}`);
+  const removedAliasInteropAddr = await resolverContract.interoperableAddress!(
+    TEST_ALIAS_LABELHASH
+  );
+  if (removedAliasInteropAddr !== "0x") {
+    throw new Error(
+      `Removed alias should return empty: got=${removedAliasInteropAddr}`
+    );
   }
-  log('Removed alias returns empty data ✓');
+  log("Removed alias returns empty data ✓");
 
-  console.log('\n✓ All Blocksmith tests passed (including alias system)');
+  console.log("✓ All tests passed");
 
   await smith.shutdown();
 }

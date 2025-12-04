@@ -3,7 +3,8 @@ src = "src"
 out = "out"
 libs = ["lib"]
 remappings = [
-    "solidity-bytes-utils/=node_modules/solidity-bytes-utils/"
+    "solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
+    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/"
 ]
 
 [rpc_endpoints]

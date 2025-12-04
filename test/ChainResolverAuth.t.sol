@@ -1,17 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import "forge-std/Test.sol";
-import "../src/ChainResolver.sol";
-import "../src/interfaces/IChainResolver.sol";
-import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
+import "./ChainResolverTestBase.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract ChainResolverAuthTest is Test {
-    ChainResolver public resolver;
-
-    address public admin = address(0x1);
-    address public user1 = address(0x2);
-    address public user2 = address(0x3);
+contract ChainResolverAuthTest is ChainResolverTestBase {
     address public attacker = address(0x999);
 
     // Coin type constants
@@ -25,8 +18,7 @@ contract ChainResolverAuthTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        bytes32 parentNamehash = NameCoder.namehash(NameCoder.encode("cid.eth"), 0);
-        resolver = new ChainResolver(admin, parentNamehash);
+        resolver = deployResolver(admin);
         vm.stopPrank();
     }
 
@@ -48,7 +40,7 @@ contract ChainResolverAuthTest is Test {
         // Attacker tries to register a chain
         vm.startPrank(attacker);
 
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, attacker));
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, attacker));
         resolver.register(IChainResolver.ChainRegistrationData({label: "attacker-label", chainName: "attacker-label", owner: attacker, interoperableAddress: hex"0101"}));
 
         vm.stopPrank();

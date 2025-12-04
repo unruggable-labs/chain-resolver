@@ -1,17 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import "forge-std/Test.sol";
-import "../src/ChainResolver.sol";
-import "../src/interfaces/IChainResolver.sol";
-import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
+import "./ChainResolverTestBase.sol";
 
-contract ChainResolverRegistryTest is Test {
-    ChainResolver public resolver;
-
-    address public admin = address(0x1);
-    address public user1 = address(0x2);
-    address public user2 = address(0x3);
+contract ChainResolverRegistryTest is ChainResolverTestBase {
     address public operator = address(0x4);
 
     // Test data - using 7930 chain ID format
@@ -29,8 +21,7 @@ contract ChainResolverRegistryTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        bytes32 parentNamehash = NameCoder.namehash(NameCoder.encode("cid.eth"), 0);
-        resolver = new ChainResolver(admin, parentNamehash);
+        resolver = deployResolver(admin);
         vm.stopPrank();
     }
 

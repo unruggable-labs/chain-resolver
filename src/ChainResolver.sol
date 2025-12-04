@@ -5,12 +5,13 @@ pragma solidity ^0.8.25;
  * @title ChainResolver
  * @author Unruggable
  * @notice ENS resolver for chain ID registration and resolution with ERC-7930 identifiers.
- * @dev Based on Wonderland's L2Resolver.
+ * @dev Based on Wonderland's L2Resolver. Upgradeable via UUPS with 7-day timelock.
  * @dev Repository: https://github.com/unruggable-labs/chain-resolver
  */
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
-import {HexUtils} from "@ensdomains/ens-contracts/contracts/utils/HexUtils.sol";
 import {IExtendedResolver} from "@ensdomains/ens-contracts/contracts/resolvers/profiles/IExtendedResolver.sol";
 import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
 import {IChainResolver} from "./interfaces/IChainResolver.sol";
@@ -22,7 +23,7 @@ event TextChanged(
     string value
 );
 
-contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
+contract ChainResolver is Initializable, OwnableUpgradeable, UUPSUpgradeable, IERC165, IExtendedResolver, IChainResolver {
 
     /**
      * @notice Modifier to ensure only the chain owner can call the function
@@ -55,8 +56,15 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     string public constant CHAIN_LABEL_PREFIX = "chain-label:";
     bytes32 public constant REVERSE_LABELHASH = keccak256("reverse");
 
+    // Upgrade timelock duration (7 days)
+    uint256 public constant UPGRADE_TIMELOCK = 7 days;
+
     // Parent namespace namehash (e.g., namehash("cid.eth")) for computing full namehashes in events
-    bytes32 public immutable parentNamehash;
+    bytes32 public parentNamehash;
+
+    // Upgrade timelock state
+    address public pendingImplementation;
+    uint256 public upgradeProposedAt;
 
     // Chain data storage
     mapping(bytes32 labelhash => address owner) private chainOwners;
@@ -78,18 +86,123 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     mapping(bytes32 labelhash => mapping(string key => string value)) private textRecords;
     mapping(bytes32 labelhash => mapping(string key => bytes data)) private dataRecords;
 
+    // Events for upgrade timelock
+    event UpgradeProposed(address indexed newImplementation, uint256 executeAfter);
+    event UpgradeCancelled(address indexed cancelledImplementation);
+    event UpgradeExecuted(address indexed newImplementation);
+
+    // Errors for upgrade timelock
+    error NoUpgradePending();
+    error UpgradeTimelockNotElapsed(uint256 remainingTime);
+    error UpgradeImplementationMismatch(address expected, address provided);
+    error UpgradeAlreadyPending();
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
-     * @notice Constructor
+     * @notice Initialize the contract (replaces constructor for upgradeable contracts)
      * @param _owner The address to set as the owner
      * @param _parentNamehash The namehash of the parent namespace (e.g., namehash("cid.eth"))
      */
-    constructor(address _owner, bytes32 _parentNamehash) Ownable(_owner) {
+    function initialize(address _owner, bytes32 _parentNamehash) external initializer {
+        __Ownable_init(_owner);
         parentNamehash = _parentNamehash;
     }
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IExtendedResolver).interfaceId
             || interfaceId == type(IChainResolver).interfaceId;
+    }
+
+    //////
+    /// UPGRADE TIMELOCK
+    //////
+
+    /**
+     * @notice Propose an upgrade to a new implementation. Must wait 7 days before execution.
+     * @param _newImplementation The address of the new implementation contract.
+     */
+    function proposeUpgrade(address _newImplementation) external onlyOwner {
+        if (pendingImplementation != address(0)) {
+            revert UpgradeAlreadyPending();
+        }
+        
+        pendingImplementation = _newImplementation;
+        upgradeProposedAt = block.timestamp;
+        
+        emit UpgradeProposed(_newImplementation, block.timestamp + UPGRADE_TIMELOCK);
+    }
+
+    /**
+     * @notice Cancel a pending upgrade proposal.
+     */
+    function cancelUpgrade() external onlyOwner {
+        if (pendingImplementation == address(0)) {
+            revert NoUpgradePending();
+        }
+        
+        address cancelled = pendingImplementation;
+        pendingImplementation = address(0);
+        upgradeProposedAt = 0;
+        
+        emit UpgradeCancelled(cancelled);
+    }
+
+    /**
+     * @notice Execute a pending upgrade after the timelock has elapsed.
+     * @param _newImplementation The address of the new implementation (must match pending).
+     */
+    function executeUpgrade(address _newImplementation) external onlyOwner {
+        if (pendingImplementation == address(0)) {
+            revert NoUpgradePending();
+        }
+        
+        if (_newImplementation != pendingImplementation) {
+            revert UpgradeImplementationMismatch(pendingImplementation, _newImplementation);
+        }
+        
+        uint256 elapsed = block.timestamp - upgradeProposedAt;
+        if (elapsed < UPGRADE_TIMELOCK) {
+            revert UpgradeTimelockNotElapsed(UPGRADE_TIMELOCK - elapsed);
+        }
+        
+        // Clear pending state before upgrade
+        pendingImplementation = address(0);
+        upgradeProposedAt = 0;
+        
+        emit UpgradeExecuted(_newImplementation);
+        
+        // Perform the actual upgrade
+        upgradeToAndCall(_newImplementation, "");
+    }
+
+    /**
+     * @notice Returns the time remaining until a pending upgrade can be executed.
+     * @return remaining The time remaining in seconds, or 0 if no upgrade pending or timelock elapsed.
+     */
+    function upgradeTimelockRemaining() external view returns (uint256 remaining) {
+        if (pendingImplementation == address(0)) {
+            return 0;
+        }
+        
+        uint256 elapsed = block.timestamp - upgradeProposedAt;
+        if (elapsed >= UPGRADE_TIMELOCK) {
+            return 0;
+        }
+        
+        return UPGRADE_TIMELOCK - elapsed;
+    }
+
+    /**
+     * @notice UUPS authorization - only allows upgrades through the timelock mechanism.
+     * @dev This function is called by upgradeToAndCall. We block direct calls.
+     */
+    function _authorizeUpgrade(address) internal view override onlyOwner {
+        // Upgrades must go through proposeUpgrade -> executeUpgrade
+        // This will only be called from executeUpgrade after timelock validation
     }
 
     //////

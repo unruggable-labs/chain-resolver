@@ -1,27 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import "forge-std/Test.sol";
-import "../src/ChainResolver.sol";
-import "../src/interfaces/IChainResolver.sol";
-import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
+import "./ChainResolverTestBase.sol";
 
-contract ChainResolverEnumerationTest is Test {
-    ChainResolver public resolver;
-
-    // Accounts
-    address public admin = address(0x1);
-    address public user1 = address(0x2);
-    address public user2 = address(0x3);
-
+contract ChainResolverEnumerationTest is ChainResolverTestBase {
     // Example 7930 chain IDs
     bytes public constant OP_ID = hex"00010001010a00"; // Optimism
     bytes public constant ARB_ID = hex"00010001016600"; // Arbitrum
 
     function setUp() public {
         vm.startPrank(admin);
-        bytes32 parentNamehash = NameCoder.namehash(NameCoder.encode("cid.eth"), 0);
-        resolver = new ChainResolver(admin, parentNamehash);
+        resolver = deployResolver(admin);
         vm.stopPrank();
     }
 
