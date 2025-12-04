@@ -37,6 +37,31 @@ const logEvents = (receipt: any, contract: Contract) => {
   }
 };
 
+// Chain registration data type
+interface ChainData {
+  label: string;
+  chainName: string;
+  interoperableAddressHex: string;
+}
+
+// Helper to register a chain
+const registerChain = async (
+  contract: Contract,
+  owner: string,
+  chain: ChainData
+) => {
+  const tx = await contract.register!([
+    chain.label,
+    chain.chainName,
+    owner,
+    getBytes(chain.interoperableAddressHex),
+  ]);
+  const receipt = await tx.wait();
+  logEvents(receipt, contract);
+  log(`Registered chain: ${chain.label}`);
+  return receipt;
+};
+
 // The resolver contract
 const RESOLVER_FILE_NAME = "ChainResolver.sol";
 
@@ -49,12 +74,24 @@ const INTEROPERABLE_ADDRESS_DATA_KEY = "interoperable-address";
 // See ERC-7828
 const CHAIN_LABEL_PREFIX = "chain-label:";
 
-// Test data
-const TEST_LABEL = "optimism";
-const TEST_CHAIN_NAME = "Optimism";
+// Test chain data
+const OPTIMISM_CHAIN: ChainData = {
+  label: "optimism",
+  chainName: "Optimism",
+  interoperableAddressHex: "0x00010001010a00",
+};
+
+const BASE_CHAIN: ChainData = {
+  label: "base",
+  chainName: "Base",
+  interoperableAddressHex: "0x000100012105",
+};
+
+// Derived constants for optimism (primary test chain)
+const TEST_LABEL = OPTIMISM_CHAIN.label;
+const TEST_CHAIN_NAME = OPTIMISM_CHAIN.chainName;
+const INTEROPERABLE_ADDRESS_AS_HEX = OPTIMISM_CHAIN.interoperableAddressHex;
 const TEST_LABELHASH = keccak256(toUtf8Bytes(TEST_LABEL));
-const INTEROPERABLE_ADDRESS_AS_HEX = "0x00010001010a00";
-const INTEROPERABLE_ADDRESS_AS_BYTES = getBytes(INTEROPERABLE_ADDRESS_AS_HEX);
 const SECOND_LEVEL_DOMAIN = "cid.eth";
 const TEST_RESOLUTION_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 const TEST_OTHER_COIN_TYPE = 123;
@@ -135,15 +172,7 @@ async function main() {
 
   // Register the test chain
   section("Register test chain data");
-  const tx = await resolverContract.register!([
-    TEST_LABEL,
-    TEST_CHAIN_NAME,
-    deployer,
-    INTEROPERABLE_ADDRESS_AS_BYTES,
-  ]);
-  const receipt = await tx.wait();
-  logEvents(receipt, castedContract);
-  log("Registration successful");
+  await registerChain(castedContract, deployer, OPTIMISM_CHAIN);
 
   // Test Forward Resolution of ERC-7930 _Interoperable Address_
   const ensName = `${TEST_LABEL}.${SECOND_LEVEL_DOMAIN}`;
@@ -385,6 +414,81 @@ async function main() {
     );
   }
   log("Removed alias returns empty data ✓");
+
+  // Discoverability tests
+  section("Discoverability tests");
+
+  // Test chainCount
+  const count = await resolverContract.chainCount!();
+  log("Chain count", count.toString());
+  if (count !== 1n) {
+    throw new Error(`Unexpected chain count: got=${count} want=1`);
+  }
+  log("chainCount ✓");
+
+  // Test getChainAtIndex for the registered chain
+  const [label, cName, interopAddr] = await resolverContract.getChainAtIndex!(0);
+  log("Chain at index 0:", { label, chainName: cName, interopAddr });
+
+  if (label !== TEST_LABEL) {
+    throw new Error(`Unexpected label at index 0: got=${label} want=${TEST_LABEL}`);
+  }
+  if (cName !== TEST_CHAIN_NAME) {
+    throw new Error(`Unexpected chainName at index 0: got=${cName} want=${TEST_CHAIN_NAME}`);
+  }
+  if (interopAddr !== INTEROPERABLE_ADDRESS_AS_HEX) {
+    throw new Error(
+      `Unexpected interoperableAddress at index 0: got=${interopAddr} want=${INTEROPERABLE_ADDRESS_AS_HEX}`
+    );
+  }
+  log("getChainAtIndex(0) ✓");
+
+  // Test getChainAtIndex with out-of-bounds index (should revert)
+  try {
+    await resolverContract.getChainAtIndex!(1);
+    throw new Error("Expected revert for out-of-bounds index");
+  } catch (e: any) {
+    if (e.message === "Expected revert for out-of-bounds index") {
+      throw e;
+    }
+    log("getChainAtIndex(1) correctly reverted ✓");
+  }
+
+  // Register a second chain to test multiple entries
+  section("Register second chain for discoverability");
+  await registerChain(castedContract, deployer, BASE_CHAIN);
+
+  // Verify chainCount increased
+  const count2 = await resolverContract.chainCount!();
+  log("Chain count after second registration", count2.toString());
+  if (count2 !== 2n) {
+    throw new Error(`Unexpected chain count: got=${count2} want=2`);
+  }
+  log("chainCount after second registration ✓");
+
+  // Verify getChainAtIndex(1) returns the second chain
+  const [label2, cName2, interopAddr2] = await resolverContract.getChainAtIndex!(1);
+  log("Chain at index 1:", { label: label2, chainName: cName2, interopAddr: interopAddr2 });
+
+  if (label2 !== BASE_CHAIN.label) {
+    throw new Error(`Unexpected label at index 1: got=${label2} want=${BASE_CHAIN.label}`);
+  }
+  if (cName2 !== BASE_CHAIN.chainName) {
+    throw new Error(`Unexpected chainName at index 1: got=${cName2} want=${BASE_CHAIN.chainName}`);
+  }
+  if (interopAddr2 !== BASE_CHAIN.interoperableAddressHex) {
+    throw new Error(
+      `Unexpected interoperableAddress at index 1: got=${interopAddr2} want=${BASE_CHAIN.interoperableAddressHex}`
+    );
+  }
+  log("getChainAtIndex(1) ✓");
+
+  // Verify first chain is still accessible at index 0
+  const [label0, cName0, interopAddr0] = await resolverContract.getChainAtIndex!(0);
+  if (label0 !== TEST_LABEL || cName0 !== TEST_CHAIN_NAME) {
+    throw new Error("First chain data changed unexpectedly");
+  }
+  log("First chain still at index 0 ✓");
 
   console.log("✓ All tests passed");
 
