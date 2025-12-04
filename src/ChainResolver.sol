@@ -55,6 +55,9 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     string public constant CHAIN_LABEL_PREFIX = "chain-label:";
     bytes32 public constant REVERSE_LABELHASH = keccak256("reverse");
 
+    // Parent namespace namehash (e.g., namehash("cid.eth")) for computing full namehashes in events
+    bytes32 public immutable parentNamehash;
+
     // Chain data storage
     mapping(bytes32 labelhash => address owner) private chainOwners;
     mapping(bytes32 labelhash => string name) private chainNames;
@@ -78,8 +81,11 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     /**
      * @notice Constructor
      * @param _owner The address to set as the owner
+     * @param _parentNamehash The namehash of the parent namespace (e.g., namehash("cid.eth"))
      */
-    constructor(address _owner) Ownable(_owner) {}
+    constructor(address _owner, bytes32 _parentNamehash) Ownable(_owner) {
+        parentNamehash = _parentNamehash;
+    }
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return interfaceId == type(IERC165).interfaceId || interfaceId == type(IExtendedResolver).interfaceId
@@ -163,9 +169,10 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     {
         bytes32 canonical = _resolveLabelhash(_labelhash);
         addressRecords[canonical][_coinType] = _value;
-        emit AddressChanged(canonical, _coinType, _value);
+        bytes32 node = _computeNamehash(canonical);
+        emit AddressChanged(node, _coinType, _value);
         if (_coinType == ETHEREUM_COIN_TYPE) {
-            emit AddrChanged(canonical, bytesToAddress(_value));
+            emit AddrChanged(node, bytesToAddress(_value));
         }
     }
 
@@ -200,7 +207,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         internal
     {
         textRecords[_labelhash][_key] = _value;
-        emit TextChanged(_labelhash, _key, _key, _value);
+        emit TextChanged(_computeNamehash(_labelhash), _key, _key, _value);
     }
 
     /**
@@ -243,7 +250,7 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
         internal
     {
         dataRecords[_labelhash][_key] = _data;
-        emit DataChanged(_labelhash, _key, keccak256(bytes(_key)), keccak256(_data));
+        emit DataChanged(_computeNamehash(_labelhash), _key, keccak256(bytes(_key)), keccak256(_data));
     }
 
     //////
@@ -436,6 +443,16 @@ contract ChainResolver is Ownable, IERC165, IExtendedResolver, IChainResolver {
     function _resolveLabelhash(bytes32 _labelhash) internal view returns (bytes32) {
         bytes32 canonical = aliasOf[_labelhash];
         return canonical == bytes32(0) ? _labelhash : canonical;
+    }
+
+    /**
+     * @notice Computes the full ENS namehash from a labelhash using the parent namespace.
+     * @param _labelhash The labelhash of the label.
+     * @return The full namehash (e.g., namehash("optimism.cid.eth") from labelhash("optimism")).
+     * @dev Uses the formula: namehash(label.parent) = keccak256(namehash(parent) + labelhash(label))
+     */
+    function _computeNamehash(bytes32 _labelhash) internal view returns (bytes32) {
+        return keccak256(abi.encodePacked(parentNamehash, _labelhash));
     }
 
     /**

@@ -35,7 +35,8 @@ contract ChainResolverENSReverseTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        resolver = new ChainResolver(admin);
+        bytes32 parentNamehash = NameCoder.namehash(NameCoder.encode("cid.eth"), 0);
+        resolver = new ChainResolver(admin, parentNamehash);
         vm.stopPrank();
     }
 

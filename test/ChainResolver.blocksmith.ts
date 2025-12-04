@@ -42,14 +42,16 @@ async function main() {
   section('Launch (local Foundry)');
   log('wallet', wallet.address);
 
-  // 1) Deploy ChainResolver(owner)
+  // 1) Deploy ChainResolver(owner, parentNamehash)
   const deployer = wallet.address;
+  const parentNamehash = namehash('cid.eth');
   section(`Deploy ${RESOLVER_FILE_NAME}`);
   log('Deployer address', deployer);
+  log('Parent namehash (cid.eth)', parentNamehash);
   const resolverContract = await smith.deploy({
     from: wallet,
     file: RESOLVER_FILE_NAME,
-    args: [deployer],
+    args: [deployer, parentNamehash],
   });
   const castedContract = resolverContract as unknown as Contract;
   log('Deployed resolver contract address', resolverContract.target);
@@ -240,6 +242,8 @@ async function main() {
   log('Removed alias returns empty data ✓');
 
   console.log('\n✓ All Blocksmith tests passed (including alias system)');
+
+  await smith.shutdown();
 }
 
 main().catch((e) => {

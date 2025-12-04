@@ -4,6 +4,7 @@ pragma solidity ^0.8.25;
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
 import "../src/interfaces/IChainResolver.sol";
+import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
 
 contract ChainResolverENSForwardTest is Test {
     ChainResolver public resolver;
@@ -20,9 +21,14 @@ contract ChainResolverENSForwardTest is Test {
     bytes public constant CHAIN_ID = hex"00010001010a00";
     bytes32 public constant LABEL_HASH = keccak256(bytes(CHAIN_NAME));
 
+    // Expected namehash for events (namehash("optimism.cid.eth"))
+    bytes32 public EXPECTED_NAMEHASH;
+
     function setUp() public {
         vm.startPrank(admin);
-        resolver = new ChainResolver(admin);
+        bytes32 parentNamehash = NameCoder.namehash(NameCoder.encode("cid.eth"), 0);
+        EXPECTED_NAMEHASH = keccak256(abi.encodePacked(parentNamehash, LABEL_HASH));
+        resolver = new ChainResolver(admin, parentNamehash);
         vm.stopPrank();
     }
 
@@ -90,7 +96,7 @@ contract ChainResolverENSForwardTest is Test {
 
         bytes memory testData = hex"deadbeef";
         vm.expectEmit(true, true, false, true);
-        emit IChainResolver.DataChanged(LABEL_HASH, "custom", keccak256(bytes("custom")), keccak256(testData));
+        emit IChainResolver.DataChanged(EXPECTED_NAMEHASH, "custom", keccak256(bytes("custom")), keccak256(testData));
         resolver.setData(LABEL_HASH, "custom", testData);
 
         // Verify data record

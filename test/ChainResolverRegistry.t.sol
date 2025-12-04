@@ -4,6 +4,7 @@ pragma solidity ^0.8.25;
 import "forge-std/Test.sol";
 import "../src/ChainResolver.sol";
 import "../src/interfaces/IChainResolver.sol";
+import {NameCoder} from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
 
 contract ChainResolverRegistryTest is Test {
     ChainResolver public resolver;
@@ -28,7 +29,8 @@ contract ChainResolverRegistryTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        resolver = new ChainResolver(admin);
+        bytes32 parentNamehash = NameCoder.namehash(NameCoder.encode("cid.eth"), 0);
+        resolver = new ChainResolver(admin, parentNamehash);
         vm.stopPrank();
     }
 
