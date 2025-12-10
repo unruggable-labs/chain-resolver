@@ -35,12 +35,6 @@ During initialization, administrative control of **additional** data stored unde
 
 - Reverse Resolution requires the resolution of a text record ([ENSIP-5]) on the `reverse.<namespace>.eth` node. The key to use is the [ERC-7930] _Interoperable Address_ you want to reverse, prefixed with `chain-name:`. For example, `"chain-name:00010001010a00"`. The data returned is the human readable chain label. 
 
-## Resolution flow:
-
-<p align="center">
-  <img src="img/resolutionflow.png" alt="Resolution flow" width="70%" />
-</p>
-
 ## Security Considerations
 
 The storage architecture within this contract has:
@@ -58,7 +52,12 @@ Similarly, the immutability of the `chain-name:` prefixed text keys are set on t
 Checkout this repository, and install dependencies.
 
 ```bash
-forge install
+forge install foundry-rs/forge-std@v1.10.0 
+forge install OpenZeppelin/openzeppelin-contracts@v5.4.0 
+forge install OpenZeppelin/openzeppelin-contracts-upgradeable@v5.5.0 
+forge install ensdomains/ens-contracts@v1.6.0 
+git submodule add -b v4.9.3 https://github.com/OpenZeppelin/openzeppelin-contracts lib/openzeppelin-contracts-v4
+
 bun install
 ```
 

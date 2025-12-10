@@ -1,7 +1,7 @@
 {
     "type": "module",
     "dependencies": {
-        "@adraffy/blocksmith": "^0.1.59",
+        "@adraffy/blocksmith": "https://github.com/clowestab/blocksmith.js.git#2bf93f74d56b5e44de652a088d58a680d002e076",
         "@ensdomains/ens-contracts": "^1.6.0",
         "axios": "^1.13.2",
         "content-hash": "^2.5.2",

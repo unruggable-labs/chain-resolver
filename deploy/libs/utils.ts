@@ -93,7 +93,11 @@ export const promptContinueOrExit = async (
 
 // Initializes a blocksmith instance for the specified chain
 export const initSmith = async (chainName: string, privateKey) => {
-  const PROVIDER_URL = CHAIN_MAP.get(chainName).rpc;
+  const chainConfig = CHAIN_MAP.get(chainName);
+  if (!chainConfig?.rpc) {
+    throw new Error(`RPC URL not configured for chain: ${chainName}`);
+  }
+  const PROVIDER_URL = chainConfig.rpc;
   const PRIVATE_KEY = privateKey;
 
   console.log(`Initializing Smith for ${chainName} ...`);
@@ -164,6 +168,9 @@ export const verifyContract = async (
   smith,
   apiKey: string = process.env.ETHERSCAN_API_KEY || ""
 ) => {
+  if (!apiKey) {
+    throw new Error("API key is required for contract verification. Set ETHERSCAN_API_KEY environment variable or pass it explicitly.");
+  }
   //console.log(apiKey);
   const { target: contractAddress, links = [] } = contract;
 
