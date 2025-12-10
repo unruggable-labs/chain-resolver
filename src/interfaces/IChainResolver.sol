@@ -41,6 +41,8 @@ interface IChainResolver {
 
     // The `reverse.<namespace>.eth` node is special and can not be owned
     error ReverseNodeOwnershipBlock();
+    // Cannot set chain admin to zero address
+    error InvalidChainAdmin();
 
     /// @notice Functions
 

@@ -198,6 +198,10 @@ contract ChainResolver is
         bytes32 _labelhash,
         address _owner
     ) external onlyChainOwner(_labelhash) {
+        if (_owner == address(0)) {
+            revert InvalidChainAdmin();
+        }
+
         bytes32 canonical = _resolveLabelhash(_labelhash);
 
         if (canonical == REVERSE_LABELHASH) {
@@ -528,7 +532,7 @@ contract ChainResolver is
     ) internal {
         bytes32 _labelhash = keccak256(bytes(_label));
 
-        bool isUpdate = chainOwners[_labelhash] != address(0);
+        bool isNew = chainOwners[_labelhash] != address(0);
 
         chainNames[_labelhash] = _chainName;
         chainOwners[_labelhash] = _owner;
@@ -547,7 +551,7 @@ contract ChainResolver is
         // Map the Interoperable Address back to the chain label (for reverse resolution)
         labelByInteroperableAddress[_interoperableAddress] = _label;
 
-        if (!isUpdate) {
+        if (!isNew) {
             labelhashList.push(_labelhash);
             unchecked {
                 chainCount += 1;
