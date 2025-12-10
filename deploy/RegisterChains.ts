@@ -20,6 +20,7 @@ const RESOLVER_ABI = [
   "function register((string,string,address,bytes)) external",
   "function batchRegister((string,string,address,bytes)[]) external",
   "function registerAlias(string,bytes32) external",
+  "function batchRegisterAlias(string[],bytes32[]) external",
   "function removeAlias(string) external",
   "function getCanonicalLabelhash(bytes32) view returns (bytes32)",
 ];
@@ -266,7 +267,9 @@ async function main() {
         if (shouldRegisterAliases) {
           console.log("\nRegistering aliases...\n");
 
-          for (const { alias, canonicalLabel } of unregisteredAliases) {
+          if (unregisteredAliases.length === 1) {
+            // Single alias - use registerAlias
+            const { alias, canonicalLabel } = unregisteredAliases[0]!;
             const canonicalHash = keccak256(toUtf8Bytes(canonicalLabel));
 
             try {
@@ -276,6 +279,39 @@ async function main() {
             } catch (e: any) {
               const msg = e?.shortMessage || e?.message || String(e);
               console.error(`✗ ${alias}: Failed - ${msg}`);
+            }
+          } else {
+            // Multiple aliases - use batchRegisterAlias
+            const aliasStrings = unregisteredAliases.map((a) => a.alias);
+            const canonicalHashes = unregisteredAliases.map((a) =>
+              keccak256(toUtf8Bytes(a.canonicalLabel))
+            );
+
+            try {
+              console.log(`Using batchRegisterAlias for ${unregisteredAliases.length} aliases...`);
+              const tx = await resolver.batchRegisterAlias!(aliasStrings, canonicalHashes);
+              await tx.wait();
+              for (const { alias, canonicalLabel } of unregisteredAliases) {
+                console.log(`✓ ${alias} → ${canonicalLabel}: Registered`);
+              }
+            } catch (e: any) {
+              const msg = e?.shortMessage || e?.message || String(e);
+              console.error(`✗ batchRegisterAlias failed: ${msg}`);
+
+              // Fallback to individual registration
+              console.log("\nFalling back to individual registration...\n");
+              for (const { alias, canonicalLabel } of unregisteredAliases) {
+                const canonicalHash = keccak256(toUtf8Bytes(canonicalLabel));
+
+                try {
+                  const tx = await resolver.registerAlias!(alias, canonicalHash);
+                  await tx.wait();
+                  console.log(`✓ ${alias} → ${canonicalLabel}: Registered`);
+                } catch (e2: any) {
+                  const msg2 = e2?.shortMessage || e2?.message || String(e2);
+                  console.error(`✗ ${alias}: Failed - ${msg2}`);
+                }
+              }
             }
           }
         }

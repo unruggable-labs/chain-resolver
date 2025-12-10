@@ -192,4 +192,164 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
 
         console.log("Successfully registered single item batch");
     }
+
+    function test_009____registerAlias_________________SuccessfulAliasRegistration()
+        public
+    {
+        vm.startPrank(admin);
+
+        // First register the canonical chain
+        registerTestChain();
+
+        // Register an alias "op" pointing to "optimism"
+        string memory aliasLabel = "op";
+        resolver.registerAlias(aliasLabel, TEST_LABELHASH);
+
+        // Verify alias was registered
+        bytes32 aliasHash = keccak256(bytes(aliasLabel));
+        assertEq(
+            resolver.getCanonicalLabelhash(aliasHash),
+            TEST_LABELHASH,
+            "Alias should point to canonical labelhash"
+        );
+
+        // Verify alias resolves to same data as canonical
+        assertEq(
+            resolver.interoperableAddress(aliasHash),
+            TEST_INTEROPERABLE_ADDRESS,
+            "Alias should resolve to same interoperable address"
+        );
+        assertEq(
+            resolver.getChainAdmin(aliasHash),
+            user1,
+            "Alias should resolve to same chain admin"
+        );
+
+        vm.stopPrank();
+
+        console.log("Successfully registered alias");
+    }
+
+    function test_010____registerAlias_________________RevertsWhenCanonicalNotRegistered()
+        public
+    {
+        vm.startPrank(admin);
+
+        // Try to register alias without registering canonical first
+        bytes32 unregisteredLabelhash = keccak256(bytes("unregistered"));
+        vm.expectRevert("Canonical not registered");
+        resolver.registerAlias("alias", unregisteredLabelhash);
+
+        vm.stopPrank();
+
+        console.log("Correctly reverted when canonical not registered");
+    }
+
+    function test_011____registerAlias_________________RevertsWhenAliasingToAlias()
+        public
+    {
+        vm.startPrank(admin);
+
+        // Register canonical chain
+        registerTestChain();
+
+        // Register first alias
+        resolver.registerAlias("op", TEST_LABELHASH);
+
+        // Try to alias to the alias - should fail
+        bytes32 aliasHash = keccak256(bytes("op"));
+        vm.expectRevert("Cannot alias to an alias");
+        resolver.registerAlias("o", aliasHash);
+
+        vm.stopPrank();
+
+        console.log("Correctly reverted when aliasing to an alias");
+    }
+
+    function test_012____batchRegisterAlias____________SuccessfulBatchAliasRegistration()
+        public
+    {
+        vm.startPrank(admin);
+
+        // Register two canonical chains
+        registerTestChain(); // optimism
+        registerChain(CHAIN_LABEL_2, "Arbitrum", user2, CHAIN_ID_2); // arbitrum
+
+        // Prepare batch alias data
+        string[] memory aliases = new string[](2);
+        bytes32[] memory canonicals = new bytes32[](2);
+        aliases[0] = "op";
+        aliases[1] = "arb";
+        canonicals[0] = TEST_LABELHASH; // optimism
+        canonicals[1] = LABELHASH_2; // arbitrum
+
+        // Register batch aliases
+        resolver.batchRegisterAlias(aliases, canonicals);
+
+        // Verify aliases were registered
+        assertEq(
+            resolver.getCanonicalLabelhash(keccak256(bytes("op"))),
+            TEST_LABELHASH,
+            "First alias should point to optimism"
+        );
+        assertEq(
+            resolver.getCanonicalLabelhash(keccak256(bytes("arb"))),
+            LABELHASH_2,
+            "Second alias should point to arbitrum"
+        );
+
+        // Verify aliases resolve correctly
+        assertEq(
+            resolver.interoperableAddress(keccak256(bytes("op"))),
+            TEST_INTEROPERABLE_ADDRESS,
+            "op alias should resolve to optimism interoperable address"
+        );
+        assertEq(
+            resolver.interoperableAddress(keccak256(bytes("arb"))),
+            CHAIN_ID_2,
+            "arb alias should resolve to arbitrum interoperable address"
+        );
+
+        vm.stopPrank();
+
+        console.log("Successfully registered batch of aliases");
+    }
+
+    function test_013____batchRegisterAlias____________RevertsOnArrayLengthMismatch()
+        public
+    {
+        vm.startPrank(admin);
+
+        registerTestChain();
+
+        // Prepare mismatched arrays
+        string[] memory aliases = new string[](2);
+        bytes32[] memory canonicals = new bytes32[](1);
+        aliases[0] = "op";
+        aliases[1] = "o";
+        canonicals[0] = TEST_LABELHASH;
+
+        // Should revert due to length mismatch
+        vm.expectRevert("Array length mismatch");
+        resolver.batchRegisterAlias(aliases, canonicals);
+
+        vm.stopPrank();
+
+        console.log("Correctly reverted on array length mismatch");
+    }
+
+    function test_014____batchRegisterAlias____________EmptyArrays() public {
+        vm.startPrank(admin);
+
+        // Prepare empty arrays
+        string[] memory aliases = new string[](0);
+        bytes32[] memory canonicals = new bytes32[](0);
+
+        // Should not revert with empty arrays
+        resolver.batchRegisterAlias(aliases, canonicals);
+
+        vm.stopPrank();
+
+        console.log("Successfully handled empty alias arrays");
+    }
 }

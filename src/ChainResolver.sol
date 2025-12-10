@@ -440,6 +440,37 @@ contract ChainResolver is
         string calldata _alias,
         bytes32 _canonicalLabelhash
     ) external onlyOwner {
+        _registerAlias(_alias, _canonicalLabelhash);
+    }
+
+    /**
+     * @notice Batch register aliases that point to canonical labelhashes.
+     * @param _aliases Array of alias strings.
+     * @param _canonicalLabelhashes Array of canonical labelhashes to point to.
+     */
+    function batchRegisterAlias(
+        string[] calldata _aliases,
+        bytes32[] calldata _canonicalLabelhashes
+    ) external onlyOwner {
+        require(
+            _aliases.length == _canonicalLabelhashes.length,
+            "Array length mismatch"
+        );
+        uint256 _length = _aliases.length;
+        for (uint256 i = 0; i < _length; i++) {
+            _registerAlias(_aliases[i], _canonicalLabelhashes[i]);
+        }
+    }
+
+    /**
+     * @notice Internal helper to register an alias.
+     * @param _alias The alias string (e.g., "op").
+     * @param _canonicalLabelhash The canonical labelhash to point to.
+     */
+    function _registerAlias(
+        string calldata _alias,
+        bytes32 _canonicalLabelhash
+    ) internal {
         bytes32 aliasHash = keccak256(bytes(_alias));
 
         // Prevent alias chains (op → optimism → something-else)
