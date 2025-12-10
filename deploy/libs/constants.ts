@@ -19,12 +19,12 @@ export const CHAIN_MAP = new Map<string, ChainInfo>(
         {
             id: 1,
             name: 'mainnet',
-            rpc: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+            rpc: process.env.MAINNET_RPC_URL!,
         },
         {
             id: 11155111,
             name: 'sepolia',
-            rpc: `https://sepolia.infura.io/v3/${process.env.INFURA_API_KEY}`,
+            rpc: process.env.SEPOLIA_RPC_URL!,
         },
     ]
     .sort((a, b) => a.name.localeCompare(b.name))

@@ -2,4 +2,4 @@
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @openzeppelin/=lib/openzeppelin-contracts/
 @forge/=lib/forge-std/src/
-@ensdomains/ens-contracts/=node_modules/@ensdomains/ens-contracts/
+@ensdomains/ens-contracts/=lib/ens-contracts/

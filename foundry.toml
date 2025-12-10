@@ -1,13 +1,10 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["lib"]
+libs = ["lib", "node_modules"]
 remappings = [
     "solidity-bytes-utils/=node_modules/solidity-bytes-utils/",
-    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/"
+    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "@ensdomains/ens-contracts/=lib/ens-contracts/",
 ]
-
-[rpc_endpoints]
-sepolia = "${SEPOLIA_RPC_URL}"
-
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

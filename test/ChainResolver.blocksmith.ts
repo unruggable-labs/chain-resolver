@@ -37,12 +37,9 @@ const logEvents = (receipt: any, contract: Contract) => {
   }
 };
 
-// Chain registration data type
-interface ChainData {
-  label: string;
-  chainName: string;
-  interoperableAddressHex: string;
-}
+// Import shared chain data
+import type { ChainData } from "../data/chains.ts";
+import { CHAINS, getChainByLabel } from "../data/chains.ts";
 
 // Helper to register a chain
 const registerChain = async (
@@ -74,18 +71,9 @@ const INTEROPERABLE_ADDRESS_DATA_KEY = "interoperable-address";
 // See ERC-7828
 const CHAIN_LABEL_PREFIX = "chain-label:";
 
-// Test chain data
-const OPTIMISM_CHAIN: ChainData = {
-  label: "optimism",
-  chainName: "Optimism",
-  interoperableAddressHex: "0x00010001010a00",
-};
-
-const BASE_CHAIN: ChainData = {
-  label: "base",
-  chainName: "Base",
-  interoperableAddressHex: "0x000100012105",
-};
+// Get test chains from shared data
+const OPTIMISM_CHAIN = getChainByLabel("optimism")!;
+const BASE_CHAIN = getChainByLabel("base")!;
 
 // Derived constants for optimism (primary test chain)
 const TEST_LABEL = OPTIMISM_CHAIN.label;

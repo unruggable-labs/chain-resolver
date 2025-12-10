@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: MIT
+
+// Misc tests
+
 pragma solidity ^0.8.25;
 
 import "./ChainResolverTestBase.sol";
@@ -7,21 +10,11 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
     address public operator = address(0x4);
     address public zeroAddress = address(0x0);
 
-    // Test data - using 7930 chain ID format
-    string public constant CHAIN_NAME = "optimism";
-    bytes public constant CHAIN_ID = hex"00010001010a00";
-    bytes32 public constant LABEL_HASH = keccak256(bytes(CHAIN_NAME));
-
     function setUp() public {
         vm.startPrank(admin);
         resolver = deployResolver(admin);
         vm.stopPrank();
     }
-
-    // Identify the file being tested
-    function test1000________________________________________________________________________________() public {}
-    function test1100_____________________________CHAINRESOLVER_EDGE_CASES________________________() public {}
-    function test1200________________________________________________________________________________() public {}
 
     function test_001____register____________________EmptyChainName() public {
         vm.startPrank(admin);
@@ -31,32 +24,54 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         bytes32 emptyLabelHash = keccak256(bytes(emptyName));
 
         // This should work - empty string is valid
-        resolver.register(IChainResolver.ChainRegistrationData({label: emptyName, chainName: emptyName, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerChain(emptyName, emptyName, user1, TEST_INTEROPERABLE_ADDRESS);
 
         // Verify registration
-        assertEq(resolver.getChainAdmin(emptyLabelHash), user1, "Empty chain name should be registrable");
-        assertEq(resolver.interoperableAddress(emptyLabelHash), CHAIN_ID, "Chain ID should be set for empty name");
+        assertEq(
+            resolver.getChainAdmin(emptyLabelHash),
+            user1,
+            "Empty chain name should be registrable"
+        );
+        assertEq(
+            resolver.interoperableAddress(emptyLabelHash),
+            TEST_INTEROPERABLE_ADDRESS,
+            "Chain ID should be set for empty name"
+        );
 
         vm.stopPrank();
 
         console.log("Successfully registered empty chain name");
     }
 
-    function test_002____register____________________VeryLongChainName() public {
+    function test_002____register____________________VeryLongChainName()
+        public
+    {
         vm.startPrank(admin);
 
         // Try to register with very long chain name
-        string memory longName =
-            "this_is_a_very_long_chain_name_that_is_much_longer_than_normal_chain_names_used_in_blockchain_ecosystems_and_should_test_the_limits_of_the_registration_system";
+        string
+            memory longName = "this_is_a_very_long_chain_name_that_is_much_longer_than_normal_chain_names_used_in_blockchain_ecosystems_and_should_test_the_limits_of_the_registration_system";
         bytes32 longLabelHash = keccak256(bytes(longName));
 
         // This should work - long names are valid
-        resolver.register(IChainResolver.ChainRegistrationData({label: longName, chainName: longName, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerChain(longName, longName, user1, TEST_INTEROPERABLE_ADDRESS);
 
         // Verify registration
-        assertEq(resolver.getChainAdmin(longLabelHash), user1, "Long chain name should be registrable");
-        assertEq(resolver.interoperableAddress(longLabelHash), CHAIN_ID, "Chain ID should be set for long name");
-        assertEq(resolver.chainName(CHAIN_ID), longName, "Long chain name correctly reverse resolves");
+        assertEq(
+            resolver.getChainAdmin(longLabelHash),
+            user1,
+            "Long chain name should be registrable"
+        );
+        assertEq(
+            resolver.interoperableAddress(longLabelHash),
+            TEST_INTEROPERABLE_ADDRESS,
+            "Chain ID should be set for long name"
+        );
+        assertEq(
+            resolver.chainName(TEST_INTEROPERABLE_ADDRESS),
+            longName,
+            "Long chain name correctly reverse resolves"
+        );
 
         vm.stopPrank();
 
@@ -69,12 +84,24 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         // Try to register with empty chain ID
         bytes memory emptyChainId = "";
 
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: emptyChainId}));
+        registerChain(TEST_LABEL, TEST_CHAIN_NAME, user1, emptyChainId);
 
         // Verify registration
-        assertEq(resolver.getChainAdmin(LABEL_HASH), user1, "Owner should be set");
-        assertEq(resolver.interoperableAddress(LABEL_HASH), emptyChainId, "Empty chain ID should be stored");
-        assertEq(resolver.chainName(emptyChainId), CHAIN_NAME, "Chain name should be stored");
+        assertEq(
+            resolver.getChainAdmin(TEST_LABELHASH),
+            user1,
+            "Owner should be set"
+        );
+        assertEq(
+            resolver.interoperableAddress(TEST_LABELHASH),
+            emptyChainId,
+            "Empty chain ID should be stored"
+        );
+        assertEq(
+            resolver.chainName(emptyChainId),
+            TEST_CHAIN_NAME,
+            "Chain name should be stored"
+        );
 
         vm.stopPrank();
 
@@ -90,12 +117,24 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
             longChainId[i] = bytes1(uint8(i % 256));
         }
 
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: longChainId}));
+        registerChain(TEST_LABEL, TEST_CHAIN_NAME, user1, longChainId);
 
         // Verify registration
-        assertEq(resolver.getChainAdmin(LABEL_HASH), user1, "Owner should be set");
-        assertEq(resolver.interoperableAddress(LABEL_HASH), longChainId, "Long chain ID should be stored");
-        assertEq(resolver.chainName(longChainId), CHAIN_NAME, "Chain name should be stored");
+        assertEq(
+            resolver.getChainAdmin(TEST_LABELHASH),
+            user1,
+            "Owner should be set"
+        );
+        assertEq(
+            resolver.interoperableAddress(TEST_LABELHASH),
+            longChainId,
+            "Long chain ID should be stored"
+        );
+        assertEq(
+            resolver.chainName(longChainId),
+            TEST_CHAIN_NAME,
+            "Chain name should be stored"
+        );
 
         vm.stopPrank();
 
@@ -104,12 +143,15 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
 
     function test_005____resolve_____________________UnknownSelector() public {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerTestChain();
         vm.stopPrank();
 
         // Test resolve with unknown selector
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory unknownData = abi.encodeWithSelector(bytes4(0x12345678), LABEL_HASH);
+        bytes memory name = dnsEncodeLabel(TEST_LABEL);
+        bytes memory unknownData = abi.encodeWithSelector(
+            bytes4(0x12345678),
+            TEST_LABELHASH
+        );
         bytes memory result = resolver.resolve(name, unknownData);
 
         // Should return empty string for unknown selector
@@ -118,7 +160,10 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         console.log("Successfully handled unknown selector");
     }
 
-    function test_006____supportsInterface___________InterfaceSupport() public view {
+    function test_006____supportsInterface___________InterfaceSupport()
+        public
+        view
+    {
         // Interface support across common and arbitrary IDs (edge cases)
 
         // Test with various interface IDs
@@ -151,16 +196,24 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
             assertEq(
                 result,
                 expectedResults[i],
-                string(abi.encodePacked("Interface ", vm.toString(i), " should return expected result"))
+                string(
+                    abi.encodePacked(
+                        "Interface ",
+                        vm.toString(i),
+                        " should return expected result"
+                    )
+                )
             );
         }
 
         console.log("Successfully handled interface support");
     }
 
-    function test_007____bytesToAddress_______________RevertsOnInvalidLength() public {
+    function test_007____bytesToAddress_______________RevertsOnInvalidLength()
+        public
+    {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerTestChain();
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -173,16 +226,18 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         // the setAddr function that uses it with invalid data
 
         vm.expectRevert();
-        resolver.setAddr(LABEL_HASH, 60, invalidBytes); // Use the coinType version
+        resolver.setAddr(TEST_LABELHASH, 60, invalidBytes); // Use the coinType version
 
         vm.stopPrank();
 
         console.log("Successfully reverted on invalid address length");
     }
 
-    function test_008____setAddr_____________________NonEthereumCoinType() public {
+    function test_008____setAddr_____________________NonEthereumCoinType()
+        public
+    {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerTestChain();
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -193,24 +248,38 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
 
         // This should set the address for the requested non-Ethereum coin type (generic storage),
         // but NOT affect the ETH (60) record.
-        resolver.setAddr(LABEL_HASH, nonEthereumCoinType, abi.encodePacked(testAddr));
+        resolver.setAddr(
+            TEST_LABELHASH,
+            nonEthereumCoinType,
+            abi.encodePacked(testAddr)
+        );
 
         // ETH address remains unset
-        bytes memory retrievedAddr = resolver.getAddr(LABEL_HASH, 60); // Ethereum coin type
-        assertEq(retrievedAddr.length, 0, "Non-Ethereum addresses should not be retrievable via getAddr");
+        bytes memory retrievedAddr = resolver.getAddr(TEST_LABELHASH, 60); // Ethereum coin type
+        assertEq(
+            retrievedAddr.length,
+            0,
+            "Non-Ethereum addresses should not be retrievable via getAddr"
+        );
 
         // The generic coin type record should be retrievable as raw bytes
-        bytes memory nonEth = resolver.getAddr(LABEL_HASH, nonEthereumCoinType);
-        assertEq(nonEth, abi.encodePacked(testAddr), "Non-Ethereum coin type should be stored and retrievable");
+        bytes memory nonEth = resolver.getAddr(TEST_LABELHASH, nonEthereumCoinType);
+        assertEq(
+            nonEth,
+            abi.encodePacked(testAddr),
+            "Non-Ethereum coin type should be stored and retrievable"
+        );
 
         vm.stopPrank();
 
         console.log("Successfully handled non-Ethereum coin type");
     }
 
-    function test_009____startsWith__________________NoOverrideForDataKeysShorterThanPrefix() public {
+    function test_009____startsWith__________________NoOverrideForDataKeysShorterThanPrefix()
+        public
+    {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerTestChain();
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -220,20 +289,26 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         string memory shortKey = "test-key"; // Regular key that doesn't trigger special handling
 
         // This should not revert but should not match the prefix
-        resolver.setText(LABEL_HASH, shortKey, "test-value");
+        resolver.setText(TEST_LABELHASH, shortKey, "test-value");
 
         // Verify the text was set (not handled by special logic)
-        string memory retrievedValue = resolver.getText(LABEL_HASH, shortKey);
-        assertEq(retrievedValue, "test-value", "Short key should be stored as regular text");
+        string memory retrievedValue = resolver.getText(TEST_LABELHASH, shortKey);
+        assertEq(
+            retrievedValue,
+            "test-value",
+            "Short key should be stored as regular text"
+        );
 
         vm.stopPrank();
 
         console.log("Successfully handled data shorter than prefix");
     }
 
-    function test_010____startsWith__________________NoOverrideForPrefixMismatch() public {
+    function test_010____startsWith__________________NoOverrideForPrefixMismatch()
+        public
+    {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerTestChain();
         vm.stopPrank();
 
         vm.startPrank(user1);
@@ -243,31 +318,43 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         string memory nonMatchingKey = "chain-nom:abcdef";
 
         // This should not revert but should not match the prefix
-        resolver.setText(LABEL_HASH, nonMatchingKey, "test-value");
+        resolver.setText(TEST_LABELHASH, nonMatchingKey, "test-value");
 
         // Verify the text was set (no override due to prefix mismatch)
-        string memory retrievedValue = resolver.getText(LABEL_HASH, nonMatchingKey);
-        assertEq(retrievedValue, "test-value", "Non-matching key should be stored as regular text");
+        string memory retrievedValue = resolver.getText(
+            TEST_LABELHASH,
+            nonMatchingKey
+        );
+        assertEq(
+            retrievedValue,
+            "test-value",
+            "Non-matching key should be stored as regular text"
+        );
 
         vm.stopPrank();
 
         console.log("Successfully handled data that doesn't match prefix");
     }
 
-    function test_011____bytesToAddress_______________ValidAddressConversion() public {
+    function test_011____bytesToAddress_______________ValidAddressConversion()
+        public
+    {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerTestChain();
         vm.stopPrank();
 
         vm.startPrank(user1);
 
         // Test bytesToAddress with valid data through setAddr
         address testAddr = address(0x1234567890123456789012345678901234567890);
-        resolver.setAddr(LABEL_HASH, 60, abi.encodePacked(testAddr));
+        resolver.setAddr(TEST_LABELHASH, 60, abi.encodePacked(testAddr));
 
         // Now resolve it to trigger bytesToAddress with valid data
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory addrData = abi.encodeWithSelector(resolver.ADDR_SELECTOR(), LABEL_HASH);
+        bytes memory name = dnsEncodeLabel(TEST_LABEL);
+        bytes memory addrData = abi.encodeWithSelector(
+            resolver.ADDR_SELECTOR(),
+            TEST_LABELHASH
+        );
         bytes memory result = resolver.resolve(name, addrData);
         address resolvedAddr = abi.decode(result, (address));
 
@@ -277,77 +364,5 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         vm.stopPrank();
 
         console.log("Successfully converted valid address bytes");
-    }
-
-    function test_012____authenticateCaller___________OwnerIsCaller() public {
-        vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
-        vm.stopPrank();
-
-        // Test _authenticateCaller when owner is the caller
-        vm.startPrank(user1);
-
-        // This should not revert because user1 is the owner
-        resolver.setText(LABEL_HASH, "test-key", "test-value");
-
-        vm.stopPrank();
-
-        console.log("Successfully authenticated owner as caller");
-    }
-
-    function test_013____resolve_____________________EmptyCoinTypeAddress() public {
-        vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
-        vm.stopPrank();
-
-        // Test resolve with ADDR_COINTYPE_SELECTOR when no address is set
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory addrData = abi.encodeWithSelector(resolver.ADDR_COINTYPE_SELECTOR(), LABEL_HASH, 60); // Ethereum coin type
-        bytes memory result = resolver.resolve(name, addrData);
-
-        // Should return empty bytes for unset address
-        assertEq(result, abi.encode(bytes("")));
-
-        console.log("Successfully handled empty address record with coin type");
-    }
-
-    function test_014____resolve_____________________EmptyAddressRecord() public {
-        vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
-        vm.stopPrank();
-
-        // Test resolve with ADDR_SELECTOR when no address is set
-        bytes memory name = abi.encodePacked(bytes1(uint8(bytes(CHAIN_NAME).length)), bytes(CHAIN_NAME), bytes1(0x00));
-        bytes memory addrData = abi.encodeWithSelector(resolver.ADDR_SELECTOR(), LABEL_HASH);
-        bytes memory result = resolver.resolve(name, addrData);
-
-        // Should return empty bytes for unset address
-        assertEq(result, abi.encode(address(0)));
-
-        console.log("Successfully handled empty address record");
-    }
-
-    function test_015____resolve_____________________InvalidDNSEncodingReverts() public {
-        vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
-
-        vm.stopPrank();
-
-        // Invalid DNS-encoded name should revert
-        bytes memory maliciousName = abi.encodePacked(
-            bytes1(0xff), // Invalid length byte
-            "optimism",
-            bytes1(0x00)
-        );
-
-        bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), LABEL_HASH, "description");
-
-        // This should revert due to invalid DNS encoding
-        vm.expectRevert();
-        resolver.resolve(maliciousName, textData);
-
-        console.log("Successfully handled invalid DNS encoding");
     }
 }

@@ -1,137 +1,168 @@
 // SPDX-License-Identifier: MIT
+
+// Tests for ERC-7828 reverse resolution
+// The resolution of a chain label from an Interoperable Address.
+
 pragma solidity ^0.8.25;
 
 import "./ChainResolverTestBase.sol";
 import {HexUtils} from "@ensdomains/ens-contracts/contracts/utils/HexUtils.sol";
 
 contract ChainResolverENSReverseTest is ChainResolverTestBase {
-
-    string public constant CHAIN_LABEL_PREFIX = "chain-label:";
-
     address public operator = address(0x4);
 
-    // Test data - using 7930 chain ID format
-    string public constant LABEL = "optimism"; // canonical label
-    string public constant CHAIN_NAME = "Optimism"; // human-readable name distinct from label
-    // 7930 format: Version(4) + ChainType(2) + ChainRefLen(1) + ChainRef(1) + AddrLen(1) + Addr(0)
-    // Version: 0x00000001, ChainType: 0x0001 (Ethereum), ChainRefLen: 0x01, ChainRef: 0x0a (10), AddrLen: 0x00, Addr: (empty)
-    bytes public constant CHAIN_ID = hex"00010001010a00";
-    bytes32 public constant LABEL_HASH = keccak256(bytes(LABEL));
-
-    // Precomputed DNS-encoded names
-    // cid.eth => 0x03 'cid' 0x03 'eth' 0x00
-    bytes internal constant DNS_CID_ETH = hex"036369640365746800";
+    // Precomputed DNS-encoded names for PARENT_DOMAIN
+    bytes internal DNS_REVERSE_PARENT_DOMAIN;
 
     // Encoded key for reverse text query: "chain-label:" + <7930 hex (no 0x prefix)>
-    string internal constant KEY_CHAIN_NAME = "chain-label:00010001010a00";
+    string internal constant KEY_CHAIN_LABEL = "chain-label:00010001010a00";
 
     function setUp() public {
         vm.startPrank(admin);
         resolver = deployResolver(admin);
         vm.stopPrank();
+
+        // Compute DNS-encoded reverse name
+        DNS_REVERSE_PARENT_DOMAIN = NameCoder.encode(
+            string(abi.encodePacked("reverse.", PARENT_DOMAIN))
+        );
     }
 
-    // Identify the file being tested
-    function test1000________________________________________________________________________________() public {}
-    function test1100_____________________________ENS_REVERSE____________________________________() public {}
-    function test1200________________________________________________________________________________() public {}
-
-    function test_001____resolve_____________________ReverseResolvesChainNameText() public {
+    function test_001____resolve_____________________ReverseResolvesChainNameText()
+        public
+    {
         vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
-
+        registerTestChain();
         vm.stopPrank();
 
         // Test reverse resolution via resolve() per ENSIP-10 using full name
-        // name = reverse.cid.eth; node = namehash(name)
-        bytes memory name = NameCoder.encode("reverse.cid.eth");
+        // name = reverse.PARENT_DOMAIN; node = namehash(name)
+        bytes memory name = DNS_REVERSE_PARENT_DOMAIN;
         bytes32 node = NameCoder.namehash(name, 0);
 
-        bytes memory textData = abi.encodeWithSelector(resolver.TEXT_SELECTOR(), node, KEY_CHAIN_NAME);
+        bytes memory textData = abi.encodeWithSelector(
+            resolver.TEXT_SELECTOR(),
+            node,
+            KEY_CHAIN_LABEL
+        );
         bytes memory result = resolver.resolve(name, textData);
         string memory resolvedChainName = abi.decode(result, (string));
 
         // Reverse should return the label for the given 7930 ID
-        assertEq(resolvedChainName, LABEL, "Reverse should return label, not name");
+        assertEq(
+            resolvedChainName,
+            TEST_LABEL,
+            "Reverse should return label, not name"
+        );
 
-        console.log("Successfully resolved reverse chain name via resolve function");
-        console.log("Chain ID -> Label:", resolvedChainName);
+        console.log(
+            "Successfully resolved reverse chain name via resolve function"
+        );
+        console.log("Interoperable Address -> Label:", resolvedChainName);
     }
 
-    function test_002____chainName___________________ReverseResolvesChainNameFromChainId() public {
+    function test_002____chainName_______________ReverseResolvesChainNameFromInteroperableAddress()
+        public
+    {
         vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
-
+        registerTestChain();
         vm.stopPrank();
 
-        // Test direct reverse resolution - chain ID to chain name
-        string memory resolvedChainName = resolver.chainName(CHAIN_ID);
-        // Direct reverse mapping must return the label
-        assertEq(resolvedChainName, CHAIN_NAME, "Should resolve chain name from chain ID");
+        // Test direct reverse resolution - Interoperable Address to chain name
+        string memory resolvedChainName = resolver.chainName(
+            TEST_INTEROPERABLE_ADDRESS
+        );
+        // Direct reverse mapping must return the chain name
+        assertEq(
+            resolvedChainName,
+            TEST_CHAIN_NAME,
+            "Should resolve chain name from Interoperable Address"
+        );
 
-        console.log("Successfully resolved reverse chain name via direct function");
-        console.log("Chain ID -> Label:", resolvedChainName);
+        console.log(
+            "Successfully resolved reverse chain name via direct function"
+        );
+        console.log("Interoperable Address -> Label:", resolvedChainName);
     }
 
-    function test_003____chainName___________________ReturnsEmptyForUnknownChainId() public {
+    function test_003____chainName___________________ReturnsEmptyForUnknownInteroperableAddress()
+        public
+    {
         vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
-
+        registerTestChain();
         vm.stopPrank();
 
-        // Test reverse resolution for unknown chain ID
-        bytes memory unknownChainId = hex"00010001019900"; // 7930 format for chain 153 (unknown)
-        string memory resolvedName = resolver.chainName(unknownChainId);
+        // Test reverse resolution for unknown Interoperable Address
+        bytes memory unknownInteroperableAddress = hex"00010001019900";
+        string memory resolvedName = resolver.chainName(unknownInteroperableAddress);
 
-        assertEq(resolvedName, "", "Should return empty string for unknown chain ID");
+        assertEq(
+            resolvedName,
+            "",
+            "Should return empty string for unknown Interoperable Address"
+        );
 
-        console.log("Successfully returned empty string for unknown chain ID");
+        console.log("Successfully returned empty string for unknown Interoperable Address");
     }
 
-    function test_004____resolve_____________________ReverseCidEthReturnsRegisteredChainName() public {
+    function test_004____resolve_____________________ReverseCidEthReturnsRegisteredChainName()
+        public
+    {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerTestChain();
         vm.stopPrank();
 
         // Build calldata for text(bytes32,string) using node-bound reverse context
         bytes4 TEXT_SELECTOR = resolver.TEXT_SELECTOR();
-        bytes memory name = NameCoder.encode("reverse.cid.eth");
-        bytes memory data = abi.encodeWithSelector(TEXT_SELECTOR, NameCoder.namehash(name, 0), KEY_CHAIN_NAME);
+        bytes memory name = DNS_REVERSE_PARENT_DOMAIN;
+        bytes memory data = abi.encodeWithSelector(
+            TEXT_SELECTOR,
+            NameCoder.namehash(name, 0),
+            KEY_CHAIN_LABEL
+        );
 
-        // Query under reverse.cid.eth with node-bound reverse
+        // Query under reverse.PARENT_DOMAIN with node-bound reverse
         bytes memory out = resolver.resolve(name, data);
         string memory result = abi.decode(out, (string));
 
         // Reverse should return the label for the chain ID
-        assertEq(result, LABEL, "reverse.cid.eth should return label");
+        assertEq(
+            result,
+            TEST_LABEL,
+            "reverse.PARENT_DOMAIN should return label"
+        );
     }
 
-    function test_005____resolve_____________________NonReverseContextReturnsStoredTextRecord() public {
+    function test_005____resolve_____________________NonReverseContextReturnsStoredTextRecord()
+        public
+    {
         vm.startPrank(admin);
-        resolver.register(IChainResolver.ChainRegistrationData({label: LABEL, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerTestChain();
         vm.stopPrank();
 
         // Store a text record for this label and the reverse key
         string memory fallbackVal = "fallback-value";
         vm.startPrank(user1);
-        resolver.setText(LABEL_HASH, KEY_CHAIN_NAME, fallbackVal);
+        resolver.setText(TEST_LABELHASH, KEY_CHAIN_LABEL, fallbackVal);
         vm.stopPrank();
 
         // Build calldata for text(bytes32,string)
         bytes4 TEXT_SELECTOR = bytes4(keccak256("text(bytes32,string)"));
-        bytes memory data = abi.encodeWithSelector(TEXT_SELECTOR, bytes32(0), KEY_CHAIN_NAME);
+        bytes memory data = abi.encodeWithSelector(
+            TEXT_SELECTOR,
+            bytes32(0),
+            KEY_CHAIN_LABEL
+        );
 
-        // Query under optimism.cid.eth (not reverse.cid.eth) - still non-reverse context
-        bytes memory dnsOptimismCidEth = hex"086f7074696d69736d036369640365746800";
-        bytes memory out = resolver.resolve(dnsOptimismCidEth, data);
+        // Query under optimism.PARENT_DOMAIN (not reverse.PARENT_DOMAIN) - still non-reverse context
+        bytes memory dnsName = dnsEncodeLabel(TEST_LABEL);
+        bytes memory out = resolver.resolve(dnsName, data);
         string memory result = abi.decode(out, (string));
 
-        assertEq(result, fallbackVal, "non-reverse context should return stored text record value");
+        assertEq(
+            result,
+            fallbackVal,
+            "non-reverse context should return stored text record value"
+        );
     }
 }

@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: MIT
+
+// Tests for registering chains. Both single chains, and batch registration.
+
 pragma solidity ^0.8.25;
 
 import "./ChainResolverTestBase.sol";
@@ -6,18 +9,10 @@ import "./ChainResolverTestBase.sol";
 contract ChainResolverRegistryTest is ChainResolverTestBase {
     address public operator = address(0x4);
 
-    // Test data - using 7930 chain ID format
-    string public constant CHAIN_NAME = "optimism";
-    // 7930 format: Version(4) + ChainType(2) + ChainRefLen(1) + ChainRef(1) + AddrLen(1) + Addr(0)
-    // Version: 0x00000001, ChainType: 0x0001 (Ethereum), ChainRefLen: 0x01, ChainRef: 0x0a (10), AddrLen: 0x00, Addr: (empty)
-    bytes public constant CHAIN_ID = hex"00010001010a00";
-    bytes32 public constant LABEL_HASH = keccak256(bytes(CHAIN_NAME));
-
-    string public constant CHAIN_NAME_2 = "arbitrum";
-    // 7930 format: Version(4) + ChainType(2) + ChainRefLen(1) + ChainRef(1) + AddrLen(1) + Addr(0)
-    // Version: 0x00000001, ChainType: 0x0001 (Ethereum), ChainRefLen: 0x01, ChainRef: 0x66 (102), AddrLen: 0x00, Addr: (empty)
+    // Second chain for multi-chain tests
+    string public constant CHAIN_LABEL_2 = "arbitrum";
     bytes public constant CHAIN_ID_2 = hex"00010001016600";
-    bytes32 public constant LABEL_HASH_2 = keccak256(bytes(CHAIN_NAME_2));
+    bytes32 public constant LABELHASH_2 = keccak256(bytes(CHAIN_LABEL_2));
 
     function setUp() public {
         vm.startPrank(admin);
@@ -25,60 +20,77 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         vm.stopPrank();
     }
 
-    // Identify the file being tested
-    function test1000________________________________________________________________________________() public {}
-    function test1100_______________________________REGISTRY_________________________________________() public {}
-    function test1200________________________________________________________________________________() public {}
-
-    function test_001____register____________________SuccessfulChainRegistration() public {
+    function test_001____register____________________SuccessfulChainRegistration()
+        public
+    {
         vm.startPrank(admin);
-
-        // Register a chain (label and chain name)
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerTestChain();
 
         // Verify registration
         assertEq(resolver.owner(), admin, "Admin should be contract owner");
-        assertEq(resolver.getChainAdmin(LABEL_HASH), user1, "User1 should own the label");
-        assertEq(resolver.interoperableAddress(LABEL_HASH), CHAIN_ID, "Chain ID should be set correctly");
-        assertEq(resolver.chainName(CHAIN_ID), CHAIN_NAME, "Chain name should be set correctly");
+        assertEq(
+            resolver.getChainAdmin(TEST_LABELHASH),
+            user1,
+            "User1 should own the label"
+        );
+        assertEq(
+            resolver.interoperableAddress(TEST_LABELHASH),
+            TEST_INTEROPERABLE_ADDRESS,
+            "Chain ID should be set correctly"
+        );
+        assertEq(
+            resolver.chainName(TEST_INTEROPERABLE_ADDRESS),
+            TEST_CHAIN_NAME,
+            "Chain name should be set correctly"
+        );
 
         vm.stopPrank();
 
-        console.log("Successfully registered chain:", CHAIN_NAME);
-        console.log("Chain ID:", string(abi.encodePacked(CHAIN_ID)));
+        console.log("Successfully registered chain:", TEST_LABEL);
     }
 
-    function test_002____register____________________AllowsOverwritingExistingRegistration() public {
+    function test_002____register____________________AllowsOverwritingExistingRegistration()
+        public
+    {
         vm.startPrank(admin);
 
         // Register a chain first time
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
+        registerTestChain();
 
         // Try to register the same chain again - should succeed (overwrites existing registration)
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user2, interoperableAddress: CHAIN_ID}));
+        registerTestChainWithOwner(user2);
 
         vm.stopPrank();
 
         // Verify second registration overwrote the first
-        assertEq(resolver.getChainAdmin(LABEL_HASH), user2, "Second owner should overwrite first");
+        assertEq(
+            resolver.getChainAdmin(TEST_LABELHASH),
+            user2,
+            "Second owner should overwrite first"
+        );
 
-        console.log("Correctly allowed duplicate chain registration (overwrite)");
+        console.log(
+            "Correctly allowed duplicate chain registration (overwrite)"
+        );
     }
 
-    function test_003____setLabelOwner_______________TransfersLabelOwnership() public {
+    function test_003____setChainAdmin_______________TransfersLabelOwnership()
+        public
+    {
         vm.startPrank(admin);
-
-        // Register a chain
-        resolver.register(IChainResolver.ChainRegistrationData({label: CHAIN_NAME, chainName: CHAIN_NAME, owner: user1, interoperableAddress: CHAIN_ID}));
-
+        registerTestChain();
         vm.stopPrank();
 
         // User1 transfers ownership to user2
         vm.startPrank(user1);
-        resolver.setChainAdmin(LABEL_HASH, user2);
+        resolver.setChainAdmin(TEST_LABELHASH, user2);
 
         // Verify transfer
-        assertEq(resolver.getChainAdmin(LABEL_HASH), user2, "User2 should now own the label");
+        assertEq(
+            resolver.getChainAdmin(TEST_LABELHASH),
+            user2,
+            "User2 should now own the label"
+        );
 
         vm.stopPrank();
 
@@ -86,19 +98,26 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         vm.startPrank(user2);
 
         // Test that new owner can perform authorized actions
-        resolver.setChainAdmin(LABEL_HASH, user1); // Transfer back to user1
-        assertEq(resolver.getChainAdmin(LABEL_HASH), user1, "New owner should be able to transfer ownership");
+        resolver.setChainAdmin(TEST_LABELHASH, user1); // Transfer back to user1
+        assertEq(
+            resolver.getChainAdmin(TEST_LABELHASH),
+            user1,
+            "New owner should be able to transfer ownership"
+        );
 
         vm.stopPrank();
 
         console.log("Successfully transferred label ownership");
     }
 
-    function test_004____batchRegister_______________SuccessfulBatchRegistration() public {
+    function test_004____batchRegister_______________SuccessfulBatchRegistration()
+        public
+    {
         vm.startPrank(admin);
 
         // Prepare batch data
-        IChainResolver.ChainRegistrationData[] memory items = new IChainResolver.ChainRegistrationData[](2);
+        IChainResolver.ChainRegistrationData[]
+            memory items = new IChainResolver.ChainRegistrationData[](2);
         items[0] = IChainResolver.ChainRegistrationData({
             label: "optimism",
             chainName: "optimism",
@@ -118,8 +137,14 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         // Verify registrations
         assertEq(resolver.getChainAdmin(keccak256(bytes("optimism"))), user1);
         assertEq(resolver.getChainAdmin(keccak256(bytes("arbitrum"))), user2);
-        assertEq(resolver.interoperableAddress(keccak256(bytes("optimism"))), items[0].interoperableAddress);
-        assertEq(resolver.interoperableAddress(keccak256(bytes("arbitrum"))), items[1].interoperableAddress);
+        assertEq(
+            resolver.interoperableAddress(keccak256(bytes("optimism"))),
+            items[0].interoperableAddress
+        );
+        assertEq(
+            resolver.interoperableAddress(keccak256(bytes("arbitrum"))),
+            items[1].interoperableAddress
+        );
 
         vm.stopPrank();
 
@@ -130,7 +155,8 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         vm.startPrank(admin);
 
         // Prepare empty items
-        IChainResolver.ChainRegistrationData[] memory items0 = new IChainResolver.ChainRegistrationData[](0);
+        IChainResolver.ChainRegistrationData[]
+            memory items0 = new IChainResolver.ChainRegistrationData[](0);
         // Should not revert with empty arrays
         resolver.batchRegister(items0);
 
@@ -143,7 +169,8 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         vm.startPrank(admin);
 
         // Prepare single item batch
-        IChainResolver.ChainRegistrationData[] memory one = new IChainResolver.ChainRegistrationData[](1);
+        IChainResolver.ChainRegistrationData[]
+            memory one = new IChainResolver.ChainRegistrationData[](1);
         one[0] = IChainResolver.ChainRegistrationData({
             label: "optimism",
             chainName: "optimism",
@@ -156,7 +183,10 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
 
         // Verify registration
         assertEq(resolver.getChainAdmin(keccak256(bytes("optimism"))), user1);
-        assertEq(resolver.interoperableAddress(keccak256(bytes("optimism"))), one[0].interoperableAddress);
+        assertEq(
+            resolver.interoperableAddress(keccak256(bytes("optimism"))),
+            one[0].interoperableAddress
+        );
 
         vm.stopPrank();
 

@@ -1,4 +1,4 @@
-// Deploy unified ChainResolver
+// Deploy ChainResolver via UUPS Proxy
 
 import {
   initSmith,
@@ -6,23 +6,24 @@ import {
   deployContract,
   verifyContract,
   shutdownSmith,
-  constructorCheck,
-  loadDeployment,
   askQuestion,
 } from "./libs/utils.ts";
 
 import { init } from "./libs/init.ts";
-import { isAddress } from "ethers";
+import { isAddress, namehash, Interface } from "ethers";
 
-// The contract we are deploying
-const CONTRACT_NAME = "ChainResolver";
+// The contracts we are deploying
+const IMPLEMENTATION_NAME = "ChainResolver";
+const PROXY_NAME = "ERC1967Proxy";
 
 // Initialize deployment
 const { chainInfo, privateKey } = await init();
 
+console.log('ChainInfo: ', chainInfo);
+
 // Launch blocksmith
 const { deployerWallet, smith, rl } = await initSmith(
-  chainInfo.id,
+  chainInfo.name,
   privateKey
 );
 
@@ -30,96 +31,196 @@ if (!deployerWallet || !deployerWallet.provider) {
   throw Error("No valid deployment wallet");
 }
 
-let resolverAddress: string | undefined;
+let proxyAddress: string | undefined;
+let implementationAddress: string | undefined;
 
-// Try to reuse existing deployment
-try {
-  const existingResolver = await loadDeployment(chainInfo.id, CONTRACT_NAME);
-  const deployedAddress = existingResolver.target as string;
+console.log("\n=== ChainResolver UUPS Proxy Deployment ===\n");
 
-  const code = await deployerWallet.provider.getCode(deployedAddress);
-  if (code && code !== "0x") {
-    const useExisting = await promptContinueOrExit(
-      rl,
-      `${CONTRACT_NAME} found at ${deployedAddress}. Use this? (y/n)`
-    );
-    if (useExisting) {
-      resolverAddress = deployedAddress;
-    }
+// Step 1: Get owner address
+const defaultOwner = deployerWallet.address;
+let owner = defaultOwner;
+
+const useDefaultOwner = (await askQuestion(
+  rl,
+  `Owner will be: ${defaultOwner}. Use this address? (y/n) `
+)).trim();
+
+if (!/^y(es)?$/i.test(useDefaultOwner)) {
+  const ownerInput = (await askQuestion(
+    rl,
+    `Enter the owner address: `
+  )).trim();
+
+  if (!isAddress(ownerInput)) {
+    throw Error("Invalid owner address");
   }
-} catch {}
+  owner = ownerInput;
+}
 
-if (!resolverAddress) {
+// Step 2: Get parent namespace
+const defaultParent = "on.eth";
+let parentNamespace = defaultParent;
 
-  const shouldDeploy = await promptContinueOrExit(
-    rl, 
-    `Deploy ${CONTRACT_NAME} ? (y/n)`
+const useDefaultParent = (await askQuestion(
+  rl,
+  `Parent namespace will be: ${defaultParent}. Use this? (y/n) `
+)).trim();
+
+if (!/^y(es)?$/i.test(useDefaultParent)) {
+  parentNamespace = (await askQuestion(
+    rl,
+    `Enter the parent namespace (e.g., "cid.eth", "on.eth"): `
+  )).trim();
+}
+
+const parentNamehash = namehash(parentNamespace);
+console.log(`\nParent namespace: ${parentNamespace}`);
+console.log(`Parent namehash: ${parentNamehash}`);
+
+// Step 3: Deploy implementation
+const shouldDeployImpl = await promptContinueOrExit(
+  rl,
+  `\nDeploy ${IMPLEMENTATION_NAME} implementation? (y/n)`
+);
+
+if (shouldDeployImpl) {
+  const { contract: implContract } = await deployContract(
+    smith,
+    deployerWallet,
+    IMPLEMENTATION_NAME,
+    [], // No constructor args for upgradeable
+    {},
+    "[Implementation]"
+  );
+  implementationAddress = implContract.target as string;
+
+  const shouldVerifyImpl = await promptContinueOrExit(
+    rl,
+    `Verify ${IMPLEMENTATION_NAME} implementation? (y/n)`
   );
 
-  if (shouldDeploy) {
+  if (shouldVerifyImpl) {
+    await verifyContract(
+      chainInfo.id,
+      implContract,
+      IMPLEMENTATION_NAME,
+      [],
+      {},
+      smith
+    );
+  }
+}
 
-    const defaultOwner = deployerWallet.address;
-    let owner = defaultOwner;
+if (!implementationAddress) {
+  const implInput = (await askQuestion(
+    rl,
+    `Enter existing implementation address: `
+  )).trim();
 
-    const useDefaultInput = (await askQuestion(
-      rl, 
-      `The owner of the deployed contract will be: ${defaultOwner}. Is this correct?`
+  if (!isAddress(implInput)) {
+    throw Error("Invalid implementation address");
+  }
+  implementationAddress = implInput;
+}
+
+// Step 4: Deploy proxy
+const shouldDeployProxy = await promptContinueOrExit(
+  rl,
+  `\nDeploy ${PROXY_NAME} pointing to ${implementationAddress}? (y/n)`
+);
+
+if (shouldDeployProxy) {
+  // Encode the initialize call
+  const initInterface = new Interface([
+    "function initialize(address _owner, bytes32 _parentNamehash)"
+  ]);
+  const initData = initInterface.encodeFunctionData("initialize", [
+    owner,
+    parentNamehash
+  ]);
+
+  console.log(`\nInitialize calldata:`);
+  console.log(`  Owner: ${owner}`);
+  console.log(`  Parent namehash: ${parentNamehash}`);
+
+  const { contract: proxyContract } = await deployContract(smith, deployerWallet, PROXY_NAME, [implementationAddress, initData], {}, "[Proxy]");
+
+  proxyAddress = proxyContract.target as string;
+  console.log(`[Proxy] ${PROXY_NAME} address: ${proxyAddress}`);
+
+  // Verify the owner was set correctly
+  const resolverInterface = new Interface([
+    "function owner() view returns (address)"
+  ]);
+  const ownerCall = await deployerWallet.provider!.call({
+    to: proxyAddress,
+    data: resolverInterface.encodeFunctionData("owner")
+  });
+  const [actualOwner] = resolverInterface.decodeFunctionResult("owner", ownerCall);
+  console.log(`\nVerification: proxy.owner() = ${actualOwner}`);
+
+  if (actualOwner.toLowerCase() !== owner.toLowerCase()) {
+    console.error("WARNING: Owner mismatch!");
+  }
+
+  // Verify proxy contract
+  const shouldVerifyProxy = await promptContinueOrExit(
+    rl,
+    `Verify ${PROXY_NAME}? (y/n)`
+  );
+
+  if (shouldVerifyProxy) {
+    await verifyContract(
+      chainInfo.id,
+      proxyContract,
+      PROXY_NAME,
+      [implementationAddress, initData],
+      {},
+      smith
+    );
+  }
+}
+
+// Step 5: Optional ownership transfer
+if (proxyAddress && owner === deployerWallet.address) {
+  const shouldTransfer = await promptContinueOrExit(
+    rl,
+    `\nTransfer ownership to a different address (e.g., multisig)? (y/n)`
+  );
+
+  if (shouldTransfer) {
+    const newOwner = (await askQuestion(
+      rl,
+      `Enter the new owner address: `
     )).trim();
 
-    if (/^y(es)?$/i.test(useDefaultInput)) {
-
-      // do nothing
-
-    } else {
-
-      const ownerAddressInput = (await askQuestion(
-        rl, 
-        `Enter the address that should own this contract: `
-      )).trim();
-
-      if (!isAddress(ownerAddressInput)) {
-        throw Error("Invalid address input")
-      }
-
-      owner = ownerAddressInput;
+    if (!isAddress(newOwner)) {
+      throw Error("Invalid new owner address");
     }
 
-    const args: any[] = [owner];
-    const libs = {};
-    const deploymentPrefix = "[Resolver]";
+    const transferInterface = new Interface([
+      "function transferOwnership(address newOwner)"
+    ]);
+    const transferData = transferInterface.encodeFunctionData("transferOwnership", [newOwner]);
 
-    const { contract, already } = await deployContract(
-      smith,
-      deployerWallet,
-      CONTRACT_NAME,
-      args,
-      libs,
-      deploymentPrefix
-    );
-
-    // If the contract has already been deployed, blow up if different constructor args were used
-    if (already) constructorCheck(contract.constructorArgs, args);
-    resolverAddress = contract.target as string;
-
-    const shouldVerify = await promptContinueOrExit(
-      rl, 
-      `Verify ${CONTRACT_NAME}? (y/n)`
-    );
-
-    if (shouldVerify) {
-      await verifyContract(
-        chainInfo.id,
-        contract,
-        CONTRACT_NAME,
-        contract.constructorArgs,
-        libs,
-        smith
-      );
-    }
+    console.log(`\nTransferring ownership to ${newOwner}...`);
+    const tx = await deployerWallet.sendTransaction({
+      to: proxyAddress,
+      data: transferData
+    });
+    await tx.wait();
+    console.log(`Ownership transferred. TX: ${tx.hash}`);
   }
 }
 
 console.log("\n=== Deployment Summary ===");
-console.log(`${CONTRACT_NAME}: ${resolverAddress ?? "(none)"}`);
+console.log(`Implementation: ${implementationAddress ?? "(none)"}`);
+console.log(`Proxy: ${proxyAddress ?? "(none)"}`);
+console.log(`Owner: ${owner}`);
+console.log(`Parent namespace: ${parentNamespace}`);
+
+if (proxyAddress) {
+  console.log(`\nTo interact with ChainResolver, use the PROXY address: ${proxyAddress}`);
+}
 
 await shutdownSmith(rl, smith);
