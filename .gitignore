@@ -14,3 +14,8 @@ docs/
 .env
 deployments
 node_modules
+
+# Libs
+lib/
+
+TODO

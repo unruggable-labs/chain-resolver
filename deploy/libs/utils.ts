@@ -28,9 +28,15 @@ export async function parseArgs(
     const args = process.argv.slice(2); // Skip the first two arguments (node and script path)
     const parsedArgs = new Map<string, string>(); // Use a Map to store the parsed arguments
 
-    args.forEach((arg) => {
+    args.forEach((arg: string) => {
       // Split argument into key and value
       const [key, value] = arg.split("=");
+
+      if (!key) {
+        reject(new Error(`Argument key is required. Format key=value`));
+        return;
+      }
+
       const argKey = key.replace(/^--/, ""); // Remove leading '--' from argument name
 
       if (!value) {
@@ -86,11 +92,11 @@ export const promptContinueOrExit = async (
 };
 
 // Initializes a blocksmith instance for the specified chain
-export const initSmith = async (chain: number, privateKey) => {
-  const PROVIDER_URL = CHAIN_MAP.get(chain).rpc;
+export const initSmith = async (chainName: string, privateKey) => {
+  const PROVIDER_URL = CHAIN_MAP.get(chainName).rpc;
   const PRIVATE_KEY = privateKey;
 
-  console.log(`Initializing Smith for ${chain} ...`);
+  console.log(`Initializing Smith for ${chainName} ...`);
 
   const provider = new JsonRpcProvider(PROVIDER_URL);
 
@@ -118,9 +124,9 @@ export const shutdownSmith = async (rl, smith) => {
 // Deploys a contract using Foundry
 export const deployContract = async (
   smith,
-  deployerWallet,
-  contractName,
-  contractArguments,
+  deployerWallet: Wallet,
+  contractName: string,
+  contractArguments: string[],
   libs = {},
   prepend = ""
 ) => {
@@ -180,6 +186,7 @@ export const verifyContract = async (
 
   const fqNameMap: Record<string, string> = {
     ChainResolver: "src/ChainResolver.sol:ChainResolver",
+    ERC1967Proxy: "lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy",
     KeygenLib: "src/utils/KeyGenLib.sol:KeygenLib"
   };
   const nameOrFQN = fqNameMap[contractName] || contractName;
@@ -243,11 +250,15 @@ export const constructorCheck = (deployedArgs, deploymentArgs) => {
 
 // Loads deployment data from the deployment JSON
 export async function loadDeployment(chainId, contractName) {
-  const folderPath = path.resolve(__dirname, "../deployments/" + chainId);
+
+  console.log('__dirname: ', __dirname);
+  const folderPath = path.resolve(__dirname, "../../deployments/" + chainId);
 
   const file = `${contractName}.json`;
   const filePath = path.join(folderPath, file);
 
+  console.log('filePath: ', filePath);
+  
   // Read the file content
   const data = await readFile(filePath, "utf8");
 
