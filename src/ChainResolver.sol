@@ -530,9 +530,20 @@ contract ChainResolver is
         address _owner,
         bytes calldata _interoperableAddress
     ) internal {
+        // Validate inputs
+        if (bytes(_label).length == 0) {
+            revert EmptyLabel();
+        }
+        if (bytes(_chainName).length == 0) {
+            revert EmptyChainName();
+        }
+        if (_interoperableAddress.length < 7) {
+            revert InvalidInteroperableAddress();
+        }
+
         bytes32 _labelhash = keccak256(bytes(_label));
 
-        bool isNew = chainOwners[_labelhash] != address(0);
+        bool isNew = chainNames[_labelhash] == "";
 
         chainNames[_labelhash] = _chainName;
         chainOwners[_labelhash] = _owner;
@@ -551,7 +562,7 @@ contract ChainResolver is
         // Map the Interoperable Address back to the chain label (for reverse resolution)
         labelByInteroperableAddress[_interoperableAddress] = _label;
 
-        if (!isNew) {
+        if (isNew) {
             labelhashList.push(_labelhash);
             unchecked {
                 chainCount += 1;

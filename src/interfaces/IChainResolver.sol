@@ -43,6 +43,10 @@ interface IChainResolver {
     error ReverseNodeOwnershipBlock();
     // Cannot set chain admin to zero address
     error InvalidChainAdmin();
+    // Registration validation errors
+    error EmptyLabel();
+    error EmptyChainName();
+    error InvalidInteroperableAddress();
 
     /// @notice Functions
 
