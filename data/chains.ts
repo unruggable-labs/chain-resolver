@@ -25,57 +25,15 @@ export const CHAINS: ChainData[] = [
   {
     label: "base",
     chainName: "Base",
-    interoperableAddressHex: "0x000100012105",
+    interoperableAddressHex: "0x00010001022105",
     aliases: [],
   },
   {
     label: "arbitrum",
     chainName: "Arbitrum One",
-    interoperableAddressHex: "0x0001000142a91cfd",
+    interoperableAddressHex: "0x0001000102a4b1",
     aliases: ["arb", "arb1"],
   },
- /* {
-    label: "zora",
-    chainName: "Zora",
-    interoperableAddressHex: "0x000100076adf1edd",
-    aliases: [],
-  },
-  {
-    label: "mode",
-    chainName: "Mode",
-    interoperableAddressHex: "0x0001000834d2f4b5",
-    aliases: [],
-  },
-  {
-    label: "fraxtal",
-    chainName: "Fraxtal",
-    interoperableAddressHex: "0x000100fc",
-    aliases: ["frax"],
-  },
-  {
-    label: "worldchain",
-    chainName: "World Chain",
-    interoperableAddressHex: "0x000100480",
-    aliases: ["world", "wld"],
-  },
-  {
-    label: "ink",
-    chainName: "Ink",
-    interoperableAddressHex: "0x0001b9f1",
-    aliases: [],
-  },
-  {
-    label: "unichain",
-    chainName: "Unichain",
-    interoperableAddressHex: "0x00013054d1",
-    aliases: ["uni"],
-  },
-  {
-    label: "soneium",
-    chainName: "Soneium",
-    interoperableAddressHex: "0x00017648",
-    aliases: [],
-  },*/
 ];
 
 // Helper to get a chain by label
