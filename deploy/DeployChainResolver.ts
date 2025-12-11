@@ -11,6 +11,7 @@ import {
 
 import { init } from "./libs/init.ts";
 import { isAddress, namehash, Interface } from "ethers";
+import { REVERSE_REGISTRAR_ADDRESSES, PUBLIC_RESOLVER_ADDRESSES } from "./libs/constants.ts";
 
 // The contracts we are deploying
 const IMPLEMENTATION_NAME = "ChainResolver";
@@ -181,7 +182,62 @@ if (shouldDeployProxy) {
   }
 }
 
-// Step 5: Optional ownership transfer
+// Step 5: Set primary name for the contract (reverse record)
+// See: https://docs.ens.domains/web/naming-contracts/
+if (proxyAddress) {
+  const reverseRegistrar = REVERSE_REGISTRAR_ADDRESSES[chainInfo.id];
+  const publicResolver = PUBLIC_RESOLVER_ADDRESSES[chainInfo.id];
+
+  if (reverseRegistrar && publicResolver) {
+    const shouldSetName = await promptContinueOrExit(
+      rl,
+      `\nSet a primary name (reverse record) for the contract? (y/n)`
+    );
+
+    if (shouldSetName) {
+      const contractName = (await askQuestion(
+        rl,
+        `Enter the ENS name for this contract (e.g., "resolver.on.eth"): `
+      )).trim();
+
+      if (contractName) {
+        // On L1, use setNameForAddr(address addr, address owner, address resolver, string name)
+        const reverseInterface = new Interface([
+          "function setNameForAddr(address addr, address owner, address resolver, string memory name) external returns (bytes32)"
+        ]);
+
+        const setNameData = reverseInterface.encodeFunctionData("setNameForAddr", [
+          proxyAddress,      // The contract address
+          owner,             // The owner of the contract (must be caller or authorized)
+          publicResolver,    // The resolver to use
+          contractName       // The ENS name
+        ]);
+
+        console.log(`\nSetting primary name for ${proxyAddress}...`);
+        console.log(`  Name: ${contractName}`);
+        console.log(`  Reverse Registrar: ${reverseRegistrar}`);
+        console.log(`  Resolver: ${publicResolver}`);
+
+        try {
+          const tx = await deployerWallet.sendTransaction({
+            to: reverseRegistrar,
+            data: setNameData
+          });
+          await tx.wait();
+          console.log(`✓ Primary name set. TX: ${tx.hash}`);
+        } catch (e: any) {
+          const msg = e?.shortMessage || e?.message || String(e);
+          console.error(`✗ Failed to set primary name: ${msg}`);
+          console.log("\nNote: You must own the ENS name and have the ETH address record set to the contract address.");
+        }
+      }
+    }
+  } else {
+    console.log(`\nNote: Reverse Registrar not configured for chain ${chainInfo.id}. Skipping primary name setup.`);
+  }
+}
+
+// Step 6: Optional ownership transfer
 if (proxyAddress && owner === deployerWallet.address) {
   const shouldTransfer = await promptContinueOrExit(
     rl,
