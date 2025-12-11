@@ -23,6 +23,9 @@ const RESOLVER_ABI = [
   "function batchRegisterAlias(string[],bytes32[]) external",
   "function removeAlias(string) external",
   "function getCanonicalLabelhash(bytes32) view returns (bytes32)",
+  "function getText(bytes32,string) view returns (string)",
+  "function setText(bytes32,string,string) external",
+  "function batchSetText(bytes32,string[],string[]) external",
 ];
 
 async function main() {
@@ -317,6 +320,88 @@ async function main() {
         }
       } else {
         console.log("\nAll aliases are already registered.");
+      }
+    }
+
+    // Check and set text records for registered chains
+    const chainsWithTextRecords = CHAINS.filter((c) => c.textRecords && Object.keys(c.textRecords).length > 0);
+    
+    if (chainsWithTextRecords.length > 0) {
+      console.log(`\nChecking text records for ${chainsWithTextRecords.length} chain(s)...`);
+
+      for (const chain of chainsWithTextRecords) {
+        const labelhash = keccak256(toUtf8Bytes(chain.label));
+        const textRecords = chain.textRecords!;
+        const keys = Object.keys(textRecords);
+
+        // Check which records need to be set
+        const recordsToSet: { key: string; value: string }[] = [];
+
+        for (const key of keys) {
+          const existingValue = await resolver.getText!(labelhash, key).catch(() => "");
+          const newValue = textRecords[key]!;
+          
+          if (existingValue !== newValue) {
+            recordsToSet.push({ key, value: newValue });
+          }
+        }
+
+        if (recordsToSet.length === 0) {
+          console.log(`✓ ${chain.label}: All ${keys.length} text records already set`);
+          continue;
+        }
+
+        console.log(`\n○ ${chain.label}: ${recordsToSet.length} text record(s) to set:`);
+        for (const { key, value } of recordsToSet) {
+          const displayValue = value.length > 50 ? value.slice(0, 47) + "..." : value;
+          console.log(`    - ${key}: ${displayValue}`);
+        }
+
+        const shouldSetRecords = await promptContinueOrExit(
+          rl,
+          `Set ${recordsToSet.length} text record(s) for ${chain.label}? (y/n)`
+        );
+
+        if (shouldSetRecords) {
+          try {
+            if (recordsToSet.length === 1) {
+              // Single record - use setText
+              const { key, value } = recordsToSet[0]!;
+              const tx = await resolver.setText!(labelhash, key, value);
+              await tx.wait();
+              console.log(`✓ ${chain.label}: Set ${key}`);
+            } else {
+              // Multiple records - use batchSetText
+              const keysToSet = recordsToSet.map((r) => r.key);
+              const valuesToSet = recordsToSet.map((r) => r.value);
+
+              console.log(`Using batchSetText for ${recordsToSet.length} records...`);
+              const tx = await resolver.batchSetText!(labelhash, keysToSet, valuesToSet);
+              await tx.wait();
+              for (const { key } of recordsToSet) {
+                console.log(`✓ ${chain.label}: Set ${key}`);
+              }
+            }
+          } catch (e: any) {
+            const msg = e?.shortMessage || e?.message || String(e);
+            console.error(`✗ ${chain.label}: Failed to set text records - ${msg}`);
+
+            // Fallback to individual if batch failed
+            if (recordsToSet.length > 1) {
+              console.log("\nFalling back to individual setText calls...\n");
+              for (const { key, value } of recordsToSet) {
+                try {
+                  const tx = await resolver.setText!(labelhash, key, value);
+                  await tx.wait();
+                  console.log(`✓ ${chain.label}: Set ${key}`);
+                } catch (e2: any) {
+                  const msg2 = e2?.shortMessage || e2?.message || String(e2);
+                  console.error(`✗ ${chain.label}: Failed to set ${key} - ${msg2}`);
+                }
+              }
+            }
+          }
+        }
       }
     }
 

@@ -12,6 +12,8 @@ export interface ChainData {
   aliases?: string[];
   // Optional owner address - defaults to contract owner during registration
   owner?: string;
+  // Optional text records
+  textRecords?: Record<string, string>;
 }
 
 // List of Chains to register
@@ -21,6 +23,13 @@ export const CHAINS: ChainData[] = [
     chainName: "OP Mainnet",
     interoperableAddressHex: "0x00010001010a00",
     aliases: ["op"],
+    textRecords: {
+      //"avatar": "https://optimism.io/avatar.png",
+      "description": "Optimism is a Layer 2 scaling solution for Ethereum.",
+      "url": "https://optimism.io",
+      "com.github": "https://github.com/ethereum-optimism",
+      "com.x": "https://twitter.com/optimism",
+    }
   },
   {
     label: "base",
