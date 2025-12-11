@@ -244,4 +244,112 @@ contract ChainResolverDiscoverabilityTest is ChainResolverTestBase {
 
         console.log("Successfully emitted ParentNamehashChanged event");
     }
+
+    function test_009____supportedTextKeys_______________ReturnsSetKeys()
+        public
+    {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Set some text keys
+        vm.startPrank(user1);
+        resolver.setText(TEST_LABELHASH, "url", "https://optimism.io");
+        resolver.setText(TEST_LABELHASH, "description", "Optimism L2");
+        vm.stopPrank();
+
+        // Get the node for this chain
+        bytes32 node = keccak256(
+            abi.encodePacked(
+                resolver.parentNamehash(),
+                TEST_LABELHASH
+            )
+        );
+
+        // Query supportedTextKeys
+        string[] memory keys = resolver.supportedTextKeys(node);
+
+        // Should have 2 keys (the ones we set)
+        assertEq(keys.length, 2, "Should have 2 text keys");
+        assertEq(keys[0], "url", "First key should be url");
+        assertEq(keys[1], "description", "Second key should be description");
+
+        console.log("Successfully returned supported text keys");
+    }
+
+    function test_010____supportedTextKeys_______________WorksForAliases()
+        public
+    {
+        vm.startPrank(admin);
+        registerTestChain();
+        resolver.registerAlias("op", TEST_LABELHASH);
+        vm.stopPrank();
+
+        // Set text via canonical
+        vm.startPrank(user1);
+        resolver.setText(TEST_LABELHASH, "url", "https://optimism.io");
+        vm.stopPrank();
+
+        // Get nodes for both canonical and alias
+        bytes32 canonicalNode = keccak256(
+            abi.encodePacked(
+                resolver.parentNamehash(),
+                TEST_LABELHASH
+            )
+        );
+        bytes32 aliasLabelhash = keccak256(bytes("op"));
+        bytes32 aliasNode = keccak256(
+            abi.encodePacked(
+                resolver.parentNamehash(),
+                aliasLabelhash
+            )
+        );
+
+        // Both should return the same keys
+        string[] memory canonicalKeys = resolver.supportedTextKeys(canonicalNode);
+        string[] memory aliasKeys = resolver.supportedTextKeys(aliasNode);
+
+        assertEq(canonicalKeys.length, aliasKeys.length, "Alias should return same number of keys");
+        assertEq(canonicalKeys.length, 1, "Should have 1 text key");
+
+        console.log("Successfully returned text keys via alias node");
+    }
+
+    function test_011____supportedTextKeys_______________EmptyForUnregistered()
+        public
+        view
+    {
+        // Query for non-existent node
+        bytes32 randomNode = keccak256("random");
+        string[] memory keys = resolver.supportedTextKeys(randomNode);
+
+        assertEq(keys.length, 0, "Should return empty array for unregistered node");
+
+        console.log("Successfully returned empty for unregistered node");
+    }
+
+    function test_012____supportedTextKeys_______________IncludesRegistrationKeys()
+        public
+    {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Get the node for the reverse record (where chain-label: keys are stored)
+        bytes32 reverseLabelhash = keccak256(bytes("reverse"));
+        bytes32 reverseNode = keccak256(
+            abi.encodePacked(
+                resolver.parentNamehash(),
+                reverseLabelhash
+            )
+        );
+
+        // Query supportedTextKeys for reverse node
+        string[] memory keys = resolver.supportedTextKeys(reverseNode);
+
+        // Should have 1 key from registration (chain-label:<interoperable-address>)
+        assertEq(keys.length, 1, "Should have 1 text key from registration");
+
+        console.log("Successfully returned registration text keys");
+    }
 }

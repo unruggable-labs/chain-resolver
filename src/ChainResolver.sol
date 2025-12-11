@@ -26,6 +26,7 @@ import {
 } from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
 import {IChainResolver} from "./interfaces/IChainResolver.sol";
 import {ISupportedDataKeys} from "./interfaces/ISupportedDataKeys.sol";
+import {ISupportedTextKeys} from "./interfaces/ISupportedTextKeys.sol";
 
 // https://github.com/ensdomains/ens-contracts/blob/289913d7e3923228675add09498d66920216fe9b/contracts/resolvers/profiles/ITextResolver.sol
 event TextChanged(
@@ -42,7 +43,8 @@ contract ChainResolver is
     IERC165,
     IExtendedResolver,
     IChainResolver,
-    ISupportedDataKeys
+    ISupportedDataKeys,
+    ISupportedTextKeys
 {
     /**
      * @notice Modifier to ensure only the chain owner can call the function
@@ -114,6 +116,11 @@ contract ChainResolver is
         private dataKeyExists;
     mapping(bytes32 node => bytes32 labelhash) private nodeToLabelhash;
 
+    // Text key tracking for ISupportedTextKeys
+    mapping(bytes32 labelhash => string[] keys) private textKeys;
+    mapping(bytes32 labelhash => mapping(bytes32 keyHash => bool exists))
+        private textKeyExists;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -159,11 +166,16 @@ contract ChainResolver is
             interfaceId == type(IERC165).interfaceId ||
             interfaceId == type(IExtendedResolver).interfaceId ||
             interfaceId == type(IChainResolver).interfaceId ||
-            interfaceId == type(ISupportedDataKeys).interfaceId;
+            interfaceId == type(ISupportedDataKeys).interfaceId ||
+            interfaceId == type(ISupportedTextKeys).interfaceId;
     }
 
     function supportedDataKeys(bytes32 node) external view override returns (string[] memory) {
         return dataKeys[nodeToLabelhash[node]];
+    }
+
+    function supportedTextKeys(bytes32 node) external view override returns (string[] memory) {
+        return textKeys[nodeToLabelhash[node]];
     }
 
     /**
@@ -293,7 +305,19 @@ contract ChainResolver is
         string memory _value
     ) internal {
         textRecords[_labelhash][_key] = _value;
-        emit TextChanged(_computeNamehash(_labelhash), _key, _key, _value);
+
+        // Track the key for supportedTextKeys
+        bytes32 keyHash = keccak256(bytes(_key));
+        if (!textKeyExists[_labelhash][keyHash]) {
+            textKeyExists[_labelhash][keyHash] = true;
+            textKeys[_labelhash].push(_key);
+        }
+
+        // Compute node and update reverse mapping for supportedTextKeys interface
+        bytes32 node = _computeNamehash(_labelhash);
+        nodeToLabelhash[node] = _labelhash;
+
+        emit TextChanged(node, _key, _key, _value);
     }
 
     /**
