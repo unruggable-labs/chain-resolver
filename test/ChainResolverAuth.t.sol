@@ -274,4 +274,213 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
 
         console.log("Successfully prevented unauthorized parent namehash migration");
     }
+
+    function test_010____batchSetText________________SuccessfulBatchSet() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Owner sets multiple text records in one call
+        vm.startPrank(user1);
+
+        string[] memory keys = new string[](3);
+        string[] memory values = new string[](3);
+        keys[0] = "url";
+        keys[1] = "description";
+        keys[2] = "notice";
+        values[0] = "https://optimism.io";
+        values[1] = "Optimism L2";
+        values[2] = "Welcome to Optimism";
+
+        resolver.batchSetText(TEST_LABELHASH, keys, values);
+
+        vm.stopPrank();
+
+        // Verify all records were set
+        assertEq(resolver.getText(TEST_LABELHASH, "url"), "https://optimism.io");
+        assertEq(resolver.getText(TEST_LABELHASH, "description"), "Optimism L2");
+        assertEq(resolver.getText(TEST_LABELHASH, "notice"), "Welcome to Optimism");
+
+        console.log("Successfully batch set text records");
+    }
+
+    function test_011____batchSetText________________UnauthorizedBatchSet() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Attacker tries to batch set text records
+        vm.startPrank(attacker);
+
+        string[] memory keys = new string[](2);
+        string[] memory values = new string[](2);
+        keys[0] = "url";
+        keys[1] = "description";
+        values[0] = "https://hacked.com";
+        values[1] = "Hacked";
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChainResolver.NotChainOwner.selector,
+                attacker,
+                TEST_LABELHASH
+            )
+        );
+        resolver.batchSetText(TEST_LABELHASH, keys, values);
+
+        vm.stopPrank();
+
+        // Verify no text was set
+        assertEq(resolver.getText(TEST_LABELHASH, "url"), "");
+        assertEq(resolver.getText(TEST_LABELHASH, "description"), "");
+
+        console.log("Successfully prevented unauthorized batch text setting");
+    }
+
+    function test_012____batchSetText________________ArrayLengthMismatch() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+
+        string[] memory keys = new string[](2);
+        string[] memory values = new string[](3);
+        keys[0] = "url";
+        keys[1] = "description";
+        values[0] = "https://optimism.io";
+        values[1] = "Optimism L2";
+        values[2] = "Extra value";
+
+        vm.expectRevert("Array length mismatch");
+        resolver.batchSetText(TEST_LABELHASH, keys, values);
+
+        vm.stopPrank();
+
+        console.log("Successfully reverted on array length mismatch");
+    }
+
+    function test_013____batchSetData________________SuccessfulBatchSet() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Owner sets multiple data records in one call
+        vm.startPrank(user1);
+
+        string[] memory keys = new string[](2);
+        bytes[] memory data = new bytes[](2);
+        keys[0] = "custom-data-1";
+        keys[1] = "custom-data-2";
+        data[0] = hex"deadbeef";
+        data[1] = hex"cafebabe";
+
+        resolver.batchSetData(TEST_LABELHASH, keys, data);
+
+        vm.stopPrank();
+
+        // Verify all records were set
+        assertEq(resolver.getData(TEST_LABELHASH, "custom-data-1"), hex"deadbeef");
+        assertEq(resolver.getData(TEST_LABELHASH, "custom-data-2"), hex"cafebabe");
+
+        console.log("Successfully batch set data records");
+    }
+
+    function test_014____batchSetData________________UnauthorizedBatchSet() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Attacker tries to batch set data records
+        vm.startPrank(attacker);
+
+        string[] memory keys = new string[](1);
+        bytes[] memory data = new bytes[](1);
+        keys[0] = "custom-data";
+        data[0] = hex"deadbeef";
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChainResolver.NotChainOwner.selector,
+                attacker,
+                TEST_LABELHASH
+            )
+        );
+        resolver.batchSetData(TEST_LABELHASH, keys, data);
+
+        vm.stopPrank();
+
+        // Verify no data was set
+        assertEq(resolver.getData(TEST_LABELHASH, "custom-data"), "");
+
+        console.log("Successfully prevented unauthorized batch data setting");
+    }
+
+    function test_015____batchSetData________________BlocksImmutableKey() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+
+        // Try to set interoperable-address via batch (should be blocked)
+        string[] memory keys = new string[](2);
+        bytes[] memory data = new bytes[](2);
+        keys[0] = "custom-data";
+        keys[1] = "interoperable-address";
+        data[0] = hex"1234";
+        data[1] = hex"deadbeef";
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IChainResolver.ImmutableDataKey.selector,
+                TEST_LABELHASH,
+                "interoperable-address"
+            )
+        );
+        resolver.batchSetData(TEST_LABELHASH, keys, data);
+
+        vm.stopPrank();
+
+        console.log("Successfully blocked immutable key in batch");
+    }
+
+    function test_016____batchSetData________________ArrayLengthMismatch() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+
+        string[] memory keys = new string[](2);
+        bytes[] memory data = new bytes[](1);
+        keys[0] = "key1";
+        keys[1] = "key2";
+        data[0] = hex"1234";
+
+        vm.expectRevert("Array length mismatch");
+        resolver.batchSetData(TEST_LABELHASH, keys, data);
+
+        vm.stopPrank();
+
+        console.log("Successfully reverted on array length mismatch");
+    }
+
+    function test_017____batchSetText________________EmptyArrays() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+
+        string[] memory keys = new string[](0);
+        string[] memory values = new string[](0);
+
+        // Should not revert with empty arrays
+        resolver.batchSetText(TEST_LABELHASH, keys, values);
+
+        vm.stopPrank();
+
+        console.log("Successfully handled empty arrays");
+    }
 }

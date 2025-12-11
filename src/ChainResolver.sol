@@ -293,6 +293,25 @@ contract ChainResolver is
     }
 
     /**
+     * @notice Batch set multiple text records for a labelhash.
+     * @param _labelhash The labelhash to update.
+     * @param _keys Array of text record keys.
+     * @param _values Array of text record values.
+     */
+    function batchSetText(
+        bytes32 _labelhash,
+        string[] calldata _keys,
+        string[] calldata _values
+    ) external onlyChainOwner(_labelhash) {
+        require(_keys.length == _values.length, "Array length mismatch");
+        bytes32 canonical = _resolveLabelhash(_labelhash);
+        uint256 len = _keys.length;
+        for (uint256 i = 0; i < len; i++) {
+            _setText(canonical, _keys[i], _values[i]);
+        }
+    }
+
+    /**
      * @notice INTERNAL Set a text record for a labelhash.
      * @param _labelhash The labelhash to update.
      * @param _key The text record key.
@@ -349,6 +368,28 @@ contract ChainResolver is
         }
 
         _setData(_resolveLabelhash(_labelhash), _key, _data);
+    }
+
+    /**
+     * @notice Batch set multiple data records for a labelhash.
+     * @param _labelhash The labelhash to update.
+     * @param _keys Array of data record keys.
+     * @param _data Array of data record values.
+     */
+    function batchSetData(
+        bytes32 _labelhash,
+        string[] calldata _keys,
+        bytes[] calldata _data
+    ) external onlyChainOwner(_labelhash) {
+        require(_keys.length == _data.length, "Array length mismatch");
+        bytes32 canonical = _resolveLabelhash(_labelhash);
+        uint256 len = _keys.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (keccak256(bytes(_keys[i])) == INTEROPERABLE_ADDRESS_DATA_KEY_HASH) {
+                revert ImmutableDataKey(_labelhash, _keys[i]);
+            }
+            _setData(canonical, _keys[i], _data[i]);
+        }
     }
 
     /**
