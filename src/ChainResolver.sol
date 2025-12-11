@@ -25,6 +25,7 @@ import {
     NameCoder
 } from "@ensdomains/ens-contracts/contracts/utils/NameCoder.sol";
 import {IChainResolver} from "./interfaces/IChainResolver.sol";
+import {ISupportedDataKeys} from "./interfaces/ISupportedDataKeys.sol";
 
 // https://github.com/ensdomains/ens-contracts/blob/289913d7e3923228675add09498d66920216fe9b/contracts/resolvers/profiles/ITextResolver.sol
 event TextChanged(
@@ -40,7 +41,8 @@ contract ChainResolver is
     UUPSUpgradeable,
     IERC165,
     IExtendedResolver,
-    IChainResolver
+    IChainResolver,
+    ISupportedDataKeys
 {
     /**
      * @notice Modifier to ensure only the chain owner can call the function
@@ -106,6 +108,11 @@ contract ChainResolver is
     mapping(bytes32 labelhash => mapping(string key => bytes data))
         private dataRecords;
 
+    // Data key tracking for ISupportedDataKeys (stored by node to match interface)
+    mapping(bytes32 node => string[] keys) private dataKeys;
+    mapping(bytes32 node => mapping(bytes32 keyHash => bool exists))
+        private dataKeyExists;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -130,7 +137,12 @@ contract ChainResolver is
         return
             interfaceId == type(IERC165).interfaceId ||
             interfaceId == type(IExtendedResolver).interfaceId ||
-            interfaceId == type(IChainResolver).interfaceId;
+            interfaceId == type(IChainResolver).interfaceId ||
+            interfaceId == type(ISupportedDataKeys).interfaceId;
+    }
+
+    function supportedDataKeys(bytes32 node) external view override returns (string[] memory) {
+        return dataKeys[node];
     }
 
     /**
@@ -306,12 +318,18 @@ contract ChainResolver is
         bytes memory _data
     ) internal {
         dataRecords[_labelhash][_key] = _data;
-        emit DataChanged(
-            _computeNamehash(_labelhash),
-            _key,
-            keccak256(bytes(_key)),
-            keccak256(_data)
-        );
+
+        // Compute node for event and key tracking
+        bytes32 node = _computeNamehash(_labelhash);
+
+        // Track the key for supportedDataKeys (stored by node to match interface)
+        bytes32 keyHash = keccak256(bytes(_key));
+        if (!dataKeyExists[node][keyHash]) {
+            dataKeyExists[node][keyHash] = true;
+            dataKeys[node].push(_key);
+        }
+
+        emit DataChanged(node, _key, _key, _data);
     }
 
     //////
@@ -543,7 +561,7 @@ contract ChainResolver is
 
         bytes32 _labelhash = keccak256(bytes(_label));
 
-        bool isNew = chainNames[_labelhash] == "";
+        bool isNew = bytes(chainNames[_labelhash]).length == 0;
 
         chainNames[_labelhash] = _chainName;
         chainOwners[_labelhash] = _owner;

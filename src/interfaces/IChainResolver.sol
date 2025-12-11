@@ -28,7 +28,7 @@ interface IChainResolver {
     // ENSIP-9
     event AddressChanged(bytes32 indexed node, uint256 coinType, bytes newAddress);
     // ENSIP-24
-    event DataChanged(bytes32 node, string key, bytes32 indexed keyHash, bytes32 indexed dataHash);
+    event DataChanged(bytes32 indexed node, string indexed indexedKey, string key, bytes indexed indexedData);
 
     // Errors
     // There is no registered chain at that index

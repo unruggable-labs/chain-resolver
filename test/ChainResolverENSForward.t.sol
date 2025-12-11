@@ -93,8 +93,8 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
         emit IChainResolver.DataChanged(
             EXPECTED_NAMEHASH,
             "custom",
-            keccak256(bytes("custom")),
-            keccak256(testData)
+            "custom",
+            testData
         );
         resolver.setData(TEST_LABELHASH, "custom", testData);
 
