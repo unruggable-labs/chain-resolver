@@ -3,7 +3,7 @@ pragma solidity ^0.8.25;
 
 /**
  * @title ChainResolver
- * @author Unruggable
+ * @author Thomas Clowes (clowes.eth) - <thomas@unruggable.com>
  * @notice Implementation of ERC-7828: Interoperable Addresses using ENS.
  * @dev Upgradeable via UUPS. Owner can upgrade directly.
  * @dev Repository: https://github.com/unruggable-labs/chain-resolver

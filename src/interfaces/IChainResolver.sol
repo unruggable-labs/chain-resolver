@@ -3,9 +3,8 @@ pragma solidity ^0.8.25;
 
 /**
  * @title IChainResolver
- * @author @unruggable-labs, @defi-wonderland
+ * @author Thomas Clowes (clowes.eth) - <thomas@unruggable.com>
  * @notice Interface for the ChainResolver contract specified in ERC-7828
- * @dev Source: https://github.com/unruggable-labs/chain-resolver/tree/main/src/interfaces/IChainResolver.sol
  */
 interface IChainResolver {
 

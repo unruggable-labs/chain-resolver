@@ -3,8 +3,7 @@ pragma solidity ^0.8.25;
 
 /**
  * @title ISupportedDataKeys
- * @author Unruggable
- * @notice Interface for the supported data keys for a given node.
+ * @notice Interface for the supported data keys for a given node (ENSIP-24).
  * @dev Interface selector: `0x29fb1892`
  */
 interface ISupportedDataKeys {
