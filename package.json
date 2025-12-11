@@ -9,6 +9,7 @@
         "ethers": "^6.14.0",
         "multiformats": "^13.4.1",
         "solidity-bytes-utils": "^0.8.4",
-        "tsx": "^4.19.4"
+        "tsx": "^4.19.4",
+        "viem": "^2.41.2"
     }
 }
