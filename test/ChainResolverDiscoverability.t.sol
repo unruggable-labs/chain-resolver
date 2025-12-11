@@ -100,4 +100,148 @@ contract ChainResolverDiscoverabilityTest is ChainResolverTestBase {
         vm.expectRevert(IChainResolver.IndexOutOfRange.selector);
         resolver.getChainAtIndex(1);
     }
+
+    function test_004____supportedDataKeys_______________ReturnsSetKeys()
+        public
+    {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Set some data keys
+        vm.startPrank(user1);
+        resolver.setData(TEST_LABELHASH, "custom-key-1", hex"1234");
+        resolver.setData(TEST_LABELHASH, "custom-key-2", hex"5678");
+        vm.stopPrank();
+
+        // Get the node for this chain
+        bytes32 node = keccak256(
+            abi.encodePacked(
+                resolver.parentNamehash(),
+                TEST_LABELHASH
+            )
+        );
+
+        // Query supportedDataKeys
+        string[] memory keys = resolver.supportedDataKeys(node);
+
+        // Should have 3 keys: interoperable-address (from registration) + 2 custom
+        assertEq(keys.length, 3, "Should have 3 data keys");
+        assertEq(keys[0], "interoperable-address", "First key should be interoperable-address");
+        assertEq(keys[1], "custom-key-1", "Second key should be custom-key-1");
+        assertEq(keys[2], "custom-key-2", "Third key should be custom-key-2");
+
+        console.log("Successfully returned supported data keys");
+    }
+
+    function test_005____supportedDataKeys_______________WorksForAliases()
+        public
+    {
+        vm.startPrank(admin);
+        registerTestChain();
+        resolver.registerAlias("op", TEST_LABELHASH);
+        vm.stopPrank();
+
+        // Set data via canonical
+        vm.startPrank(user1);
+        resolver.setData(TEST_LABELHASH, "custom-key", hex"abcd");
+        vm.stopPrank();
+
+        // Get nodes for both canonical and alias
+        bytes32 canonicalNode = keccak256(
+            abi.encodePacked(
+                resolver.parentNamehash(),
+                TEST_LABELHASH
+            )
+        );
+        bytes32 aliasLabelhash = keccak256(bytes("op"));
+        bytes32 aliasNode = keccak256(
+            abi.encodePacked(
+                resolver.parentNamehash(),
+                aliasLabelhash
+            )
+        );
+
+        // Both should return the same keys
+        string[] memory canonicalKeys = resolver.supportedDataKeys(canonicalNode);
+        string[] memory aliasKeys = resolver.supportedDataKeys(aliasNode);
+
+        assertEq(canonicalKeys.length, aliasKeys.length, "Alias should return same number of keys");
+        assertEq(canonicalKeys.length, 2, "Should have 2 data keys");
+
+        console.log("Successfully returned data keys via alias node");
+    }
+
+    function test_006____supportedDataKeys_______________EmptyForUnregistered()
+        public
+        view
+    {
+        // Query for non-existent node
+        bytes32 randomNode = keccak256("random");
+        string[] memory keys = resolver.supportedDataKeys(randomNode);
+
+        assertEq(keys.length, 0, "Should return empty array for unregistered node");
+
+        console.log("Successfully returned empty for unregistered node");
+    }
+
+    function test_007____migrateParentNamehash___________UpdatesNodeMappings()
+        public
+    {
+        vm.startPrank(admin);
+        registerTestChain();
+
+        // Set some data to populate nodeToLabelhash
+        vm.stopPrank();
+        vm.startPrank(user1);
+        resolver.setData(TEST_LABELHASH, "test-key", hex"1234");
+        vm.stopPrank();
+
+        // Get original node
+        bytes32 originalParent = resolver.parentNamehash();
+        bytes32 originalNode = keccak256(
+            abi.encodePacked(originalParent, TEST_LABELHASH)
+        );
+
+        // Verify keys work with original node
+        string[] memory keysBeforeMigration = resolver.supportedDataKeys(originalNode);
+        assertEq(keysBeforeMigration.length, 2, "Should have 2 keys before migration");
+
+        // Migrate to new parent namehash
+        bytes32 newParentNamehash = keccak256("new.eth");
+        vm.startPrank(admin);
+        resolver.migrateParentNamehash(newParentNamehash);
+        vm.stopPrank();
+
+        // Compute new node
+        bytes32 newNode = keccak256(
+            abi.encodePacked(newParentNamehash, TEST_LABELHASH)
+        );
+
+        // New node should now work
+        string[] memory keysAfterMigration = resolver.supportedDataKeys(newNode);
+        assertEq(keysAfterMigration.length, 2, "Should have 2 keys after migration with new node");
+
+        // Old node should no longer work (unless data is set again)
+        // Note: old mapping still exists but is stale
+
+        console.log("Successfully migrated parent namehash");
+    }
+
+    function test_008____migrateParentNamehash___________EmitsEvent()
+        public
+    {
+        vm.startPrank(admin);
+        registerTestChain();
+
+        bytes32 newParentNamehash = keccak256("new.eth");
+
+        vm.expectEmit(true, true, true, true);
+        emit IChainResolver.ParentNamehashChanged(newParentNamehash);
+
+        resolver.migrateParentNamehash(newParentNamehash);
+        vm.stopPrank();
+
+        console.log("Successfully emitted ParentNamehashChanged event");
+    }
 }

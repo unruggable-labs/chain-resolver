@@ -229,4 +229,49 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
 
         console.log("Successfully authenticated owner as caller");
     }
+
+    function test_008____setChainAdmin_______________RevertsOnZeroAddress() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Chain owner tries to set admin to zero address
+        vm.startPrank(user1);
+
+        vm.expectRevert(IChainResolver.InvalidChainAdmin.selector);
+        resolver.setChainAdmin(TEST_LABELHASH, address(0));
+
+        vm.stopPrank();
+
+        // Verify original ownership is intact
+        assertEq(
+            resolver.getChainAdmin(TEST_LABELHASH),
+            user1,
+            "Original owner should remain"
+        );
+
+        console.log("Successfully prevented setting admin to zero address");
+    }
+
+    function test_009____migrateParentNamehash_______OnlyOwnerCanCall() public {
+        vm.startPrank(admin);
+        resolver = deployResolver(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Non-owner tries to migrate
+        vm.startPrank(attacker);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                OwnableUpgradeable.OwnableUnauthorizedAccount.selector,
+                attacker
+            )
+        );
+        resolver.migrateParentNamehash(bytes32(uint256(1)));
+
+        vm.stopPrank();
+
+        console.log("Successfully prevented unauthorized parent namehash migration");
+    }
 }

@@ -16,34 +16,31 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         vm.stopPrank();
     }
 
-    function test_001____register____________________EmptyChainName() public {
+    function test_001____register____________________EmptyLabelReverts() public {
         vm.startPrank(admin);
 
-        // Try to register with empty chain name
-        string memory emptyName = "";
-        bytes32 emptyLabelHash = keccak256(bytes(emptyName));
-
-        // This should work - empty string is valid
-        registerChain(emptyName, emptyName, user1, TEST_INTEROPERABLE_ADDRESS);
-
-        // Verify registration
-        assertEq(
-            resolver.getChainAdmin(emptyLabelHash),
-            user1,
-            "Empty chain name should be registrable"
-        );
-        assertEq(
-            resolver.interoperableAddress(emptyLabelHash),
-            TEST_INTEROPERABLE_ADDRESS,
-            "Chain ID should be set for empty name"
-        );
+        // Try to register with empty label - should revert
+        vm.expectRevert(IChainResolver.EmptyLabel.selector);
+        registerChain("", TEST_CHAIN_NAME, user1, TEST_INTEROPERABLE_ADDRESS);
 
         vm.stopPrank();
 
-        console.log("Successfully registered empty chain name");
+        console.log("Successfully reverted on empty label");
     }
 
-    function test_002____register____________________VeryLongChainName()
+    function test_002____register____________________EmptyChainNameReverts() public {
+        vm.startPrank(admin);
+
+        // Try to register with empty chain name - should revert
+        vm.expectRevert(IChainResolver.EmptyChainName.selector);
+        registerChain(TEST_LABEL, "", user1, TEST_INTEROPERABLE_ADDRESS);
+
+        vm.stopPrank();
+
+        console.log("Successfully reverted on empty chain name");
+    }
+
+    function test_003____register____________________VeryLongChainName()
         public
     {
         vm.startPrank(admin);
@@ -78,37 +75,33 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         console.log("Successfully registered very long chain name");
     }
 
-    function test_003____register____________________EmptyChainId() public {
+    function test_004____register____________________ShortInteroperableAddressReverts() public {
         vm.startPrank(admin);
 
-        // Try to register with empty chain ID
-        bytes memory emptyChainId = "";
+        // Try to register with interoperable address < 7 bytes - should revert
+        bytes memory shortAddress = hex"010203040506"; // 6 bytes
 
-        registerChain(TEST_LABEL, TEST_CHAIN_NAME, user1, emptyChainId);
-
-        // Verify registration
-        assertEq(
-            resolver.getChainAdmin(TEST_LABELHASH),
-            user1,
-            "Owner should be set"
-        );
-        assertEq(
-            resolver.interoperableAddress(TEST_LABELHASH),
-            emptyChainId,
-            "Empty chain ID should be stored"
-        );
-        assertEq(
-            resolver.chainName(emptyChainId),
-            TEST_CHAIN_NAME,
-            "Chain name should be stored"
-        );
+        vm.expectRevert(IChainResolver.InvalidInteroperableAddress.selector);
+        registerChain(TEST_LABEL, TEST_CHAIN_NAME, user1, shortAddress);
 
         vm.stopPrank();
 
-        console.log("Successfully registered with empty chain ID");
+        console.log("Successfully reverted on short interoperable address");
     }
 
-    function test_004____register____________________VeryLongChainId() public {
+    function test_005____register____________________EmptyInteroperableAddressReverts() public {
+        vm.startPrank(admin);
+
+        // Try to register with empty interoperable address - should revert
+        vm.expectRevert(IChainResolver.InvalidInteroperableAddress.selector);
+        registerChain(TEST_LABEL, TEST_CHAIN_NAME, user1, "");
+
+        vm.stopPrank();
+
+        console.log("Successfully reverted on empty interoperable address");
+    }
+
+    function test_006____register____________________VeryLongChainId() public {
         vm.startPrank(admin);
 
         // Try to register with very long chain ID
@@ -141,7 +134,7 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         console.log("Successfully registered with very long chain ID");
     }
 
-    function test_005____resolve_____________________UnknownSelector() public {
+    function test_007____resolve_____________________UnknownSelector() public {
         vm.startPrank(admin);
         registerTestChain();
         vm.stopPrank();
@@ -160,7 +153,7 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         console.log("Successfully handled unknown selector");
     }
 
-    function test_006____supportsInterface___________InterfaceSupport()
+    function test_008____supportsInterface___________InterfaceSupport()
         public
         view
     {
@@ -209,7 +202,7 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         console.log("Successfully handled interface support");
     }
 
-    function test_007____bytesToAddress_______________RevertsOnInvalidLength()
+    function test_009____bytesToAddress_______________RevertsOnInvalidLength()
         public
     {
         vm.startPrank(admin);
@@ -233,7 +226,7 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         console.log("Successfully reverted on invalid address length");
     }
 
-    function test_008____setAddr_____________________NonEthereumCoinType()
+    function test_010____setAddr_____________________NonEthereumCoinType()
         public
     {
         vm.startPrank(admin);
@@ -275,7 +268,7 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         console.log("Successfully handled non-Ethereum coin type");
     }
 
-    function test_009____startsWith__________________NoOverrideForDataKeysShorterThanPrefix()
+    function test_011____startsWith__________________NoOverrideForDataKeysShorterThanPrefix()
         public
     {
         vm.startPrank(admin);
@@ -304,7 +297,7 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         console.log("Successfully handled data shorter than prefix");
     }
 
-    function test_010____startsWith__________________NoOverrideForPrefixMismatch()
+    function test_012____startsWith__________________NoOverrideForPrefixMismatch()
         public
     {
         vm.startPrank(admin);
@@ -336,7 +329,7 @@ contract ChainResolverEdgeCasesTest is ChainResolverTestBase {
         console.log("Successfully handled data that doesn't match prefix");
     }
 
-    function test_011____bytesToAddress_______________ValidAddressConversion()
+    function test_013____bytesToAddress_______________ValidAddressConversion()
         public
     {
         vm.startPrank(admin);
