@@ -108,10 +108,11 @@ contract ChainResolver is
     mapping(bytes32 labelhash => mapping(string key => bytes data))
         private dataRecords;
 
-    // Data key tracking for ISupportedDataKeys (stored by node to match interface)
-    mapping(bytes32 node => string[] keys) private dataKeys;
-    mapping(bytes32 node => mapping(bytes32 keyHash => bool exists))
+    // Data key tracking for ISupportedDataKeys
+    mapping(bytes32 labelhash => string[] keys) private dataKeys;
+    mapping(bytes32 labelhash => mapping(bytes32 keyHash => bool exists))
         private dataKeyExists;
+    mapping(bytes32 node => bytes32 labelhash) private nodeToLabelhash;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -129,6 +130,26 @@ contract ChainResolver is
     ) external initializer {
         __Ownable_init(_owner);
         parentNamehash = _parentNamehash;
+        emit ParentNamehashChanged(_parentNamehash);
+    }
+
+    /**
+     * @notice Update the parent namespace and migrate node mappings.
+     * @param _newParentNamehash The new parent namespace namehash.
+     * @dev This rebuilds all node → labelhash mappings for supportedDataKeys.
+     *      Gas cost scales with number of registered chains.
+     */
+    function migrateParentNamehash(bytes32 _newParentNamehash) external onlyOwner {
+        parentNamehash = _newParentNamehash;
+
+        // Rebuild node → labelhash mappings for supportedDataKeys
+        uint256 len = labelhashList.length;
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 lh = labelhashList[i];
+            nodeToLabelhash[_computeNamehash(lh)] = lh;
+        }
+
+        emit ParentNamehashChanged(_newParentNamehash);
     }
 
     function supportsInterface(
@@ -142,7 +163,7 @@ contract ChainResolver is
     }
 
     function supportedDataKeys(bytes32 node) external view override returns (string[] memory) {
-        return dataKeys[node];
+        return dataKeys[nodeToLabelhash[node]];
     }
 
     /**
@@ -319,15 +340,16 @@ contract ChainResolver is
     ) internal {
         dataRecords[_labelhash][_key] = _data;
 
-        // Compute node for event and key tracking
-        bytes32 node = _computeNamehash(_labelhash);
-
-        // Track the key for supportedDataKeys (stored by node to match interface)
+        // Track the key for supportedDataKeys
         bytes32 keyHash = keccak256(bytes(_key));
-        if (!dataKeyExists[node][keyHash]) {
-            dataKeyExists[node][keyHash] = true;
-            dataKeys[node].push(_key);
+        if (!dataKeyExists[_labelhash][keyHash]) {
+            dataKeyExists[_labelhash][keyHash] = true;
+            dataKeys[_labelhash].push(_key);
         }
+
+        // Compute node and update reverse mapping for supportedDataKeys interface
+        bytes32 node = _computeNamehash(_labelhash);
+        nodeToLabelhash[node] = _labelhash;
 
         emit DataChanged(node, _key, _key, _data);
     }
@@ -508,6 +530,10 @@ contract ChainResolver is
         );
 
         aliasOf[aliasHash] = _canonicalLabelhash;
+
+        // Map alias node → canonical labelhash for supportedDataKeys
+        nodeToLabelhash[_computeNamehash(aliasHash)] = _canonicalLabelhash;
+
         emit AliasRegistered(aliasHash, _canonicalLabelhash, _alias);
     }
 

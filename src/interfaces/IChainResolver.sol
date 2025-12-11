@@ -22,6 +22,7 @@ interface IChainResolver {
     event ChainAdminSet(bytes32 indexed _labelhash, address _owner);
     event AliasRegistered(bytes32 indexed _aliasHash, bytes32 indexed _canonicalLabelhash, string _alias);
     event AliasRemoved(bytes32 indexed _aliasHash, bytes32 indexed _canonicalLabelhash, string _alias);
+    event ParentNamehashChanged(bytes32 indexed _newParentNamehash);
 
     // ENSIP-1
     event AddrChanged(bytes32 indexed _labelhash, address _owner);

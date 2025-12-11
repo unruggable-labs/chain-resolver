@@ -27,6 +27,8 @@ During initialization, administrative control of **additional** data stored unde
 
 - Under the hood, data is associated with the labelhash - the `keccak256` hash of the chain label. The resolver is tied to a namespace defined on initialization. The namespace for [ERC-7828] is `on.eth`.
 
+- When originally designed there was discussion on appropriate namespace. The `ChainResolver` was designed to be agnostic to the underlying namespace. Given that some ENS event specifications emit the namehash (which is an algorithm using unidirectional hashing mechanisms - `keccak256`) we map `nodeToLabelhash`. See `migrateParentNamehash`.
+
 - There is an alias system to allow for commonly understood aliases to point to the same chain data. e.g, `arb1.on.eth` will point to the same underlying data as `arbitrum.on.eth`.
 
 - There is an in-built discovery mechanism. `chainCount()` exposes the number of chains in the registry, while `getChainAtIndex(uint256)` allows clients to iterate through them. This is provided as a utility - usage of this registry **requires no external dependencies**.
