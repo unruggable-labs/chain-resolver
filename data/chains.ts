@@ -19,6 +19,18 @@ export interface ChainData {
 // List of Chains to register
 export const CHAINS: ChainData[] = [
   {
+    label: "arbitrum",
+    chainName: "Arbitrum One",
+    interoperableAddressHex: "0x0001000102a4b1",
+    aliases: ["arb", "arb1"],
+  },
+  {
+    label: "base",
+    chainName: "Base",
+    interoperableAddressHex: "0x00010001022105",
+    aliases: [],
+  },
+  {
     label: "optimism",
     chainName: "OP Mainnet",
     interoperableAddressHex: "0x00010001010a00",
@@ -38,18 +50,8 @@ export const CHAINS: ChainData[] = [
       "com.x": "https://twitter.com/optimism",
     }
   },
-  {
-    label: "base",
-    chainName: "Base",
-    interoperableAddressHex: "0x00010001022105",
-    aliases: [],
-  },
-  {
-    label: "arbitrum",
-    chainName: "Arbitrum One",
-    interoperableAddressHex: "0x0001000102a4b1",
-    aliases: ["arb", "arb1"],
-  },
+
+
 ];
 
 // Helper to get a chain by label
