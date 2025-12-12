@@ -539,7 +539,7 @@
       'location': { icon: '📍', label: 'Location', type: 'text' },
       'phone': { icon: '📞', label: 'Phone', type: 'text' },
       'mail': { icon: '🏠', label: 'Mail', type: 'text' },
-      'contentHash': { icon: '📁', label: 'Content Hash', type: 'text' },
+      'contentHash': { icon: '📁', label: 'contenthash', type: 'contenthash' },
     };
 
     // Detect chain label from URL
@@ -707,6 +707,18 @@
             });
           } else if (config.type === 'avatar' || config.type === 'header' || config.type === 'description' || config.type === 'name') {
             display[config.type] = value;
+          } else if (config.type === 'contenthash') {
+            // Format contenthash - link will be added in renderChain with ensName
+            const cid = value.startsWith('ipfs://') ? value.slice(7) : value;
+            const displayCid = cid.length > 30 ? cid.slice(0, 12) + '...' + cid.slice(-8) : cid;
+            info.push({
+              key,
+              label: config.label,
+              value: displayCid,
+              fullValue: cid,
+              icon: config.icon,
+              isContenthash: true,
+            });
           } else if (config.type === 'text') {
             info.push({
               key,
@@ -785,12 +797,23 @@
           <div class="card">
             <div class="card-title">Info</div>
             <div class="records-grid">
-              ${info.map(item => `
-                <div class="record-item">
-                  <span class="record-key">${item.icon} ${item.label}</span>
-                  <span class="record-value">${formatRecordValue(item.key, item.value)}</span>
-                </div>
-              `).join('')}
+              ${info.map(item => {
+                if (item.isContenthash) {
+                  const limoUrl = `https://${ensName}.limo`;
+                  return `
+                    <div class="record-item">
+                      <span class="record-key">${item.icon} ${item.label}</span>
+                      <span class="record-value"><a href="${limoUrl}" target="_blank" rel="noopener">${item.value}</a></span>
+                    </div>
+                  `;
+                }
+                return `
+                  <div class="record-item">
+                    <span class="record-key">${item.icon} ${item.label}</span>
+                    <span class="record-value">${formatRecordValue(item.key, item.value)}</span>
+                  </div>
+                `;
+              }).join('')}
             </div>
           </div>
         ` : ''}
