@@ -19,7 +19,7 @@ import { join, basename } from "path";
 const IMAGE_KEYS = ["avatar", "header"];
 
 // Shared website contenthash (IPFS CID) - set for all chains
-const WEBSITE_CONTENTHASH = "bafkreihv4d7vodwqvimfqkp4h3pvcbp7ssdrwnlq2lokyux5n7e5bprpfm";
+const WEBSITE_CONTENTHASH = "bafkreiefxr2ca3q6zveqejonezevph4h57m5q657t3dvfcfa7zvzliojvm";
 
 /**
  * Check if a value looks like a local file path
