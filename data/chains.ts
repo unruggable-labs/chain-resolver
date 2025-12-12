@@ -43,6 +43,15 @@ export const CHAINS: ChainData[] = [
     chainName: "Base",
     interoperableAddressHex: "0x00010001022105",
     aliases: [],
+    textRecords: {
+      //"avatar": "images/base-avatar.png",
+      //"header": "images/base-header.png",
+      "description": "Base is a Layer 2 scaling solution for Ethereum.",
+      //"email": "hello@base.org",
+      //"mail": "123 Base, L2 123",
+      //"notice": "This is a notice",
+      //"keywords": "base, l2",
+    },
   },
   {
     label: "arbitrum",

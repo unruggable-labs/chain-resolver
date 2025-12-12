@@ -18,8 +18,8 @@ import { join, basename } from "path";
 // Image keys that should be uploaded to IPFS if they're local file paths
 const IMAGE_KEYS = ["avatar", "header"];
 
-// Shared website contenthash (IPFS CID) - set for all chains
-const WEBSITE_CONTENTHASH = "bafkreiefxr2ca3q6zveqejonezevph4h57m5q657t3dvfcfa7zvzliojvm";
+// Shared website contenthash (ENS format hex string with 0x prefix)
+const WEBSITE_CONTENTHASH = "0xe3010155122085bc74206e1ecd490225cd2649579f87efd9d87bbf9ec75288a0fe6b95a1c9ab";
 
 /**
  * Check if a value looks like a local file path
@@ -428,13 +428,10 @@ async function main() {
       for (const chain of chainsWithRecords) {
         const labelhash = keccak256(toUtf8Bytes(chain.label));
         
-        // Build text records, including auto-generated aliases and contenthash
+        // Build text records, including auto-generated aliases
         const chainTextRecords: Record<string, string> = { ...chain.textRecords };
         if (chain.aliases && chain.aliases.length > 0) {
           chainTextRecords["aliases"] = chain.aliases.join(", ");
-        }
-        if (WEBSITE_CONTENTHASH) {
-          chainTextRecords["contentHash"] = WEBSITE_CONTENTHASH;
         }
         
         // Check for local images that could be uploaded
@@ -535,6 +532,169 @@ async function main() {
               }
             }
           }
+        }
+      }
+    }
+
+    // Set base name records (cid.eth/on.eth)
+    const BASE_NAME_LABELHASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
+    const baseNameTextRecords: Record<string, string> = {
+      // Add default base name records here, or leave empty to skip
+      // Example:
+      // "url": "https://example.com",
+      "description": "ERC-7828 Chain Registry/Resolver",
+    };
+
+    if (Object.keys(baseNameTextRecords).length > 0) {
+      console.log(`\n=== Base Name Records ===`);
+      console.log(`Setting records for base name (${chainInfo.domain})...\n`);
+
+      // Check which records need to be set
+      const baseRecordsToSet: { key: string; value: string }[] = [];
+
+      for (const [key, value] of Object.entries(baseNameTextRecords)) {
+        try {
+          const existingValue = await resolver.getText!(BASE_NAME_LABELHASH, key).catch(() => "");
+          if (existingValue !== value) {
+            baseRecordsToSet.push({ key, value });
+          }
+        } catch (e) {
+          // If getText fails, assume we need to set it
+          baseRecordsToSet.push({ key, value });
+        }
+      }
+
+      if (baseRecordsToSet.length === 0) {
+        console.log(`✓ Base name: All ${Object.keys(baseNameTextRecords).length} text records already set`);
+      } else {
+        console.log(`○ Base name: ${baseRecordsToSet.length} text record(s) to set:`);
+        for (const { key, value } of baseRecordsToSet) {
+          const displayValue = value.length > 50 ? value.slice(0, 47) + "..." : value;
+          console.log(`    - ${key}: ${displayValue}`);
+        }
+
+        const shouldSetBaseRecords = await promptContinueOrExit(
+          rl,
+          `Set ${baseRecordsToSet.length} text record(s) for base name? (y/n)`
+        );
+
+        if (shouldSetBaseRecords) {
+          try {
+            if (baseRecordsToSet.length === 1) {
+              // Single record - use setText
+              const { key, value } = baseRecordsToSet[0]!;
+              const tx = await resolver.setText!(BASE_NAME_LABELHASH, key, value);
+              await tx.wait();
+              console.log(`✓ Base name: Set ${key}`);
+            } else {
+              // Multiple records - use batchSetText
+              const keysToSet = baseRecordsToSet.map((r) => r.key);
+              const valuesToSet = baseRecordsToSet.map((r) => r.value);
+
+              console.log(`Using batchSetText for ${baseRecordsToSet.length} records...`);
+              const tx = await resolver.batchSetText!(BASE_NAME_LABELHASH, keysToSet, valuesToSet);
+              await tx.wait();
+              for (const { key } of baseRecordsToSet) {
+                console.log(`✓ Base name: Set ${key}`);
+              }
+            }
+          } catch (e: any) {
+            const msg = e?.shortMessage || e?.message || String(e);
+            console.error(`✗ Base name: Failed to set text records - ${msg}`);
+
+            // Fallback to individual if batch failed
+            if (baseRecordsToSet.length > 1) {
+              console.log("\nFalling back to individual setText calls...\n");
+              for (const { key, value } of baseRecordsToSet) {
+                try {
+                  const tx = await resolver.setText!(BASE_NAME_LABELHASH, key, value);
+                  await tx.wait();
+                  console.log(`✓ Base name: Set ${key}`);
+                } catch (e2: any) {
+                  const msg2 = e2?.shortMessage || e2?.message || String(e2);
+                  console.error(`✗ Base name: Failed to set ${key} - ${msg2}`);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Set contenthash for chains and base name (using setContenthash, not text record)
+    if (WEBSITE_CONTENTHASH) {
+      console.log(`\n=== Contenthash ===`);
+      console.log(`Setting contenthash for chains and base name...\n`);
+
+      // WEBSITE_CONTENTHASH is already in ENS contenthash format (hex string with 0x prefix)
+      const contenthashBytes = WEBSITE_CONTENTHASH;
+
+      if (contenthashBytes) {
+        // Set contenthash for all registered chains
+        for (const chain of CHAINS) {
+          const labelhash = keccak256(toUtf8Bytes(chain.label));
+          
+          // Check if chain is registered
+          try {
+            const existingAdmin = await resolver.getChainAdmin!(labelhash).catch(() => null);
+            if (!existingAdmin || existingAdmin === "0x0000000000000000000000000000000000000000") {
+              continue; // Skip unregistered chains
+            }
+          } catch {
+            continue;
+          }
+
+          // Check existing contenthash
+          let existingContenthash = "";
+          try {
+            const existing = await resolver.getContenthash!(labelhash);
+            existingContenthash = existing.toLowerCase();
+          } catch {}
+
+          if (existingContenthash !== contenthashBytes.toLowerCase()) {
+            try {
+              // setContenthash expects bytes, so convert hex string to bytes
+              const contenthashBytesArray = getBytes(contenthashBytes);
+              const tx = await resolver.setContenthash!(labelhash, contenthashBytesArray);
+              await tx.wait();
+              console.log(`✓ ${chain.label}: Set contenthash`);
+            } catch (e: any) {
+              const msg = e?.shortMessage || e?.message || String(e);
+              console.error(`✗ ${chain.label}: Failed to set contenthash - ${msg}`);
+            }
+          } else {
+            console.log(`✓ ${chain.label}: Contenthash already set`);
+          }
+        }
+
+        // Set contenthash for base name
+        const BASE_NAME_LABELHASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
+        let baseExistingContenthash = "";
+        try {
+          const existing = await resolver.getContenthash!(BASE_NAME_LABELHASH);
+          baseExistingContenthash = existing.toLowerCase();
+        } catch {}
+
+        if (baseExistingContenthash !== contenthashBytes.toLowerCase()) {
+          const shouldSetBaseContenthash = await promptContinueOrExit(
+            rl,
+            `Set contenthash for base name (${chainInfo.domain})? (y/n)`
+          );
+
+          if (shouldSetBaseContenthash) {
+            try {
+              // setContenthash expects bytes, so convert hex string to bytes
+              const contenthashBytesArray = getBytes(contenthashBytes);
+              const tx = await resolver.setContenthash!(BASE_NAME_LABELHASH, contenthashBytesArray);
+              await tx.wait();
+              console.log(`✓ Base name: Set contenthash`);
+            } catch (e: any) {
+              const msg = e?.shortMessage || e?.message || String(e);
+              console.error(`✗ Base name: Failed to set contenthash - ${msg}`);
+            }
+          }
+        } else {
+          console.log(`✓ Base name: Contenthash already set`);
         }
       }
     }
