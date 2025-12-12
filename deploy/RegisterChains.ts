@@ -12,6 +12,114 @@ import {
 } from "./libs/utils.ts";
 import { Contract, keccak256, toUtf8Bytes, getBytes } from "ethers";
 import { CHAINS, getAllAliases } from "../data/chains.ts";
+import { existsSync, readFileSync } from "fs";
+import { join, basename } from "path";
+
+// Image keys that should be uploaded to IPFS if they're local file paths
+const IMAGE_KEYS = ["avatar", "header"];
+
+// Shared website contenthash (IPFS CID) - set for all chains
+const WEBSITE_CONTENTHASH = "bafkreihv4d7vodwqvimfqkp4h3pvcbp7ssdrwnlq2lokyux5n7e5bprpfm";
+
+/**
+ * Check if a value looks like a local file path
+ */
+function isLocalFilePath(value: string): boolean {
+  // Skip if it's already a URL
+  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("ipfs://")) {
+    return false;
+  }
+  // Check if it looks like a file path and exists
+  const fullPath = value.startsWith("/") ? value : join(process.cwd(), value);
+  return existsSync(fullPath);
+}
+
+/**
+ * Upload a file to Pinata IPFS and return the ipfs:// URL
+ * Requires PINATA_JWT environment variable
+ */
+async function uploadToPinata(filePath: string): Promise<string> {
+  const token = process.env.PINATA_JWT;
+  if (!token) {
+    throw new Error("PINATA_JWT environment variable not set. Get one at https://pinata.cloud");
+  }
+
+  const fullPath = filePath.startsWith("/") ? filePath : join(process.cwd(), filePath);
+  const fileContent = readFileSync(fullPath);
+  const fileName = basename(fullPath);
+
+  console.log(`    Uploading ${fileName} to Pinata...`);
+
+  // Create form data with the file
+  const formData = new FormData();
+  const blob = new Blob([fileContent]);
+  formData.append("file", blob, fileName);
+
+  // Optional: add metadata
+  const metadata = JSON.stringify({ name: fileName });
+  formData.append("pinataMetadata", metadata);
+
+  const response = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Pinata upload failed: ${response.status} ${error}`);
+  }
+
+  const result = await response.json() as { IpfsHash: string };
+  const ipfsUrl = `ipfs://${result.IpfsHash}`;
+  console.log(`    ✓ Uploaded: ${ipfsUrl}`);
+  
+  return ipfsUrl;
+}
+
+/**
+ * Find local image files in text records that could be uploaded
+ */
+function findLocalImages(textRecords: Record<string, string>): { key: string; path: string }[] {
+  const localImages: { key: string; path: string }[] = [];
+  for (const [key, value] of Object.entries(textRecords)) {
+    if (IMAGE_KEYS.includes(key) && isLocalFilePath(value)) {
+      localImages.push({ key, path: value });
+    }
+  }
+  return localImages;
+}
+
+/**
+ * Process text records, optionally uploading local image files to IPFS via Pinata
+ * @param textRecords The text records to process
+ * @param imagesToUpload List of images to upload (already confirmed by user)
+ */
+async function processTextRecords(
+  textRecords: Record<string, string>,
+  imagesToUpload: { key: string; path: string }[]
+): Promise<Record<string, string>> {
+  const processed: Record<string, string> = {};
+  const uploadKeys = new Set(imagesToUpload.map((i) => i.key));
+
+  for (const [key, value] of Object.entries(textRecords)) {
+    if (uploadKeys.has(key)) {
+      try {
+        processed[key] = await uploadToPinata(value);
+      } catch (e: any) {
+        console.warn(`    ⚠️  Failed to upload ${key}: ${e.message}`);
+        console.warn(`    Using original value: ${value}`);
+        processed[key] = value;
+      }
+    } else {
+      processed[key] = value;
+    }
+  }
+
+  return processed;
+}
 
 const RESOLVER_ABI = [
   "function owner() view returns (address)",
@@ -323,15 +431,54 @@ async function main() {
       }
     }
 
-    // Check and set text records for registered chains
-    const chainsWithTextRecords = CHAINS.filter((c) => c.textRecords && Object.keys(c.textRecords).length > 0);
+    // Check and set text records for all registered chains 
+    // (includes auto-generated aliases and shared contenthash)
+    const chainsWithRecords = CHAINS;
     
-    if (chainsWithTextRecords.length > 0) {
-      console.log(`\nChecking text records for ${chainsWithTextRecords.length} chain(s)...`);
+    if (chainsWithRecords.length > 0) {
+      console.log(`\nChecking text records for ${chainsWithRecords.length} chain(s)...`);
 
-      for (const chain of chainsWithTextRecords) {
+      for (const chain of chainsWithRecords) {
         const labelhash = keccak256(toUtf8Bytes(chain.label));
-        const textRecords = chain.textRecords!;
+        
+        // Build text records, including auto-generated aliases and contenthash
+        const chainTextRecords: Record<string, string> = { ...chain.textRecords };
+        if (chain.aliases && chain.aliases.length > 0) {
+          chainTextRecords["aliases"] = chain.aliases.join(", ");
+        }
+        if (WEBSITE_CONTENTHASH) {
+          chainTextRecords["contentHash"] = WEBSITE_CONTENTHASH;
+        }
+        
+        // Check for local images that could be uploaded
+        const localImages = findLocalImages(chainTextRecords);
+        let imagesToUpload: { key: string; path: string }[] = [];
+
+        if (localImages.length > 0) {
+          console.log(`\n${chain.label}: Found ${localImages.length} local image(s):`);
+          for (const { key, path } of localImages) {
+            console.log(`    - ${key}: ${path}`);
+          }
+
+          const shouldUpload = await promptContinueOrExit(
+            rl,
+            `Upload ${localImages.length} image(s) to Pinata IPFS? (y/n)`
+          );
+
+          if (shouldUpload) {
+            imagesToUpload = localImages;
+          } else {
+            // Remove image keys from text records if not uploading
+            for (const { key } of localImages) {
+              delete chainTextRecords[key];
+            }
+            console.log("  Skipping image records, continuing with other text records");
+          }
+        }
+
+        // Process text records - upload confirmed images to IPFS
+        console.log(`\nProcessing ${chain.label} text records...`);
+        const textRecords = await processTextRecords(chainTextRecords, imagesToUpload);
         const keys = Object.keys(textRecords);
 
         // Check which records need to be set

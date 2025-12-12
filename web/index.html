@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chain Info</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.0/dist/ethers.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: #1a1a24;
+      --text-primary: #f0f0f5;
+      --text-secondary: #8888a0;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.3);
+      --border: #2a2a3a;
+      --success: #22c55e;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* Animated background */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 102, 241, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Top bar */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 0;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .top-bar-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .top-bar-title .chain-label {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* Header section */
+    .header {
+      position: relative;
+      margin-bottom: 2rem;
+      border-radius: 24px;
+      overflow: hidden;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+    }
+
+    .header-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+    }
+
+    .header-content {
+      padding: 0 2rem 2rem;
+      position: relative;
+    }
+
+    .avatar-wrapper {
+      margin-top: -60px;
+      margin-bottom: 1rem;
+    }
+
+    .avatar {
+      width: 120px;
+      height: 120px;
+      border-radius: 24px;
+      border: 4px solid var(--bg-card);
+      background: var(--bg-secondary);
+      object-fit: cover;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .avatar-placeholder {
+      width: 120px;
+      height: 120px;
+      border-radius: 24px;
+      border: 4px solid var(--bg-card);
+      background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: 700;
+      color: white;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .chain-name {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .ens-name {
+      font-family: 'Space Mono', monospace;
+      font-size: 1rem;
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+
+    .description {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      max-width: 600px;
+    }
+
+    .aliases {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    .alias-tag {
+      display: inline-block;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--accent);
+      margin-left: 0.25rem;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .card-title a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .card-title a:hover {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* Interoperable Address */
+    .interop-address {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.9rem;
+      background: var(--bg-secondary);
+      padding: 1rem;
+      border-radius: 12px;
+      word-break: break-all;
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+
+    /* Records grid */
+    .records-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .record-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 0.75rem 1rem;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      gap: 1rem;
+    }
+
+    .record-key {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .record-value {
+      font-size: 0.9rem;
+      text-align: right;
+      word-break: break-all;
+      color: var(--text-primary);
+    }
+
+    .record-value a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .record-value a:hover {
+      text-decoration: underline;
+    }
+
+    /* Social links */
+    .social-links {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .social-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .social-link:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    /* Loading state */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      gap: 1.5rem;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+    }
+
+    /* Input form - full height layout */
+    .input-form-container {
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 4rem);
+    }
+
+    .input-form {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .form-title {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+
+    .input-error {
+      color: #ef4444;
+      font-size: 0.9rem;
+      margin-top: 0.75rem;
+    }
+
+    .erc-links {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+    }
+
+    .erc-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-bottom: 1px dotted var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .erc-links a:hover {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .erc-links .separator {
+      color: var(--text-secondary);
+      margin: 0 0.5rem;
+    }
+
+    /* Input for manual name entry */
+    .name-input-section {
+      max-width: 450px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .name-input-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .name-input {
+      width: 100%;
+      padding: 1rem 1.25rem;
+      font-size: 1rem;
+      font-family: 'Space Mono', monospace;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      outline: none;
+      text-align: center;
+    }
+
+    .name-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .name-input::placeholder {
+      color: var(--text-secondary);
+    }
+
+    .load-btn {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      background: var(--accent);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .load-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .footer .built-by {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .footer .unruggable-logo {
+      height: 24px;
+      width: auto;
+      vertical-align: middle;
+      filter: invert(1);
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+
+    .footer .unruggable-logo:hover {
+      opacity: 1;
+    }
+
+    .footer .powered-by {
+      opacity: 0.7;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      .chain-name {
+        font-size: 1.75rem;
+      }
+
+      .header-content {
+        padding: 0 1.25rem 1.5rem;
+      }
+
+      .record-item {
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+
+      .record-value {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  
+  <div id="app" class="container">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div class="loading-text">Initializing...</div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const CONFIG = {
+      // RPC endpoints
+      rpc: {
+        mainnet: 'https://mainnet.infura.io/v3/e52f43f8dcb84a95823849ed676970eb',
+        sepolia: 'https://sepolia.infura.io/v3/e52f43f8dcb84a95823849ed676970eb',
+      },
+      // ChainResolver proxy addresses
+      resolvers: {
+        mainnet: '0x0000000000000000000000000000000000000000', // TODO: Set mainnet address
+        sepolia: '0x38Bc9a2F8b5D29d29a99c2e542C2a2BDB468882C',
+      },
+      // Parent domains
+      domains: {
+        mainnet: 'on.eth',
+        sepolia: 'cid.eth',
+      },
+      // Default network
+      defaultNetwork: 'sepolia',
+    };
+
+    // ABI for ChainResolver
+    const RESOLVER_ABI = [
+      'function chainCount() view returns (uint256)',
+      'function interoperableAddress(bytes32) view returns (bytes)',
+      'function chainLabel(bytes) view returns (string)',
+      'function chainName(bytes) view returns (string)',
+      'function getCanonicalLabelhash(bytes32) view returns (bytes32)',
+      'function getText(bytes32,string) view returns (string)',
+      'function getData(bytes32,string) view returns (bytes)',
+      'function supportedTextKeys(bytes32) view returns (string[])',
+      'function supportedDataKeys(bytes32) view returns (string[])',
+      'function parentNamehash() view returns (bytes32)',
+    ];
+
+    // Known keys with formatting
+    const KNOWN_KEYS = {
+      // Social/links - will be shown as buttons
+      'url': { icon: '🔗', label: 'Website', type: 'link' },
+      'com.github': { icon: '📦', label: 'GitHub', type: 'link' },
+      'com.twitter': { icon: '𝕏', label: 'Twitter', type: 'link' },
+      'com.x': { icon: '𝕏', label: 'X', type: 'link' },
+      'com.discord': { icon: '💬', label: 'Discord', type: 'link' },
+      'org.telegram': { icon: '✈️', label: 'Telegram', type: 'link' },
+      'email': { icon: '✉️', label: 'Email', type: 'email' },
+      // Display fields - shown in header area
+      'avatar': { type: 'avatar' },
+      'header': { type: 'header' },
+      'banner': { type: 'header' },
+      'description': { type: 'description' },
+      'name': { type: 'name' },
+      'aliases': { type: 'aliases' },  // handled specially - verified on-chain
+      // Info fields - shown as formatted records
+      'notice': { icon: '📢', label: 'Notice', type: 'text' },
+      'keywords': { icon: '🏷️', label: 'Keywords', type: 'text' },
+      'location': { icon: '📍', label: 'Location', type: 'text' },
+      'phone': { icon: '📞', label: 'Phone', type: 'text' },
+      'mail': { icon: '🏠', label: 'Mail', type: 'text' },
+      'contentHash': { icon: '📁', label: 'Content Hash', type: 'text' },
+    };
+
+    // Detect chain label from URL
+    // Only returns a chain if:
+    // 1. Query param ?label=X is present
+    // 2. Hostname matches ENS gateway pattern (something.on.eth.limo or something.cid.eth.limo)
+    function detectChainLabel() {
+      // Check URL params first
+      const params = new URLSearchParams(window.location.search);
+
+      if (params.has('label')) {
+        return params.get('label');
+      }
+
+      // Check hostname for ENS gateway patterns
+      const hostname = window.location.hostname;
+      
+      // Pattern: optimism.on.eth.limo → optimism
+      // Pattern: optimism.cid.eth.limo → optimism
+      const ethGatewayMatch = hostname.match(/^([^.]+)\.(on|cid)\.eth\.(limo|link|cc)$/);
+      if (ethGatewayMatch) {
+        return ethGatewayMatch[1];
+      }
+
+      // No chain detected - show the input form
+      return null;
+    }
+
+    // Get network from domain
+    function detectNetwork() {
+      const hostname = window.location.hostname;
+      if (hostname.includes('on.eth')) return 'mainnet';
+      if (hostname.includes('cid.eth')) return 'sepolia';
+      
+      const params = new URLSearchParams(window.location.search);
+      return params.get('network') || CONFIG.defaultNetwork;
+    }
+
+    // Shared footer HTML
+    const FOOTER_HTML = `
+      <div class="footer">
+        <div class="built-by">
+          Built by
+          <a href="https://unruggable.com" target="_blank" rel="noopener">
+            <img src="https://ipfs.io/ipfs/bafkreihdpqv324h6j6yuvyzynrqy25i4ifphnvz6ktzbcp6siq5vee3d6a" alt="Unruggable" class="unruggable-logo">
+          </a>
+        </div>
+        <div class="powered-by">
+          Powered by <a href="https://github.com/unruggable-labs/chain-resolver" target="_blank">ChainResolver</a> - 
+          Data fetched from Ethereum
+        </div>
+      </div>
+    `;
+
+    // Render loading state
+    function renderLoading(message = 'Loading chain data...') {
+      document.getElementById('app').innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <div class="loading-text">${message}</div>
+        </div>
+      `;
+    }
+
+    // Render input form for entering chain label
+    function renderInputForm(errorMessage = null) {
+      document.getElementById('app').innerHTML = `
+        <div class="input-form-container">
+          <div class="input-form">
+            <h1 class="form-title">Enter a chain label to view its on-chain data.</h1>
+            <div class="name-input-section">
+              <div class="name-input-wrapper">
+                <input type="text" class="name-input" id="chainInput" placeholder="optimism" />
+                <button class="load-btn" onclick="loadChain()">Lookup</button>
+              </div>
+              ${errorMessage ? `<p class="input-error">${errorMessage}</p>` : ''}
+              <p style="color: var(--text-secondary); margin-top: 1rem; font-size: 0.85rem;">
+                e.g., optimism, base, arbitrum
+              </p>
+            </div>
+            <div class="erc-links">
+              <a href="https://eips.ethereum.org/EIPS/eip-7828" target="_blank" rel="noopener">ERC-7828</a>
+              <span class="separator">·</span>
+              <a href="https://eips.ethereum.org/EIPS/eip-7930" target="_blank" rel="noopener">ERC-7930</a>
+            </div>
+          </div>
+
+          ${FOOTER_HTML}
+        </div>
+      `;
+
+      // Handle enter key
+      const input = document.getElementById('chainInput');
+      if (input) {
+        input.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') loadChain();
+        });
+        input.focus();
+      }
+    }
+
+    // Load chain from input
+    function loadChain() {
+      const input = document.getElementById('chainInput');
+      if (input && input.value.trim()) {
+        const chainLabel = input.value.trim().toLowerCase();
+        window.location.href = `?label=${chainLabel}`;
+      }
+    }
+
+    // Format record value (make URLs clickable)
+    function formatRecordValue(key, value) {
+      if (!value) return '-';
+      
+      // Check if it's a URL
+      if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('ipfs://')) {
+        const displayUrl = value.length > 50 ? value.slice(0, 47) + '...' : value;
+        const href = value.startsWith('ipfs://') 
+          ? `https://ipfs.io/ipfs/${value.slice(7)}`
+          : value;
+        return `<a href="${href}" target="_blank" rel="noopener">${displayUrl}</a>`;
+      }
+      
+      return value;
+    }
+
+    // Categorize text records
+    function categorizeRecords(textRecords) {
+      const links = [];
+      const info = [];
+      const other = [];
+      const display = {}; // avatar, header, description, name
+      
+      for (const [key, value] of Object.entries(textRecords)) {
+        if (!value) continue;
+        
+        const config = KNOWN_KEYS[key];
+        
+        if (config) {
+          if (config.type === 'link' || config.type === 'email') {
+            let href = value;
+            let displayUrl = value;
+            
+            if (config.type === 'email' && !href.startsWith('mailto:')) {
+              href = `mailto:${href}`;
+            }
+            
+            // Clean up display URL (remove protocol, trailing slashes)
+            displayUrl = displayUrl
+              .replace(/^https?:\/\//, '')
+              .replace(/^mailto:/, '')
+              .replace(/\/$/, '');
+            
+            // Truncate if too long
+            if (displayUrl.length > 40) {
+              displayUrl = displayUrl.slice(0, 37) + '...';
+            }
+            
+            links.push({
+              key,
+              label: config.label,
+              href,
+              displayUrl,
+              icon: config.icon,
+            });
+          } else if (config.type === 'avatar' || config.type === 'header' || config.type === 'description' || config.type === 'name') {
+            display[config.type] = value;
+          } else if (config.type === 'text') {
+            info.push({
+              key,
+              label: config.label,
+              value,
+              icon: config.icon,
+            });
+          }
+        } else {
+          // Unknown key - add to other
+          other.push({ key, value });
+        }
+      }
+      
+      return { links, info, other, display };
+    }
+
+    // Render chain data
+    function renderChain(data) {
+      const { chainLabel, ensName, chainName, interopAddress, textRecords, dataRecords, verifiedAliases = [], canonicalLabel = null } = data;
+      
+      // Categorize all text records
+      const { links, info, other, display } = categorizeRecords(textRecords);
+      
+      // Use display values or fallbacks
+      const avatar = display.avatar || '';
+      const header = display.header || '';
+      const description = display.description || '';
+      const displayName = display.name || chainName || chainLabel;
+
+      const avatarHtml = avatar 
+        ? `<img class="avatar" src="${avatar.startsWith('ipfs://') ? `https://ipfs.io/ipfs/${avatar.slice(7)}` : avatar}" alt="${displayName}" onerror="this.outerHTML='<div class=\\'avatar-placeholder\\'>${displayName.charAt(0)}</div>'">`
+        : `<div class="avatar-placeholder">${displayName ? displayName.charAt(0) : '?'}</div>`;
+
+      const headerStyle = header 
+        ? `background-image: url('${header.startsWith('ipfs://') ? `https://ipfs.io/ipfs/${header.slice(7)}` : header}'); background-size: cover; background-position: center;`
+        : '';
+
+      document.getElementById('app').innerHTML = `
+        <div class="header">
+          <div class="header-image" style="${headerStyle}"></div>
+          <div class="header-content">
+            <div class="avatar-wrapper">
+              ${avatarHtml}
+            </div>
+            <h1 class="chain-name">${chainName}</h1>
+            <div class="ens-name">${ensName}</div>
+            ${canonicalLabel ? `<div class="aliases">Alias for: <span class="alias-tag">${canonicalLabel}</span></div>` : ''}
+            ${verifiedAliases.length > 0 ? `<div class="aliases">Also known as: ${verifiedAliases.map(a => `<span class="alias-tag">${a}</span>`).join(' ')}</div>` : ''}
+            ${description ? `<p class="description">${description}</p>` : ''}
+          </div>
+        </div>
+
+        ${interopAddress ? `
+          <div class="card">
+            <div class="card-title">Interoperable Address (<a href="https://eips.ethereum.org/EIPS/eip-7930" target="_blank" rel="noopener">ERC-7930</a>)</div>
+            <div class="interop-address">${interopAddress}</div>
+          </div>
+        ` : ''}
+
+        ${links.length > 0 ? `
+          <div class="card">
+            <div class="card-title">Links</div>
+            <div class="records-grid">
+              ${links.map(link => `
+                <div class="record-item">
+                  <span class="record-key">${link.icon} ${link.label}</span>
+                  <span class="record-value"><a href="${link.href}" target="_blank" rel="noopener">${link.displayUrl}</a></span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${info.length > 0 ? `
+          <div class="card">
+            <div class="card-title">Info</div>
+            <div class="records-grid">
+              ${info.map(item => `
+                <div class="record-item">
+                  <span class="record-key">${item.icon} ${item.label}</span>
+                  <span class="record-value">${formatRecordValue(item.key, item.value)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${other.length > 0 ? `
+          <div class="card">
+            <div class="card-title">Other Records</div>
+            <div class="records-grid">
+              ${other.map(({ key, value }) => `
+                <div class="record-item">
+                  <span class="record-key">${key}</span>
+                  <span class="record-value">${formatRecordValue(key, value)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${Object.keys(dataRecords).length > 0 ? `
+          <div class="card">
+            <div class="card-title">Data Records</div>
+            <div class="records-grid">
+              ${Object.entries(dataRecords).map(([key, value]) => `
+                <div class="record-item">
+                  <span class="record-key">${key}</span>
+                  <span class="record-value" style="font-family: 'Space Mono', monospace; font-size: 0.8rem;">${value}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${FOOTER_HTML}
+      `;
+
+      // Update page title
+      document.title = `${displayName} | Chain Info`;
+    }
+
+    // Main function
+    async function main() {
+      const chainLabel = detectChainLabel();
+      const network = detectNetwork();
+
+      if (!chainLabel) {
+        renderInputForm();
+        return;
+      }
+
+      renderLoading(`Loading ${chainLabel}...`);
+
+      try {
+        const rpcUrl = CONFIG.rpc[network];
+        const resolverAddress = CONFIG.resolvers[network];
+        const domain = CONFIG.domains[network];
+
+        if (!resolverAddress || resolverAddress === '0x0000000000000000000000000000000000000000') {
+          throw new Error(`ChainResolver not configured for ${network}`);
+        }
+
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const resolver = new ethers.Contract(resolverAddress, RESOLVER_ABI, provider);
+
+        // Compute labelhash
+        const labelhash = ethers.keccak256(ethers.toUtf8Bytes(chainLabel));
+        const ensName = `${chainLabel}.${domain}`;
+
+        // Get parent namehash and compute node
+        const parentNamehash = await resolver.parentNamehash();
+        const node = ethers.keccak256(ethers.solidityPacked(['bytes32', 'bytes32'], [parentNamehash, labelhash]));
+
+        console.log(`Loading chain: ${chainLabel}`);
+        console.log(`  Labelhash: ${labelhash}`);
+        console.log(`  Node: ${node}`);
+
+        // Fetch interoperable address first to check if chain exists
+        let interopAddress = '';
+        try {
+          const interopBytes = await resolver.interoperableAddress(labelhash);
+          if (interopBytes && interopBytes !== '0x') {
+            interopAddress = interopBytes;
+          }
+        } catch (e) {
+          console.warn('Could not fetch interoperable address:', e);
+        }
+
+        if (!interopAddress) {
+          renderInputForm(`No data found for "${chainLabel}"`);
+          return;
+        }
+
+        // Check if we're viewing an alias
+        let canonicalLabel = null;
+        const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
+        try {
+          const canonical = await resolver.getCanonicalLabelhash(labelhash);
+          if (canonical && canonical !== ZERO_BYTES32) {
+            // We're viewing an alias - get the canonical label
+            const canonicalInterop = await resolver.interoperableAddress(canonical);
+            if (canonicalInterop && canonicalInterop !== '0x') {
+              canonicalLabel = await resolver.chainLabel(canonicalInterop);
+              console.log(`This is an alias. Canonical label: ${canonicalLabel}`);
+            }
+          }
+        } catch (e) {
+          console.warn('Could not check alias status:', e.message);
+        }
+
+        // Fetch ALL text records using supportedTextKeys
+        const textRecords = {};
+        try {
+          console.log('Fetching supported text keys...');
+          const textKeys = await resolver.supportedTextKeys(node);
+          console.log(`  Found ${textKeys.length} text keys:`, textKeys);
+          
+          // Fetch all text records in parallel for speed
+          const textPromises = textKeys.map(async (key) => {
+            try {
+              const value = await resolver.getText(labelhash, key);
+              return { key, value };
+            } catch (e) {
+              console.warn(`  Could not fetch text record "${key}":`, e.message);
+              return { key, value: null };
+            }
+          });
+          
+          const textResults = await Promise.all(textPromises);
+          for (const { key, value } of textResults) {
+            if (value) textRecords[key] = value;
+          }
+        } catch (e) {
+          console.warn('Could not fetch supported text keys, trying fallback:', e.message);
+          // Fallback: try common keys
+          const commonKeys = ['name', 'description', 'url', 'avatar', 'header', 'banner', 
+                             'com.github', 'com.twitter', 'com.x', 'com.discord', 
+                             'notice', 'keywords', 'email'];
+          for (const key of commonKeys) {
+            try {
+              const value = await resolver.getText(labelhash, key);
+              if (value) textRecords[key] = value;
+            } catch (e) {}
+          }
+        }
+
+        console.log('Text records:', textRecords);
+
+        // Fetch ALL data records using supportedDataKeys
+        const dataRecords = {};
+        try {
+          console.log('Fetching supported data keys...');
+          const dataKeys = await resolver.supportedDataKeys(node);
+          console.log(`  Found ${dataKeys.length} data keys:`, dataKeys);
+          
+          // Fetch all data records in parallel
+          const dataPromises = dataKeys.map(async (key) => {
+            if (key === 'interoperable-address') return { key, value: null }; // Skip, shown separately
+            try {
+              const value = await resolver.getData(labelhash, key);
+              return { key, value };
+            } catch (e) {
+              console.warn(`  Could not fetch data record "${key}":`, e.message);
+              return { key, value: null };
+            }
+          });
+          
+          const dataResults = await Promise.all(dataPromises);
+          for (const { key, value } of dataResults) {
+            if (value && value !== '0x') dataRecords[key] = value;
+          }
+        } catch (e) {
+          console.warn('Could not fetch supported data keys:', e.message);
+        }
+
+        console.log('Data records:', dataRecords);
+
+        // Get chain name from contract
+        let chainName = await resolver.chainName(interopAddress);
+
+        // Verify aliases from text record
+        const verifiedAliases = [];
+        const aliasesText = textRecords['aliases'] || '';
+        
+        // Determine which labelhash to verify aliases against
+        // If we're viewing an alias, verify against the canonical labelhash
+        const canonicalLabelhash = canonicalLabel 
+          ? ethers.keccak256(ethers.toUtf8Bytes(canonicalLabel))
+          : labelhash;
+        
+        if (aliasesText) {
+          const aliasesList = aliasesText.split(',').map(a => a.trim()).filter(Boolean);
+          console.log('Verifying aliases:', aliasesList);
+          
+          for (const alias of aliasesList) {
+            // Skip the current label we're viewing (don't show "op" as alias when viewing "op")
+            if (alias.toLowerCase() === chainLabel.toLowerCase()) {
+              console.log(`  - ${alias} skipped (current view)`);
+              continue;
+            }
+            
+            try {
+              const aliasHash = ethers.keccak256(ethers.toUtf8Bytes(alias));
+              const canonical = await resolver.getCanonicalLabelhash(aliasHash);
+              if (canonical === canonicalLabelhash) {
+                verifiedAliases.push(alias);
+                console.log(`  ✓ ${alias} verified`);
+              } else {
+                console.log(`  ✗ ${alias} not verified (points to ${canonical})`);
+              }
+            } catch (e) {
+              console.warn(`  Could not verify alias "${alias}":`, e.message);
+            }
+          }
+        }
+        console.log('Verified aliases:', verifiedAliases);
+
+        renderChain({
+          chainLabel,
+          ensName,
+          chainName,
+          interopAddress,
+          textRecords,
+          dataRecords,
+          verifiedAliases,
+          canonicalLabel,
+        });
+
+      } catch (error) {
+        console.error('Error loading chain data:', error);
+        renderInputForm(error.message || 'An unexpected error occurred.');
+      }
+    }
+
+    // Run on load
+    main();
+  </script>
+</body>
+</html>
+
