@@ -13,6 +13,11 @@ import {
   hexlify,
   namehash,
 } from "ethers";
+import {
+  INTEROPERABLE_ADDRESS_DATA_KEY,
+  CHAIN_LABEL_PREFIX,
+  ETHEREUM_COIN_TYPE,
+} from "../shared/constants.ts";
 
 // Helper functions
 const log = (...a: any[]) => console.log("[blocksmith]", ...a);
@@ -62,14 +67,7 @@ const registerChain = async (
 // The resolver contract
 const RESOLVER_FILE_NAME = "ChainResolver.sol";
 
-const ETHEREUM_COIN_TYPE = 60;
-
-// Data record key constants
-const INTEROPERABLE_ADDRESS_DATA_KEY = "interoperable-address";
-
-// Text record prefix for reverse resolving 7930 chain ID
-// See ERC-7828
-const CHAIN_LABEL_PREFIX = "chain-label:";
+// Constants imported from shared/constants.ts
 
 // Get test chains from shared data
 const OPTIMISM_CHAIN = getChainByLabel("optimism")!;

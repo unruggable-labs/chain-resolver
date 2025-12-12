@@ -6,10 +6,10 @@ import { init } from "./libs/init.ts";
 import {
   initSmith,
   shutdownSmith,
-  askQuestion,
-  promptContinueOrExit,
   loadDeployment,
 } from "./libs/utils.ts";
+import { askQuestion, promptContinueOrExit } from "../shared/utils.ts";
+import { RESOLVER_ABI } from "../shared/abis.ts";
 import { Contract, keccak256, toUtf8Bytes, getBytes } from "ethers";
 import { CHAINS, getAllAliases } from "../data/chains.ts";
 import { existsSync, readFileSync } from "fs";
@@ -121,20 +121,7 @@ async function processTextRecords(
   return processed;
 }
 
-const RESOLVER_ABI = [
-  "function owner() view returns (address)",
-  "function chainCount() view returns (uint256)",
-  "function getChainAdmin(bytes32) view returns (address)",
-  "function register((string,string,address,bytes)) external",
-  "function batchRegister((string,string,address,bytes)[]) external",
-  "function registerAlias(string,bytes32) external",
-  "function batchRegisterAlias(string[],bytes32[]) external",
-  "function removeAlias(string) external",
-  "function getCanonicalLabelhash(bytes32) view returns (bytes32)",
-  "function getText(bytes32,string) view returns (string)",
-  "function setText(bytes32,string,string) external",
-  "function batchSetText(bytes32,string[],string[]) external",
-];
+// RESOLVER_ABI imported from shared/abis.ts
 
 async function main() {
   const { chainInfo, privateKey } = await init();

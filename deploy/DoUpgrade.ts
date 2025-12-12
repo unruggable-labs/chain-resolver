@@ -11,21 +11,14 @@ import { init } from "./libs/init.ts";
 import {
   initSmith,
   shutdownSmith,
-  askQuestion,
-  promptContinueOrExit,
   loadDeployment,
   deployContract,
   verifyContract,
 } from "./libs/utils.ts";
-import { Contract, Interface, keccak256, toUtf8Bytes } from "ethers";
+import { askQuestion, promptContinueOrExit } from "../shared/utils.ts";
+import { RESOLVER_ABI } from "../shared/abis.ts";
+import { Contract, keccak256, toUtf8Bytes } from "ethers";
 
-const RESOLVER_ABI = [
-  "function owner() view returns (address)",
-  "function chainCount() view returns (uint256)",
-  "function getChainAdmin(bytes32) view returns (address)",
-  "function interoperableAddress(bytes32) view returns (bytes)",
-  "function upgradeToAndCall(address,bytes) external",
-];
 
 // ERC1967 implementation slot
 const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";

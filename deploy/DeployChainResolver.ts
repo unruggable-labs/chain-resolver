@@ -2,12 +2,11 @@
 
 import {
   initSmith,
-  promptContinueOrExit,
   deployContract,
   verifyContract,
   shutdownSmith,
-  askQuestion,
 } from "./libs/utils.ts";
+import { askQuestion, promptContinueOrExit } from "../shared/utils.ts";
 
 import { init } from "./libs/init.ts";
 import { isAddress, namehash, Interface } from "ethers";

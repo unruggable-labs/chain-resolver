@@ -2,6 +2,19 @@
 
 import "dotenv/config";
 import * as readline from "readline";
+import { getChainByLabel } from "../data/chains.ts";
+
+// Re-export from shared modules
+export {
+  INTEROPERABLE_ADDRESS_DATA_KEY,
+  CHAIN_LABEL_PREFIX,
+} from "../shared/constants.ts";
+
+export {
+  section,
+  log,
+  dnsEncode,
+} from "../shared/utils.ts";
 
 // Network configurations (loaded from environment variables)
 export const NETWORKS = {
@@ -27,22 +40,13 @@ export const NETWORKS = {
 
 export type NetworkConfig = typeof NETWORKS.sepolia;
 
-// Constants
-export const INTEROPERABLE_ADDRESS_DATA_KEY = "interoperable-address";
-export const CHAIN_LABEL_PREFIX = "chain-label:";
-
-// Optimism chain data (for demo)
+// Optimism chain data (for demo) - imported from shared chain data
+const optimismData = getChainByLabel("optimism");
 export const OPTIMISM = {
-  label: "optimism",
-  chainName: "OP Mainnet",
-  interoperableAddressHex: "0x00010001010a00",
+  label: optimismData?.label ?? "optimism",
+  chainName: optimismData?.chainName ?? "OP Mainnet",
+  interoperableAddressHex: optimismData?.interoperableAddressHex ?? "0x00010001010a00",
 };
-
-// Helper functions
-export const section = (name: string) =>
-  console.log(`\n${"=".repeat(50)}\n${name}\n${"=".repeat(50)}`);
-
-export const log = (...args: any[]) => console.log("  →", ...args);
 
 // Prompt user for input
 export function askQuestion(rl: readline.Interface, question: string): Promise<string> {
@@ -115,6 +119,7 @@ export function printSummary(
   resolvedLabel: string,
   resolvedChainName: string
 ): void {
+  const { section } = require("../shared/utils.ts");
   section("SUMMARY");
 
   console.log(`\n Network: ${network.name} (${network.domain})`);
@@ -129,19 +134,3 @@ export function printSummary(
 
   console.log("\n✅ Demo complete!\n");
 }
-
-// DNS encode a name
-export function dnsEncode(name: string): `0x${string}` {
-  const labels = name.split(".");
-  let result = "";
-  for (const label of labels) {
-    const length = label.length;
-    result += length.toString(16).padStart(2, "0");
-    for (let i = 0; i < label.length; i++) {
-      result += label.charCodeAt(i).toString(16).padStart(2, "0");
-    }
-  }
-  result += "00"; // null terminator
-  return `0x${result}`;
-}
-
