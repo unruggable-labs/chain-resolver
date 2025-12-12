@@ -49,12 +49,20 @@ contract ChainResolver is
     /**
      * @notice Modifier to ensure only the chain owner can call the function
      * @param _labelhash The labelhash to check authorization for
+     * @dev For BASE_NAME_LABELHASH (bytes32(0)), allows contract owner instead of chain owner
      */
     modifier onlyChainOwner(bytes32 _labelhash) {
-        bytes32 canonical = _resolveLabelhash(_labelhash);
-        address _owner = chainOwners[canonical];
-        if (_owner != _msgSender()) {
-            revert NotChainOwner(_msgSender(), _labelhash);
+        if (_labelhash == BASE_NAME_LABELHASH) {
+            // Base name records can only be set by contract owner
+            if (_msgSender() != owner()) {
+                revert NotChainOwner(_msgSender(), _labelhash);
+            }
+        } else {
+            bytes32 canonical = _resolveLabelhash(_labelhash);
+            address _owner = chainOwners[canonical];
+            if (_owner != _msgSender()) {
+                revert NotChainOwner(_msgSender(), _labelhash);
+            }
         }
         _;
     }
@@ -82,6 +90,10 @@ contract ChainResolver is
     // Text record key constants
     string public constant CHAIN_LABEL_PREFIX = "chain-label:";
     bytes32 public constant REVERSE_LABELHASH = keccak256("reverse");
+    
+    // Sentinel value for base name (cid.eth/on.eth) - not an actual labelhash
+    // The base name has no label, so we use bytes32(0) as a placeholder
+    bytes32 private constant BASE_NAME_LABELHASH = bytes32(0);
 
     // Parent namespace namehash (e.g., namehash("cid.eth")) for computing full namehashes in events
     bytes32 public parentNamehash;
@@ -197,8 +209,17 @@ contract ChainResolver is
         bytes calldata name,
         bytes calldata data
     ) external view override returns (bytes memory) {
-        // Extract the first labelhash from the DNS-encoded name
-        (bytes32 labelhash, , , ) = NameCoder.readLabel(name, 0, true);
+        // Compute namehash from DNS-encoded name to check if it's the base name
+        bytes32 namehash = NameCoder.namehash(name, 0);
+        bytes32 labelhash;
+        
+        // If this is the parent namehash, use BASE_NAME_LABELHASH for base name records
+        if (namehash == parentNamehash) {
+            labelhash = BASE_NAME_LABELHASH;
+        } else {
+            // Extract the first labelhash from the DNS-encoded name
+            (labelhash, , , ) = NameCoder.readLabel(name, 0, true);
+        }
 
         // Get the method selector (first 4 bytes)
         bytes4 selector = bytes4(data);
@@ -341,14 +362,19 @@ contract ChainResolver is
 
     /**
      * @notice Set the contenthash for a labelhash.
-     * @param _labelhash The labelhash to update.
+     * @param _labelhash The labelhash to update. Use bytes32(0) for base name.
      * @param _contenthash The contenthash to set.
      */
     function setContenthash(
         bytes32 _labelhash,
         bytes calldata _contenthash
     ) external onlyChainOwner(_labelhash) {
-        contenthashRecords[_resolveLabelhash(_labelhash)] = _contenthash;
+        bytes32 canonical = _resolveLabelhash(_labelhash);
+        contenthashRecords[canonical] = _contenthash;
+        
+        // Update node mapping for supportedTextKeys/supportedDataKeys
+        bytes32 node = _computeNamehash(canonical);
+        nodeToLabelhash[node] = canonical;
     }
 
     /**
@@ -456,7 +482,7 @@ contract ChainResolver is
 
     /**
      * @notice Get the address for a labelhash with a specific coin type.
-     * @param _labelhash The labelhash to query.
+     * @param _labelhash The labelhash to query. Use bytes32(0) for base name.
      * @param _coinType The coin type (default: 60 for Ethereum).
      * @return The address for this label and coin type.
      */
@@ -469,7 +495,7 @@ contract ChainResolver is
 
     /**
      * @notice Get a text record for a labelhash.
-     * @param _labelhash The labelhash to query.
+     * @param _labelhash The labelhash to query. Use bytes32(0) for base name.
      * @param _key The text record key.
      * @return The text record value (with special handling for chain-id and chain-name:).
      */
@@ -482,7 +508,7 @@ contract ChainResolver is
 
     /**
      * @notice Get the content hash for a labelhash.
-     * @param _labelhash The labelhash to query.
+     * @param _labelhash The labelhash to query. Use bytes32(0) for base name.
      * @return The content hash for this label.
      */
     function getContenthash(
@@ -493,7 +519,7 @@ contract ChainResolver is
 
     /**
      * @notice Get a data record for a labelhash.
-     * @param _labelhash The labelhash to query.
+     * @param _labelhash The labelhash to query. Use bytes32(0) for base name.
      * @param _key The data record key.
      * @return The data record value (with special handling for chain-id).
      */
@@ -738,10 +764,14 @@ contract ChainResolver is
      * @param _labelhash The labelhash of the label.
      * @return The full namehash (e.g., namehash("optimism.cid.eth") from labelhash("optimism")).
      * @dev Uses the formula: namehash(label.parent) = keccak256(namehash(parent) + labelhash(label))
+     * @dev For BASE_NAME_LABELHASH (bytes32(0)), returns parentNamehash directly.
      */
     function _computeNamehash(
         bytes32 _labelhash
     ) internal view returns (bytes32) {
+        if (_labelhash == BASE_NAME_LABELHASH) {
+            return parentNamehash;
+        }
         return keccak256(abi.encodePacked(parentNamehash, _labelhash));
     }
 
