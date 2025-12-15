@@ -195,8 +195,7 @@ async function main() {
     const unregisteredChains: typeof CHAINS = [];
 
     for (const chain of CHAINS) {
-      const labelhash = keccak256(toUtf8Bytes(chain.label));
-      const existingAdmin = await resolver.getChainAdmin!(labelhash).catch(() => null);
+      const existingAdmin = await resolver.getChainAdmin!(chain.label).catch(() => null);
       const isRegistered = existingAdmin && existingAdmin !== "0x0000000000000000000000000000000000000000";
       
       if (isRegistered) {
@@ -334,8 +333,8 @@ async function main() {
 
       for (const aliasData of aliases) {
         const aliasHash = keccak256(toUtf8Bytes(aliasData.alias));
-        const existingCanonical = await resolver.getCanonicalLabelhash!(aliasHash).catch(() => null);
-        const isRegistered = existingCanonical && existingCanonical !== "0x0000000000000000000000000000000000000000000000000000000000000000";
+        const existingCanonicalInfo = await resolver.getCanonicalLabel!(aliasHash).catch(() => null);
+        const isRegistered = existingCanonicalInfo && existingCanonicalInfo.labelhash !== "0x0000000000000000000000000000000000000000000000000000000000000000";
         
         if (isRegistered) {
           registeredAliases.push(aliasData);
@@ -426,8 +425,6 @@ async function main() {
       console.log(`\nChecking text records for ${chainsWithRecords.length} chain(s)...`);
 
       for (const chain of chainsWithRecords) {
-        const labelhash = keccak256(toUtf8Bytes(chain.label));
-        
         // Build text records, including auto-generated aliases
         const chainTextRecords: Record<string, string> = { ...chain.textRecords };
         if (chain.aliases && chain.aliases.length > 0) {
@@ -469,7 +466,7 @@ async function main() {
         const recordsToSet: { key: string; value: string }[] = [];
 
         for (const key of keys) {
-          const existingValue = await resolver.getText!(labelhash, key).catch(() => "");
+          const existingValue = await resolver.getText!(chain.label, key).catch(() => "");
           const newValue = textRecords[key]!;
           
           if (existingValue !== newValue) {
@@ -498,7 +495,7 @@ async function main() {
             if (recordsToSet.length === 1) {
               // Single record - use setText
               const { key, value } = recordsToSet[0]!;
-              const tx = await resolver.setText!(labelhash, key, value);
+              const tx = await resolver.setText!(keccak256(toUtf8Bytes(chain.label)), key, value);
               await tx.wait();
               console.log(`✓ ${chain.label}: Set ${key}`);
             } else {
@@ -507,7 +504,7 @@ async function main() {
               const valuesToSet = recordsToSet.map((r) => r.value);
 
               console.log(`Using batchSetText for ${recordsToSet.length} records...`);
-              const tx = await resolver.batchSetText!(labelhash, keysToSet, valuesToSet);
+              const tx = await resolver.batchSetText!(keccak256(toUtf8Bytes(chain.label)), keysToSet, valuesToSet);
               await tx.wait();
               for (const { key } of recordsToSet) {
                 console.log(`✓ ${chain.label}: Set ${key}`);
@@ -522,7 +519,7 @@ async function main() {
               console.log("\nFalling back to individual setText calls...\n");
               for (const { key, value } of recordsToSet) {
                 try {
-                  const tx = await resolver.setText!(labelhash, key, value);
+                  const tx = await resolver.setText!(keccak256(toUtf8Bytes(chain.label)), key, value);
                   await tx.wait();
                   console.log(`✓ ${chain.label}: Set ${key}`);
                 } catch (e2: any) {
@@ -632,11 +629,9 @@ async function main() {
       if (contenthashBytes) {
         // Set contenthash for all registered chains
         for (const chain of CHAINS) {
-          const labelhash = keccak256(toUtf8Bytes(chain.label));
-          
           // Check if chain is registered
           try {
-            const existingAdmin = await resolver.getChainAdmin!(labelhash).catch(() => null);
+            const existingAdmin = await resolver.getChainAdmin!(chain.label).catch(() => null);
             if (!existingAdmin || existingAdmin === "0x0000000000000000000000000000000000000000") {
               continue; // Skip unregistered chains
             }
@@ -647,7 +642,7 @@ async function main() {
           // Check existing contenthash
           let existingContenthash = "";
           try {
-            const existing = await resolver.getContenthash!(labelhash);
+            const existing = await resolver.getContenthash!(chain.label);
             existingContenthash = existing.toLowerCase();
           } catch {}
 
@@ -655,7 +650,7 @@ async function main() {
             try {
               // setContenthash expects bytes, so convert hex string to bytes
               const contenthashBytesArray = getBytes(contenthashBytes);
-              const tx = await resolver.setContenthash!(labelhash, contenthashBytesArray);
+              const tx = await resolver.setContenthash!(keccak256(toUtf8Bytes(chain.label)), contenthashBytesArray);
               await tx.wait();
               console.log(`✓ ${chain.label}: Set contenthash`);
             } catch (e: any) {

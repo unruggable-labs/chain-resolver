@@ -49,7 +49,7 @@ contract ChainResolver is
     /**
      * @notice Modifier to ensure only the chain owner can call the function
      * @param _labelhash The labelhash to check authorization for
-     * @dev For BASE_NAME_LABELHASH (bytes32(0)), allows contract owner instead of chain owner
+     * @dev For the root 2LD, allows contract owner instead of chain owner
      */
     modifier onlyChainOwner(bytes32 _labelhash) {
         if (_labelhash == BASE_NAME_LABELHASH) {
@@ -68,34 +68,34 @@ contract ChainResolver is
     }
 
     // ENS method selectors
-    bytes4 public constant ADDR_SELECTOR = bytes4(keccak256("addr(bytes32)"));
-    bytes4 public constant ADDR_COINTYPE_SELECTOR =
+    bytes4 private constant ADDR_SELECTOR = bytes4(keccak256("addr(bytes32)"));
+    bytes4 private constant ADDR_COINTYPE_SELECTOR =
         bytes4(keccak256("addr(bytes32,uint256)"));
-    bytes4 public constant CONTENTHASH_SELECTOR =
+    bytes4 private constant CONTENTHASH_SELECTOR =
         bytes4(keccak256("contenthash(bytes32)"));
-    bytes4 public constant TEXT_SELECTOR =
+    bytes4 private constant TEXT_SELECTOR =
         bytes4(keccak256("text(bytes32,string)"));
-    bytes4 public constant DATA_SELECTOR =
+    bytes4 private constant DATA_SELECTOR =
         bytes4(keccak256("data(bytes32,string)"));
 
     // Cointype constants
-    uint256 public constant ETHEREUM_COIN_TYPE = 60;
+    uint256 private constant ETHEREUM_COIN_TYPE = 60;
 
     // Data record key constants
-    string public constant INTEROPERABLE_ADDRESS_DATA_KEY =
+    string private constant INTEROPERABLE_ADDRESS_DATA_KEY =
         "interoperable-address";
     bytes32 private constant INTEROPERABLE_ADDRESS_DATA_KEY_HASH =
         keccak256("interoperable-address");
 
     // Text record key constants
-    string public constant CHAIN_LABEL_PREFIX = "chain-label:";
-    bytes32 public constant REVERSE_LABELHASH = keccak256("reverse");
+    string private constant CHAIN_LABEL_PREFIX = "chain-label:";
+    bytes32 private constant REVERSE_LABELHASH = keccak256("reverse");
     
-    // Sentinel value for base name (cid.eth/on.eth) - not an actual labelhash
-    // The base name has no label, so we use bytes32(0) as a placeholder
+    // Sentinel value for base 2LD name - not an actual labelhash
+    // The base 2LD has no third level label, so we use bytes32(0) as a placeholder
     bytes32 private constant BASE_NAME_LABELHASH = bytes32(0);
 
-    // Parent namespace namehash (e.g., namehash("cid.eth")) for computing full namehashes in events
+    // Parent namespace namehash. Used for computing full namehashes in events
     bytes32 public parentNamehash;
 
     // Chain data storage
@@ -104,8 +104,11 @@ contract ChainResolver is
     mapping(bytes interoperableAddress => string label)
         internal labelByInteroperableAddress;
 
-    // Alias mapping. Alias labelhash → canonical labelhash
+    // Alias mapping. Alias labelhash => canonical labelhash
     mapping(bytes32 => bytes32) private aliasOf;
+
+    // Label lookup by labelhash (for getCanonicalLabel efficiency)
+    mapping(bytes32 labelhash => string label) private labelByLabelhash;
 
     // Discoverability
     // Total number of registered chains
@@ -126,12 +129,15 @@ contract ChainResolver is
     mapping(bytes32 labelhash => string[] keys) private dataKeys;
     mapping(bytes32 labelhash => mapping(bytes32 keyHash => bool exists))
         private dataKeyExists;
-    mapping(bytes32 node => bytes32 labelhash) private nodeToLabelhash;
 
     // Text key tracking for ISupportedTextKeys
     mapping(bytes32 labelhash => string[] keys) private textKeys;
     mapping(bytes32 labelhash => mapping(bytes32 keyHash => bool exists))
         private textKeyExists;
+
+    // Node to labelhash mapping. Used for events emission supportedTextKeys/supportedDataKeys
+    mapping(bytes32 node => bytes32 labelhash) private nodeToLabelhash;
+
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -139,9 +145,9 @@ contract ChainResolver is
     }
 
     /**
-     * @notice Initialize the contract (replaces constructor for upgradeable contracts)
+     * @notice Initialize the contract
      * @param _owner The address to set as the owner
-     * @param _parentNamehash The namehash of the parent namespace (e.g., namehash("cid.eth"))
+     * @param _parentNamehash The namehash of the parent namespace (e.g., namehash("on.eth"))
      */
     function initialize(
         address _owner,
@@ -182,10 +188,24 @@ contract ChainResolver is
             interfaceId == type(ISupportedTextKeys).interfaceId;
     }
 
+    /**
+     * @notice For a specific `node`, get an array of supported data keys.
+     * @dev Implements ISupportedDataKeys (ENSIP-24). Uses nodeToLabelhash mapping to resolve
+     *      the labelhash from the node, then returns the data keys stored for that labelhash.
+     * @param node The node (namehash) to query.
+     * @return The keys for which we have associated data records.
+     */
     function supportedDataKeys(bytes32 node) external view override returns (string[] memory) {
         return dataKeys[nodeToLabelhash[node]];
     }
 
+    /**
+     * @notice For a specific `node`, get an array of supported text keys.
+     * @dev Implements ISupportedTextKeys. Uses nodeToLabelhash mapping to resolve
+     *      the labelhash from the node, then returns the text keys stored for that labelhash.
+     * @param node The node (namehash) to query.
+     * @return The keys for which we have associated text records.
+     */
     function supportedTextKeys(bytes32 node) external view override returns (string[] memory) {
         return textKeys[nodeToLabelhash[node]];
     }
@@ -279,7 +299,7 @@ contract ChainResolver is
     }
 
     /**
-     * @notice EXTERNAL Set the address for a given coinType.
+     * @notice Set the address for a given coinType.
      * @param _labelhash The labelhash to update.
      * @param _coinType The coin type (per ENSIP-11).
      * @param _value The raw address bytes encoded for that coin type.
@@ -300,7 +320,7 @@ contract ChainResolver is
 
     /**
      * @notice Set a text record for a labelhash.
-     * @dev EXTERNAL - blocks immutable keys
+     * @dev Blocks immutable keys.
      * @param _labelhash The labelhash to update.
      * @param _key The text record key.
      * @param _value The text record value.
@@ -333,11 +353,10 @@ contract ChainResolver is
     }
 
     /**
-     * @notice INTERNAL Set a text record for a labelhash.
+     * @notice Set a text record for a labelhash.
      * @param _labelhash The labelhash to update.
      * @param _key The text record key.
      * @param _value The text record value.
-     * @dev Note: "chain-id" text record will be stored but not used - resolve() overrides it with internal registry value.
      */
     function _setText(
         bytes32 _labelhash,
@@ -379,7 +398,7 @@ contract ChainResolver is
 
     /**
      * @notice Set a data record for a labelhash.
-     * @dev EXTERNAL - blocks immutable keys
+     * @dev Blocks immutable keys.
      * @param _labelhash The labelhash to update.
      * @param _key The data record key.
      * @param _data The data record value.
@@ -419,7 +438,7 @@ contract ChainResolver is
     }
 
     /**
-     * @notice INTERNAL Set a data record for a labelhash.
+     * @notice Set a data record for a labelhash.
      * @param _labelhash The labelhash to update.
      * @param _key The data record key.
      * @param _data The data record value.
@@ -449,6 +468,14 @@ contract ChainResolver is
     /// GETTERS
     //////
 
+    /**
+     * @notice Return the canonical chain label for a given ERC-7930 Interoperable Address.
+     * @dev Implements reverse resolution (ERC-7828). Looks up the chain label stored in the
+     *      reverse node's text record using the key format "chain-label:<interoperable-address>".
+     *      Returns empty string if no label is registered for the given interoperable address.
+     * @param _interoperableAddress The ERC-7930 Interoperable Address bytes.
+     * @return The chain label (e.g., "optimism") or empty string if not found.
+     */
     function chainLabel(
         bytes calldata _interoperableAddress
     ) external view returns (string memory) {
@@ -459,20 +486,27 @@ contract ChainResolver is
             );
     }
 
+    /**
+     * @notice Get the chain name for a label string.
+     * @param _label The chain label (e.g., "optimism").
+     * @return The chain name.
+     */
     function chainName(
-        bytes calldata _interoperableAddress
+        string calldata _label
     ) external view returns (string memory) {
-        string memory _label = _getText(
-            REVERSE_LABELHASH,
-            concat(CHAIN_LABEL_PREFIX, _interoperableAddress)
-        );
         bytes32 _labelhash = keccak256(bytes(_label));
         return chainNames[_resolveLabelhash(_labelhash)];
     }
 
+    /**
+     * @notice Get the interoperable address for a label string.
+     * @param _label The chain label (e.g., "optimism").
+     * @return The interoperable address bytes.
+     */
     function interoperableAddress(
-        bytes32 _labelhash
+        string calldata _label
     ) external view returns (bytes memory) {
+        bytes32 _labelhash = keccak256(bytes(_label));
         return
             _getData(
                 _resolveLabelhash(_labelhash),
@@ -480,63 +514,139 @@ contract ChainResolver is
             );
     }
 
-    /**
-     * @notice Get the address for a labelhash with a specific coin type.
-     * @param _labelhash The labelhash to query. Use bytes32(0) for base name.
+        /**
+     * @notice Get the address for a label with a specific coin type.
+     * @param _label The label string to query.
      * @param _coinType The coin type (default: 60 for Ethereum).
      * @return The address for this label and coin type.
      */
     function getAddr(
-        bytes32 _labelhash,
+        string calldata _label,
         uint256 _coinType
     ) external view returns (bytes memory) {
+        bytes32 _labelhash = keccak256(bytes(_label));
         return _getAddr(_labelhash, _coinType);
     }
 
     /**
-     * @notice Get a text record for a labelhash.
-     * @param _labelhash The labelhash to query. Use bytes32(0) for base name.
+     * @notice Get a text record for a label.
+     * @param _label The label string to query.
      * @param _key The text record key.
      * @return The text record value (with special handling for chain-id and chain-name:).
      */
     function getText(
-        bytes32 _labelhash,
+        string calldata _label,
         string calldata _key
     ) external view returns (string memory) {
+        bytes32 _labelhash = keccak256(bytes(_label));
         return _getText(_labelhash, _key);
     }
 
     /**
-     * @notice Get the content hash for a labelhash.
-     * @param _labelhash The labelhash to query. Use bytes32(0) for base name.
+     * @notice Get the content hash for a label.
+     * @param _label The label string to query.
      * @return The content hash for this label.
      */
     function getContenthash(
-        bytes32 _labelhash
+        string calldata _label
     ) external view returns (bytes memory) {
+        bytes32 _labelhash = keccak256(bytes(_label));
         return _getContenthash(_labelhash);
     }
 
     /**
-     * @notice Get a data record for a labelhash.
-     * @param _labelhash The labelhash to query. Use bytes32(0) for base name.
+     * @notice Get a data record for a label.
+     * @param _label The label string to query.
      * @param _key The data record key.
      * @return The data record value (with special handling for chain-id).
      */
     function getData(
-        bytes32 _labelhash,
+        string calldata _label,
         string calldata _key
     ) external view returns (bytes memory) {
+        bytes32 _labelhash = keccak256(bytes(_label));
         return _getData(_labelhash, _key);
     }
 
     /**
-     * @notice Get the admin for a chain
-     * @param _labelhash The labelhash to query.
+     * @notice Get the admin for a chain.
+     * @param _label The label string to query.
      * @return The owner address.
      */
-    function getChainAdmin(bytes32 _labelhash) external view returns (address) {
+    function getChainAdmin(string calldata _label) external view returns (address) {
+        bytes32 _labelhash = keccak256(bytes(_label));
         return chainOwners[_resolveLabelhash(_labelhash)];
+    }
+
+    /**
+     * @notice Get the canonical label information for an alias.
+     * @param _label The label string to check.
+     * @return info The canonical label info (label and labelhash), or empty if not an alias.
+     */
+    function getCanonicalLabel(
+        string calldata _label
+    ) external view returns (IChainResolver.CanonicalLabelInfo memory info) {
+        bytes32 _labelhash = keccak256(bytes(_label));
+        bytes32 canonicalLabelhash = aliasOf[_labelhash];
+        if (canonicalLabelhash == bytes32(0)) {
+            return info;
+        }
+        info.label = labelByLabelhash[canonicalLabelhash];
+        info.labelhash = canonicalLabelhash;
+    }
+
+    //////
+    /// INTERNAL Getters
+    //////
+    
+    /**
+     * @notice Get address records for a specific coin type.
+     * @param _labelhash The labelhash to query.
+     * @param _coinType The coin type (default: 60 for Ethereum).
+     * @return The address for this label and coin type.
+     */
+    function _getAddr(
+        bytes32 _labelhash,
+        uint256 _coinType
+    ) internal view returns (bytes memory) {
+        return addressRecords[_resolveLabelhash(_labelhash)][_coinType];
+    }
+
+    /**
+     * @notice Get text records.
+     * @param _labelhash The labelhash to query.
+     * @param _key The text record key.
+     * @return The text record value.
+     */
+    function _getText(
+        bytes32 _labelhash,
+        string memory _key
+    ) internal view returns (string memory) {
+        return textRecords[_resolveLabelhash(_labelhash)][_key];
+    }
+
+    /**
+     * @notice Get a contenthash.
+     * @param _labelhash The labelhash to query.
+     * @return The contenthash value.
+     */
+    function _getContenthash(
+        bytes32 _labelhash
+    ) internal view returns (bytes memory) {
+        return contenthashRecords[_resolveLabelhash(_labelhash)];
+    }
+
+    /**
+     * @notice Get a data record.
+     * @param _labelhash The labelhash to query.
+     * @param _key The data record key.
+     * @return The data record value (with override for chain-id).
+     */
+    function _getData(
+        bytes32 _labelhash,
+        string memory _key
+    ) internal view returns (bytes memory) {
+        return dataRecords[_resolveLabelhash(_labelhash)][_key];
     }
 
     //////
@@ -564,6 +674,63 @@ contract ChainResolver is
                 data[i].interoperableAddress
             );
         }
+    }
+
+    /**
+     * @notice Register an individual chain.
+     * @param _label The short chain label (e.g., "optimism").
+     * @param _chainName The chain name (e.g., "Optimism").
+     * @param _owner The owner address.
+     * @param _interoperableAddress The Interoperable Address (ERC-7930).
+     */
+    function _register(
+        string calldata _label,
+        string calldata _chainName,
+        address _owner,
+        bytes calldata _interoperableAddress
+    ) internal {
+        // Validate inputs
+        if (bytes(_label).length == 0) {
+            revert EmptyLabel();
+        }
+        if (bytes(_chainName).length == 0) {
+            revert EmptyChainName();
+        }
+        if (_interoperableAddress.length < 7) {
+            revert InvalidInteroperableAddress();
+        }
+
+        bytes32 _labelhash = keccak256(bytes(_label));
+
+        bool isNew = bytes(chainNames[_labelhash]).length == 0;
+
+        chainNames[_labelhash] = _chainName;
+        chainOwners[_labelhash] = _owner;
+        labelByLabelhash[_labelhash] = _label;
+
+        _setData(
+            _labelhash,
+            INTEROPERABLE_ADDRESS_DATA_KEY,
+            _interoperableAddress
+        );
+        _setText(
+            REVERSE_LABELHASH,
+            concat(CHAIN_LABEL_PREFIX, _interoperableAddress),
+            _label
+        );
+
+        // Map the Interoperable Address back to the chain label (for reverse resolution)
+        labelByInteroperableAddress[_interoperableAddress] = _label;
+
+        if (isNew) {
+            labelhashList.push(_labelhash);
+            unchecked {
+                chainCount += 1;
+            }
+        }
+
+        emit ChainAdminSet(_labelhash, _owner);
+        emit ChainRegistered(_labelhash, _chainName, _interoperableAddress);
     }
 
     /**
@@ -598,7 +765,7 @@ contract ChainResolver is
     }
 
     /**
-     * @notice Internal helper to register an alias.
+     * @notice Register an alias.
      * @param _alias The alias string (e.g., "op").
      * @param _canonicalLabelhash The canonical labelhash to point to.
      */
@@ -621,6 +788,7 @@ contract ChainResolver is
         );
 
         aliasOf[aliasHash] = _canonicalLabelhash;
+        labelByLabelhash[aliasHash] = _alias;
 
         // Map alias node → canonical labelhash for supportedDataKeys
         nodeToLabelhash[_computeNamehash(aliasHash)] = _canonicalLabelhash;
@@ -639,73 +807,6 @@ contract ChainResolver is
 
         delete aliasOf[aliasHash];
         emit AliasRemoved(aliasHash, canonical, _alias);
-    }
-
-    /**
-     * @notice Get the canonical labelhash for an alias.
-     * @param _labelhash The labelhash to check.
-     * @return The canonical labelhash, or bytes32(0) if not an alias.
-     */
-    function getCanonicalLabelhash(
-        bytes32 _labelhash
-    ) external view returns (bytes32) {
-        return aliasOf[_labelhash];
-    }
-
-    /**
-     * @notice Internal helper function to register an individual chain
-     * @param _label The short chain label (e.g., "optimism")
-     * @param _chainName The chain name (e.g., "Optimism")
-     * @param _owner The owner address
-     * @param _interoperableAddress The Interoperable Address (ERC-7930)
-     */
-    function _register(
-        string calldata _label,
-        string calldata _chainName,
-        address _owner,
-        bytes calldata _interoperableAddress
-    ) internal {
-        // Validate inputs
-        if (bytes(_label).length == 0) {
-            revert EmptyLabel();
-        }
-        if (bytes(_chainName).length == 0) {
-            revert EmptyChainName();
-        }
-        if (_interoperableAddress.length < 7) {
-            revert InvalidInteroperableAddress();
-        }
-
-        bytes32 _labelhash = keccak256(bytes(_label));
-
-        bool isNew = bytes(chainNames[_labelhash]).length == 0;
-
-        chainNames[_labelhash] = _chainName;
-        chainOwners[_labelhash] = _owner;
-
-        _setData(
-            _labelhash,
-            INTEROPERABLE_ADDRESS_DATA_KEY,
-            _interoperableAddress
-        );
-        _setText(
-            REVERSE_LABELHASH,
-            concat(CHAIN_LABEL_PREFIX, _interoperableAddress),
-            _label
-        );
-
-        // Map the Interoperable Address back to the chain label (for reverse resolution)
-        labelByInteroperableAddress[_interoperableAddress] = _label;
-
-        if (isNew) {
-            labelhashList.push(_labelhash);
-            unchecked {
-                chainCount += 1;
-            }
-        }
-
-        emit ChainAdminSet(_labelhash, _owner);
-        emit ChainRegistered(_labelhash, _chainName, _interoperableAddress);
     }
 
     //////
@@ -744,7 +845,7 @@ contract ChainResolver is
     }
 
     //////
-    /// INTERNAL Getters
+    /// HELPERS
     //////
 
     /**
@@ -762,8 +863,7 @@ contract ChainResolver is
     /**
      * @notice Computes the full ENS namehash from a labelhash using the parent namespace.
      * @param _labelhash The labelhash of the label.
-     * @return The full namehash (e.g., namehash("optimism.cid.eth") from labelhash("optimism")).
-     * @dev Uses the formula: namehash(label.parent) = keccak256(namehash(parent) + labelhash(label))
+     * @return The full namehash (e.g., namehash("optimism.on.eth") from labelhash("optimism")).
      * @dev For BASE_NAME_LABELHASH (bytes32(0)), returns parentNamehash directly.
      */
     function _computeNamehash(
@@ -774,61 +874,7 @@ contract ChainResolver is
         }
         return keccak256(abi.encodePacked(parentNamehash, _labelhash));
     }
-
-    /**
-     * @notice INTERNAL function for getting address records for a specific coin type.
-     * @param _labelhash The labelhash to query.
-     * @param _coinType The coin type (default: 60 for Ethereum).
-     * @return The address for this label and coin type.
-     */
-    function _getAddr(
-        bytes32 _labelhash,
-        uint256 _coinType
-    ) internal view returns (bytes memory) {
-        return addressRecords[_resolveLabelhash(_labelhash)][_coinType];
-    }
-
-    /**
-     * @notice INTERNAL function for getting text records
-     * @param _labelhash The labelhash to query
-     * @param _key The text record key
-     * @return The text record value
-     */
-    function _getText(
-        bytes32 _labelhash,
-        string memory _key
-    ) internal view returns (string memory) {
-        return textRecords[_resolveLabelhash(_labelhash)][_key];
-    }
-
-    /**
-     * @notice INTERNAL function for getting a contenthash
-     * @param _labelhash The labelhash to query
-     * @return The contenthash value
-     */
-    function _getContenthash(
-        bytes32 _labelhash
-    ) internal view returns (bytes memory) {
-        return contenthashRecords[_resolveLabelhash(_labelhash)];
-    }
-
-    /**
-     * @notice INTERNAL function to handle data record keys with overrides
-     * @param _labelhash The labelhash to query
-     * @param _key The data record key
-     * @return The data record value (with override for chain-id)
-     */
-    function _getData(
-        bytes32 _labelhash,
-        string memory _key
-    ) internal view returns (bytes memory) {
-        return dataRecords[_resolveLabelhash(_labelhash)][_key];
-    }
-
-    //////
-    /// HELPERS
-    //////
-
+    
     /**
      * @notice Concatenates a string with bytes (as hex string) into a single string.
      * @param _str The string prefix.

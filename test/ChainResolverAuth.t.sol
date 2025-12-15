@@ -43,13 +43,6 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
 
         vm.stopPrank();
 
-        // Verify registration failed
-        assertEq(
-            resolver.chainName(hex"0101"),
-            "",
-            "Unauthorized registration failed"
-        );
-
         console.log("Successfully prevented unauthorized registration");
     }
 
@@ -77,7 +70,7 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
 
         // Verify original ownership is intact
         assertEq(
-            resolver.getChainAdmin(TEST_LABELHASH),
+            resolver.getChainAdmin(TEST_LABEL),
             user1,
             "Original owner should remain"
         );
@@ -138,7 +131,7 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
 
         // Verify no text was set
         assertEq(
-            resolver.getText(TEST_LABELHASH, "url"),
+            resolver.getText(TEST_LABEL, "url"),
             "",
             "No text should be set"
         );
@@ -170,7 +163,7 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
 
         // Verify no data was set
         assertEq(
-            resolver.getData(TEST_LABELHASH, "custom"),
+            resolver.getData(TEST_LABEL, "custom"),
             "",
             "No data should be set"
         );
@@ -205,7 +198,7 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
 
         // Verify no content hash was set
         assertEq(
-            resolver.getContenthash(TEST_LABELHASH),
+            resolver.getContenthash(TEST_LABEL),
             "",
             "No content hash should be set"
         );
@@ -245,7 +238,7 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
 
         // Verify original ownership is intact
         assertEq(
-            resolver.getChainAdmin(TEST_LABELHASH),
+            resolver.getChainAdmin(TEST_LABEL),
             user1,
             "Original owner should remain"
         );
@@ -297,9 +290,9 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
         vm.stopPrank();
 
         // Verify all records were set
-        assertEq(resolver.getText(TEST_LABELHASH, "url"), "https://optimism.io");
-        assertEq(resolver.getText(TEST_LABELHASH, "description"), "Optimism L2");
-        assertEq(resolver.getText(TEST_LABELHASH, "notice"), "Welcome to Optimism");
+        assertEq(resolver.getText(TEST_LABEL, "url"), "https://optimism.io");
+        assertEq(resolver.getText(TEST_LABEL, "description"), "Optimism L2");
+        assertEq(resolver.getText(TEST_LABEL, "notice"), "Welcome to Optimism");
 
         console.log("Successfully batch set text records");
     }
@@ -331,8 +324,8 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
         vm.stopPrank();
 
         // Verify no text was set
-        assertEq(resolver.getText(TEST_LABELHASH, "url"), "");
-        assertEq(resolver.getText(TEST_LABELHASH, "description"), "");
+        assertEq(resolver.getText(TEST_LABEL, "url"), "");
+        assertEq(resolver.getText(TEST_LABEL, "description"), "");
 
         console.log("Successfully prevented unauthorized batch text setting");
     }
@@ -380,8 +373,8 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
         vm.stopPrank();
 
         // Verify all records were set
-        assertEq(resolver.getData(TEST_LABELHASH, "custom-data-1"), hex"deadbeef");
-        assertEq(resolver.getData(TEST_LABELHASH, "custom-data-2"), hex"cafebabe");
+        assertEq(resolver.getData(TEST_LABEL, "custom-data-1"), hex"deadbeef");
+        assertEq(resolver.getData(TEST_LABEL, "custom-data-2"), hex"cafebabe");
 
         console.log("Successfully batch set data records");
     }
@@ -411,7 +404,7 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
         vm.stopPrank();
 
         // Verify no data was set
-        assertEq(resolver.getData(TEST_LABELHASH, "custom-data"), "");
+        assertEq(resolver.getData(TEST_LABEL, "custom-data"), "");
 
         console.log("Successfully prevented unauthorized batch data setting");
     }

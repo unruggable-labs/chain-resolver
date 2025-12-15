@@ -29,17 +29,17 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         // Verify registration
         assertEq(resolver.owner(), admin, "Admin should be contract owner");
         assertEq(
-            resolver.getChainAdmin(TEST_LABELHASH),
+            resolver.getChainAdmin(TEST_LABEL),
             user1,
             "User1 should own the label"
         );
         assertEq(
-            resolver.interoperableAddress(TEST_LABELHASH),
+            resolver.interoperableAddress(TEST_LABEL),
             TEST_INTEROPERABLE_ADDRESS,
             "Chain ID should be set correctly"
         );
         assertEq(
-            resolver.chainName(TEST_INTEROPERABLE_ADDRESS),
+            resolver.chainName(TEST_LABEL),
             TEST_CHAIN_NAME,
             "Chain name should be set correctly"
         );
@@ -64,7 +64,7 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
 
         // Verify second registration overwrote the first
         assertEq(
-            resolver.getChainAdmin(TEST_LABELHASH),
+            resolver.getChainAdmin(TEST_LABEL),
             user2,
             "Second owner should overwrite first"
         );
@@ -87,7 +87,7 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
 
         // Verify transfer
         assertEq(
-            resolver.getChainAdmin(TEST_LABELHASH),
+            resolver.getChainAdmin(TEST_LABEL),
             user2,
             "User2 should now own the label"
         );
@@ -100,7 +100,7 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         // Test that new owner can perform authorized actions
         resolver.setChainAdmin(TEST_LABELHASH, user1); // Transfer back to user1
         assertEq(
-            resolver.getChainAdmin(TEST_LABELHASH),
+            resolver.getChainAdmin(TEST_LABEL),
             user1,
             "New owner should be able to transfer ownership"
         );
@@ -135,14 +135,14 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         resolver.batchRegister(items);
 
         // Verify registrations
-        assertEq(resolver.getChainAdmin(keccak256(bytes("optimism"))), user1);
-        assertEq(resolver.getChainAdmin(keccak256(bytes("arbitrum"))), user2);
+        assertEq(resolver.getChainAdmin("optimism"), user1);
+        assertEq(resolver.getChainAdmin("arbitrum"), user2);
         assertEq(
-            resolver.interoperableAddress(keccak256(bytes("optimism"))),
+            resolver.interoperableAddress("optimism"),
             items[0].interoperableAddress
         );
         assertEq(
-            resolver.interoperableAddress(keccak256(bytes("arbitrum"))),
+            resolver.interoperableAddress("arbitrum"),
             items[1].interoperableAddress
         );
 
@@ -182,9 +182,9 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         resolver.batchRegister(one);
 
         // Verify registration
-        assertEq(resolver.getChainAdmin(keccak256(bytes("optimism"))), user1);
+        assertEq(resolver.getChainAdmin("optimism"), user1);
         assertEq(
-            resolver.interoperableAddress(keccak256(bytes("optimism"))),
+            resolver.interoperableAddress("optimism"),
             one[0].interoperableAddress
         );
 
@@ -207,20 +207,21 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
 
         // Verify alias was registered
         bytes32 aliasHash = keccak256(bytes(aliasLabel));
+        IChainResolver.CanonicalLabelInfo memory info = resolver.getCanonicalLabel(aliasLabel);
         assertEq(
-            resolver.getCanonicalLabelhash(aliasHash),
+            info.labelhash,
             TEST_LABELHASH,
             "Alias should point to canonical labelhash"
         );
 
         // Verify alias resolves to same data as canonical
         assertEq(
-            resolver.interoperableAddress(aliasHash),
+            resolver.interoperableAddress(aliasLabel),
             TEST_INTEROPERABLE_ADDRESS,
             "Alias should resolve to same interoperable address"
         );
         assertEq(
-            resolver.getChainAdmin(aliasHash),
+            resolver.getChainAdmin(aliasLabel),
             user1,
             "Alias should resolve to same chain admin"
         );
@@ -287,25 +288,27 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         resolver.batchRegisterAlias(aliases, canonicals);
 
         // Verify aliases were registered
+        IChainResolver.CanonicalLabelInfo memory info1 = resolver.getCanonicalLabel("op");
         assertEq(
-            resolver.getCanonicalLabelhash(keccak256(bytes("op"))),
+            info1.labelhash,
             TEST_LABELHASH,
             "First alias should point to optimism"
         );
+        IChainResolver.CanonicalLabelInfo memory info2 = resolver.getCanonicalLabel("arb");
         assertEq(
-            resolver.getCanonicalLabelhash(keccak256(bytes("arb"))),
+            info2.labelhash,
             LABELHASH_2,
             "Second alias should point to arbitrum"
         );
 
         // Verify aliases resolve correctly
         assertEq(
-            resolver.interoperableAddress(keccak256(bytes("op"))),
+            resolver.interoperableAddress("op"),
             TEST_INTEROPERABLE_ADDRESS,
             "op alias should resolve to optimism interoperable address"
         );
         assertEq(
-            resolver.interoperableAddress(keccak256(bytes("arb"))),
+            resolver.interoperableAddress("arb"),
             CHAIN_ID_2,
             "arb alias should resolve to arbitrum interoperable address"
         );
@@ -351,5 +354,172 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         vm.stopPrank();
 
         console.log("Successfully handled empty alias arrays");
+    }
+
+    //////
+    /// LABEL STRING GETTERS TESTS
+    //////
+
+    function test_015____chainName_____________________LabelStringGetter() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Test chainName with label string (new overload)
+        string memory resolvedName = resolver.chainName(TEST_LABEL);
+        assertEq(
+            resolvedName,
+            TEST_CHAIN_NAME,
+            "chainName(label) should return correct chain name"
+        );
+
+        console.log("Successfully retrieved chain name using label string");
+    }
+
+    function test_016____chainName_____________________LabelStringGetterForUnregistered() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Test chainName with unregistered label string
+        string memory unregisteredLabel = "unregistered";
+        string memory resolvedName = resolver.chainName(unregisteredLabel);
+        assertEq(
+            resolvedName,
+            "",
+            "chainName(label) should return empty string for unregistered label"
+        );
+
+        console.log("Successfully returned empty string for unregistered label");
+    }
+
+    function test_017____interoperableAddress__________LabelStringGetter() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Test interoperableAddress with label string (new overload)
+        bytes memory resolvedAddress = resolver.interoperableAddress(TEST_LABEL);
+        assertEq(
+            resolvedAddress,
+            TEST_INTEROPERABLE_ADDRESS,
+            "interoperableAddress(label) should return correct interoperable address"
+        );
+
+        console.log("Successfully retrieved interoperable address using label string");
+    }
+
+    function test_018____interoperableAddress__________LabelStringGetterForUnregistered() public {
+        vm.startPrank(admin);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Test interoperableAddress with unregistered label string
+        string memory unregisteredLabel = "unregistered";
+        bytes memory resolvedAddress = resolver.interoperableAddress(unregisteredLabel);
+        assertEq(
+            resolvedAddress.length,
+            0,
+            "interoperableAddress(label) should return empty bytes for unregistered label"
+        );
+
+        console.log("Successfully returned empty bytes for unregistered label");
+    }
+
+    function test_019____chainName_____________________LabelStringGetterForAlias() public {
+        vm.startPrank(admin);
+        registerTestChain();
+
+        // Register an alias
+        string memory aliasLabel = "op";
+        resolver.registerAlias(aliasLabel, TEST_LABELHASH);
+        vm.stopPrank();
+
+        // Test chainName with alias label string
+        string memory resolvedName = resolver.chainName(aliasLabel);
+        assertEq(
+            resolvedName,
+            TEST_CHAIN_NAME,
+            "chainName(alias) should resolve to canonical chain name"
+        );
+
+        // Verify it matches the canonical
+        string memory canonicalName = resolver.chainName(TEST_LABEL);
+        assertEq(
+            resolvedName,
+            canonicalName,
+            "Alias should resolve to same chain name as canonical"
+        );
+
+        console.log("Successfully retrieved chain name using alias label string");
+    }
+
+    function test_020____interoperableAddress__________LabelStringGetterForAlias() public {
+        vm.startPrank(admin);
+        registerTestChain();
+
+        // Register an alias
+        string memory aliasLabel = "op";
+        resolver.registerAlias(aliasLabel, TEST_LABELHASH);
+        vm.stopPrank();
+
+        // Test interoperableAddress with alias label string
+        bytes memory resolvedAddress = resolver.interoperableAddress(aliasLabel);
+        assertEq(
+            resolvedAddress,
+            TEST_INTEROPERABLE_ADDRESS,
+            "interoperableAddress(alias) should resolve to canonical interoperable address"
+        );
+
+        // Verify it matches the canonical
+        bytes memory canonicalAddress = resolver.interoperableAddress(TEST_LABEL);
+        assertEq(
+            resolvedAddress,
+            canonicalAddress,
+            "Alias should resolve to same interoperable address as canonical"
+        );
+
+        console.log("Successfully retrieved interoperable address using alias label string");
+    }
+
+    function test_021____chainName_____________________LabelStringGetterForBatchRegistered() public {
+        vm.startPrank(admin);
+
+        // Register multiple chains via batch
+        IChainResolver.ChainRegistrationData[]
+            memory items = new IChainResolver.ChainRegistrationData[](2);
+        items[0] = IChainResolver.ChainRegistrationData({
+            label: "optimism",
+            chainName: "Optimism",
+            owner: user1,
+            interoperableAddress: hex"000000010001010a00"
+        });
+        items[1] = IChainResolver.ChainRegistrationData({
+            label: "arbitrum",
+            chainName: "Arbitrum",
+            owner: user2,
+            interoperableAddress: hex"000000010001016600"
+        });
+
+        resolver.batchRegister(items);
+        vm.stopPrank();
+
+        // Test both chains with label string getters
+        string memory optLabel = "optimism";
+        string memory arbLabel = "arbitrum";
+        assertEq(resolver.chainName(optLabel), "Optimism");
+        assertEq(resolver.chainName(arbLabel), "Arbitrum");
+
+        // Test interoperable addresses
+        assertEq(
+            resolver.interoperableAddress(optLabel),
+            hex"000000010001010a00"
+        );
+        assertEq(
+            resolver.interoperableAddress(arbLabel),
+            hex"000000010001016600"
+        );
+
+        console.log("Successfully retrieved data for batch registered chains using label strings");
     }
 }

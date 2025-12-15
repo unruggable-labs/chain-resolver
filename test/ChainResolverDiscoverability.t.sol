@@ -222,9 +222,6 @@ contract ChainResolverDiscoverabilityTest is ChainResolverTestBase {
         string[] memory keysAfterMigration = resolver.supportedDataKeys(newNode);
         assertEq(keysAfterMigration.length, 2, "Should have 2 keys after migration with new node");
 
-        // Old node should no longer work (unless data is set again)
-        // Note: old mapping still exists but is stale
-
         console.log("Successfully migrated parent namehash");
     }
 
