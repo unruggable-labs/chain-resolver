@@ -14,6 +14,7 @@ export interface ChainData {
   owner?: string;
   // Optional text records
   textRecords?: Record<string, string>;
+  contenthash?: string;
 }
 
 // List of Chains to register
@@ -36,7 +37,8 @@ export const CHAINS: ChainData[] = [
       "url": "https://optimism.io",
       "com.github": "https://github.com/ethereum-optimism",
       "com.x": "https://twitter.com/optimism",
-    }
+    },
+    //contenthash: "0x", //reset to default
   },
   {
     label: "base",
@@ -44,13 +46,16 @@ export const CHAINS: ChainData[] = [
     interoperableAddressHex: "0x00010001022105",
     aliases: [],
     textRecords: {
-      //"avatar": "images/base-avatar.png",
-      //"header": "images/base-header.png",
-      "description": "Base is a Layer 2 scaling solution for Ethereum.",
-      //"email": "hello@base.org",
-      //"mail": "123 Base, L2 123",
+      "avatar": "images/base-avatar.png",
+      "header": "images/base-header.png",
+      "description": "Base is a Layer 2 scaling solution for Ethereum from Coinbase.",
+      "email": "hello@base.org",
+      "mail": "123 Base, L2 123",
       //"notice": "This is a notice",
-      //"keywords": "base, l2",
+      "keywords": "base, l2, coinbase",
+      "url": "https://base.org",
+      "com.github": "https://github.com/base-org",
+      "com.x": "https://twitter.com/base",
     },
   },
   {
@@ -58,6 +63,17 @@ export const CHAINS: ChainData[] = [
     chainName: "Arbitrum One",
     interoperableAddressHex: "0x0001000102a4b1",
     aliases: ["arb", "arb1"],
+    textRecords: {
+      "avatar": "images/arbitrum-avatar.png",
+      "header": "images/arbitrum-header.png",
+      "description": "Arbitrum is an Optimistic Layer 2 scaling solution for Ethereum.",
+      "email": "hello@arbitrum.org",
+      "mail": "123 Arbitrum, L2 123",
+      "keywords": "arbitrum, optimistic, l2",
+      "url": "https://arbitrum.org",
+      "com.github": "https://github.com/arbitrum",
+      "com.x": "https://twitter.com/arbitrum",
+    },
   },
 ];
 

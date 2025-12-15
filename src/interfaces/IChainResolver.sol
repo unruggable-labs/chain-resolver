@@ -35,6 +35,8 @@ interface IChainResolver {
     event AddressChanged(bytes32 indexed node, uint256 coinType, bytes newAddress);
     // ENSIP-24
     event DataChanged(bytes32 indexed node, string indexed indexedKey, string key, bytes indexed indexedData);
+    // ENSIP-7
+    event ContenthashChanged(bytes32 indexed node, bytes _contenthash);
 
     // Errors
     // There is no registered chain at that index
@@ -128,6 +130,12 @@ interface IChainResolver {
      * @return info The canonical label info (label and labelhash), or empty if not an alias.
      */
     function getCanonicalLabel(string calldata _label) external view returns (CanonicalLabelInfo memory info);
+
+    /**
+     * @notice Set the default contenthash used when no specific contenthash is set.
+     * @param _contenthash The default contenthash to set.
+     */
+    function setDefaultContenthash(bytes calldata _contenthash) external;
 
     /**
      * @notice Register or update a chain entry

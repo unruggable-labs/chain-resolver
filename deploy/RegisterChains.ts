@@ -10,7 +10,7 @@ import {
 } from "./libs/utils.ts";
 import { askQuestion, promptContinueOrExit } from "../shared/utils.ts";
 import { RESOLVER_ABI } from "../shared/abis.ts";
-import { Contract, keccak256, toUtf8Bytes, getBytes } from "ethers";
+import { Contract, keccak256, toUtf8Bytes, getBytes, dnsEncode, namehash, Interface, AbiCoder, hexlify } from "ethers";
 import { CHAINS, getAllAliases } from "../data/chains.ts";
 import { existsSync, readFileSync } from "fs";
 import { join, basename } from "path";
@@ -18,8 +18,10 @@ import { join, basename } from "path";
 // Image keys that should be uploaded to IPFS if they're local file paths
 const IMAGE_KEYS = ["avatar", "header"];
 
-// Shared website contenthash (ENS format hex string with 0x prefix)
-const WEBSITE_CONTENTHASH = "0xe3010155122085bc74206e1ecd490225cd2649579f87efd9d87bbf9ec75288a0fe6b95a1c9ab";
+const WEBSITE_CONTENTHASH = {
+  sepolia: "0xe3010155122085bc74206e1ecd490225cd2649579f87efd9d87bbf9ec75288a0fe6b95a1c9ab",
+  mainnet: "0xe30101551220bcfedd3b3076c10f119ad4ec22e2dbe60d46e737a17f94971b7824457dfb4044"
+}
 
 /**
  * Check if a value looks like a local file path
@@ -460,7 +462,27 @@ async function main() {
         let imagesToUpload: { key: string; path: string }[] = [];
 
         if (localImages.length > 0) {
-          console.log(`\n${chain.label}: Found ${localImages.length} local image(s):`);
+          // Check existing image records on-chain
+          console.log(`\n${chain.label}: Checking image records...`);
+          const existingImages: { key: string; value: string }[] = [];
+          for (const key of IMAGE_KEYS) {
+            try {
+              const existingValue = await resolver.getText!(chain.label, key).catch(() => "");
+              if (existingValue) {
+                existingImages.push({ key, value: existingValue });
+              }
+            } catch {}
+          }
+
+          if (existingImages.length > 0) {
+            console.log(`  Existing image records:`);
+            for (const { key, value } of existingImages) {
+              const displayValue = value.length > 60 ? value.slice(0, 57) + "..." : value;
+              console.log(`    - ${key}: ${displayValue}`);
+            }
+          }
+
+          console.log(`\n  Found ${localImages.length} local image(s) to upload:`);
           for (const { key, path } of localImages) {
             console.log(`    - ${key}: ${path}`);
           }
@@ -473,17 +495,64 @@ async function main() {
           if (shouldUpload) {
             imagesToUpload = localImages;
           } else {
-            // Remove image keys from text records if not uploading
-            for (const { key } of localImages) {
-              delete chainTextRecords[key];
+            // Allow user to specify which keys to upload
+            const keysToUploadInput = (await askQuestion(
+              rl,
+              `Enter specific image key(s) to upload (comma-separated, e.g., "avatar" or "avatar,header"), or press Enter to skip: `
+            )).trim();
+
+            if (keysToUploadInput) {
+              const requestedKeys = keysToUploadInput.split(",").map((k) => k.trim().toLowerCase());
+              imagesToUpload = localImages.filter((img) => requestedKeys.includes(img.key.toLowerCase()));
+              
+              if (imagesToUpload.length === 0) {
+                console.log("  No matching image keys found, skipping image upload");
+                // Remove image keys from text records if no matches
+                for (const { key } of localImages) {
+                  delete chainTextRecords[key];
+                }
+              } else {
+                console.log(`  Will upload ${imagesToUpload.length} image(s): ${imagesToUpload.map(i => i.key).join(", ")}`);
+                // Ensure the keys to upload are in chainTextRecords (they should be, but just in case)
+                for (const { key, path } of imagesToUpload) {
+                  if (!chainTextRecords[key]) {
+                    chainTextRecords[key] = path;
+                  }
+                }
+              }
+            } else {
+              // Remove image keys from text records if not uploading
+              for (const { key } of localImages) {
+                delete chainTextRecords[key];
+              }
+              console.log("  Skipping image records, continuing with other text records");
             }
-            console.log("  Skipping image records, continuing with other text records");
           }
         }
 
         // Process text records - upload confirmed images to IPFS
         console.log(`\nProcessing ${chain.label} text records...`);
         const textRecords = await processTextRecords(chainTextRecords, imagesToUpload);
+        
+        // Remove image keys that are local file paths but weren't uploaded
+        // Keep keys that were uploaded (now IPFS URLs) or are already URLs
+        const uploadedImageKeys = new Set(imagesToUpload.map(img => img.key));
+        for (const key of IMAGE_KEYS) {
+          if (textRecords[key]) {
+            // If this key was uploaded, it should now be an IPFS URL (not a local path)
+            // So we keep it - it will be included in recordsToSet
+            if (uploadedImageKeys.has(key)) {
+              // Key was uploaded, keep it (should already be IPFS URL from processTextRecords)
+              continue;
+            }
+            // If it's still a local file path and wasn't uploaded, remove it
+            if (isLocalFilePath(textRecords[key]!)) {
+              delete textRecords[key];
+            }
+            // Otherwise keep it (already a URL/IPFS link, just not uploaded in this run)
+          }
+        }
+        
         const keys = Object.keys(textRecords);
 
         // Check which records need to be set
@@ -500,8 +569,7 @@ async function main() {
 
         if (recordsToSet.length === 0) {
           console.log(`✓ ${chain.label}: All ${keys.length} text records already set`);
-          continue;
-        }
+        } else {
 
         console.log(`\n○ ${chain.label}: ${recordsToSet.length} text record(s) to set:`);
         for (const { key, value } of recordsToSet) {
@@ -514,23 +582,47 @@ async function main() {
           `Set ${recordsToSet.length} text record(s) for ${chain.label}? (y/n)`
         );
 
-        if (shouldSetRecords) {
+        let finalRecordsToSet = recordsToSet;
+
+        if (!shouldSetRecords) {
+          // Allow user to specify which keys to set
+          const keysToSetInput = (await askQuestion(
+            rl,
+            `Enter specific text record key(s) to set (comma-separated, e.g., "description" or "description,url"), or press Enter to skip: `
+          )).trim();
+
+          if (keysToSetInput) {
+            const requestedKeys = keysToSetInput.split(",").map((k) => k.trim().toLowerCase());
+            finalRecordsToSet = recordsToSet.filter((r) => requestedKeys.includes(r.key.toLowerCase()));
+            
+            if (finalRecordsToSet.length === 0) {
+              console.log("  No matching text record keys found, skipping");
+            } else {
+              console.log(`  Will set ${finalRecordsToSet.length} text record(s): ${finalRecordsToSet.map(r => r.key).join(", ")}`);
+            }
+          } else {
+            finalRecordsToSet = [];
+            console.log("  Skipping text record updates");
+          }
+        }
+
+        if (finalRecordsToSet.length > 0) {
           try {
-            if (recordsToSet.length === 1) {
+            if (finalRecordsToSet.length === 1) {
               // Single record - use setText
-              const { key, value } = recordsToSet[0]!;
+              const { key, value } = finalRecordsToSet[0]!;
               const tx = await resolver.setText!(keccak256(toUtf8Bytes(chain.label)), key, value);
               await tx.wait();
               console.log(`✓ ${chain.label}: Set ${key}`);
             } else {
               // Multiple records - use batchSetText
-              const keysToSet = recordsToSet.map((r) => r.key);
-              const valuesToSet = recordsToSet.map((r) => r.value);
+              const keysToSet = finalRecordsToSet.map((r) => r.key);
+              const valuesToSet = finalRecordsToSet.map((r) => r.value);
 
-              console.log(`Using batchSetText for ${recordsToSet.length} records...`);
+              console.log(`Using batchSetText for ${finalRecordsToSet.length} records...`);
               const tx = await resolver.batchSetText!(keccak256(toUtf8Bytes(chain.label)), keysToSet, valuesToSet);
               await tx.wait();
-              for (const { key } of recordsToSet) {
+              for (const { key } of finalRecordsToSet) {
                 console.log(`✓ ${chain.label}: Set ${key}`);
               }
             }
@@ -539,9 +631,9 @@ async function main() {
             console.error(`✗ ${chain.label}: Failed to set text records - ${msg}`);
 
             // Fallback to individual if batch failed
-            if (recordsToSet.length > 1) {
+            if (finalRecordsToSet.length > 1) {
               console.log("\nFalling back to individual setText calls...\n");
-              for (const { key, value } of recordsToSet) {
+              for (const { key, value } of finalRecordsToSet) {
                 try {
                   const tx = await resolver.setText!(keccak256(toUtf8Bytes(chain.label)), key, value);
                   await tx.wait();
@@ -553,6 +645,52 @@ async function main() {
               }
             }
           }
+        }
+        }
+
+        console.log("WAAAAAAT");
+        // Check contenthash
+        try {
+          // Determine expected contenthash: use chain.contenthash if set, otherwise use WEBSITE_CONTENTHASH
+          const expectedContenthash = chain.contenthash ?? WEBSITE_CONTENTHASH[chainInfo.name as keyof typeof WEBSITE_CONTENTHASH];
+          
+          console.log("expectedContenthash", expectedContenthash);
+          console.log("chain.contenthash", chain.contenthash);
+          console.log("chain.label", chain.label);
+
+          if (expectedContenthash) {
+            // Get current contenthash from chain
+            const currentContenthash = await resolver.getContenthash!(chain.label);
+            const currentHex = hexlify(currentContenthash).toLowerCase();
+            const expectedHex = expectedContenthash.toLowerCase();
+            
+            // If different, ask to update
+            if (currentHex !== expectedHex) {
+              console.log(`\n${chain.label}: Contenthash differs from expected`);
+              console.log(`  Current: ${currentHex.slice(0, 20)}...${currentHex.slice(-10)}`);
+              console.log(`  Expected: ${expectedHex.slice(0, 20)}...${expectedHex.slice(-10)}`);
+              
+              const shouldUpdate = await promptContinueOrExit(
+                rl,
+                `Update contenthash for ${chain.label}? (y/n)`
+              );
+
+              if (shouldUpdate) {
+                try {
+                  const chainLabelhash = keccak256(toUtf8Bytes(chain.label));
+                  const contenthashBytes = getBytes(expectedContenthash);
+                  const tx = await resolver.setContenthash!(chainLabelhash, contenthashBytes);
+                  await tx.wait();
+                  console.log(`✓ ${chain.label}: Updated contenthash`);
+                } catch (e: any) {
+                  const msg = e?.shortMessage || e?.message || String(e);
+                  console.error(`✗ ${chain.label}: Failed to update contenthash - ${msg}`);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn(`  Could not check contenthash for ${chain.label}`);
         }
       }
     }
@@ -570,17 +708,31 @@ async function main() {
       console.log(`\n=== Base Name Records ===`);
       console.log(`Setting records for base name (${chainInfo.domain})...\n`);
 
-      // Check which records need to be set
+      // Check which records need to be set using resolve path for base name
       const baseRecordsToSet: { key: string; value: string }[] = [];
+
+      // Get parent namehash and DNS-encode the base name
+      const parentNamehash = await resolver.parentNamehash!();
+      const baseNameDnsEncoded = dnsEncode(chainInfo.domain);
+      const baseNamehash = namehash(chainInfo.domain);
+
+      // Interface for text() function
+      const textInterface = new Interface([
+        "function text(bytes32,string) view returns (string)"
+      ]);
 
       for (const [key, value] of Object.entries(baseNameTextRecords)) {
         try {
-          const existingValue = await resolver.getText!(BASE_NAME_LABELHASH, key).catch(() => "");
+          // Use resolve() to get text record for base name
+          const textCalldata = textInterface.encodeFunctionData("text", [baseNamehash, key]);
+          const resolveResponse = await resolver.resolve!(baseNameDnsEncoded, textCalldata);
+          const existingValue = textInterface.decodeFunctionResult("text", resolveResponse)[0] as string;
+          
           if (existingValue !== value) {
             baseRecordsToSet.push({ key, value });
           }
         } catch (e) {
-          // If getText fails, assume we need to set it
+          // If resolve fails, assume we need to set it
           baseRecordsToSet.push({ key, value });
         }
       }
@@ -642,69 +794,46 @@ async function main() {
       }
     }
 
-    // Set contenthash for chains and base name (using setContenthash, not text record)
+    // Set default contenthash (used for base name and all chains if they don't have a specific contenthash)
     if (WEBSITE_CONTENTHASH) {
-      console.log(`\n=== Contenthash ===`);
-      console.log(`Setting contenthash for chains and base name...\n`);
+      console.log(`\n=== Default Contenthash ===`);
 
       // WEBSITE_CONTENTHASH is already in ENS contenthash format (hex string with 0x prefix)
-      const contenthashBytes = WEBSITE_CONTENTHASH;
+      const contenthashBytes: string = WEBSITE_CONTENTHASH[chainInfo.name as keyof typeof WEBSITE_CONTENTHASH];
 
       if (contenthashBytes) {
-        // Set contenthash for all registered chains
-        for (const chain of registeredChains) {
-
-          // Check existing contenthash
-          let existingContenthash = "";
-          try {
-            const existing = await resolver.getContenthash!(chain.label);
-            existingContenthash = existing.toLowerCase();
-          } catch {}
-
-          if (existingContenthash !== contenthashBytes.toLowerCase()) {
-            try {
-              // setContenthash expects bytes, so convert hex string to bytes
-              const contenthashBytesArray = getBytes(contenthashBytes);
-              const tx = await resolver.setContenthash!(keccak256(toUtf8Bytes(chain.label)), contenthashBytesArray);
-              await tx.wait();
-              console.log(`✓ ${chain.label}: Set contenthash`);
-            } catch (e: any) {
-              const msg = e?.shortMessage || e?.message || String(e);
-              console.error(`✗ ${chain.label}: Failed to set contenthash - ${msg}`);
-            }
-          } else {
-            console.log(`✓ ${chain.label}: Contenthash already set`);
-          }
-        }
-
-        // Set contenthash for base name
-        const BASE_NAME_LABELHASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
-        let baseExistingContenthash = "";
+        // Check existing default contenthash
+        let existingDefaultContenthash = "";
         try {
-          const existing = await resolver.getContenthash!(BASE_NAME_LABELHASH);
-          baseExistingContenthash = existing.toLowerCase();
+          const existing = await resolver.defaultContenthash!();
+          existingDefaultContenthash = existing.toLowerCase();
         } catch {}
 
-        if (baseExistingContenthash !== contenthashBytes.toLowerCase()) {
-          const shouldSetBaseContenthash = await promptContinueOrExit(
+        if (existingDefaultContenthash !== contenthashBytes.toLowerCase()) {
+          console.log(`Current default contenthash: ${existingDefaultContenthash || "(not set)"}`);
+          console.log(`New default contenthash: ${contenthashBytes}`);
+          
+          const shouldSetDefaultContenthash = await promptContinueOrExit(
             rl,
-            `Set contenthash for base name (${chainInfo.domain})? (y/n)`
+            `Update default contenthash? (y/n)`
           );
 
-          if (shouldSetBaseContenthash) {
+          if (shouldSetDefaultContenthash) {
             try {
-              // setContenthash expects bytes, so convert hex string to bytes
+              // setDefaultContenthash expects bytes, so convert hex string to bytes
               const contenthashBytesArray = getBytes(contenthashBytes);
-              const tx = await resolver.setContenthash!(BASE_NAME_LABELHASH, contenthashBytesArray);
+              const tx = await resolver.setDefaultContenthash!(contenthashBytesArray);
               await tx.wait();
-              console.log(`✓ Base name: Set contenthash`);
+              console.log(`✓ Default contenthash updated`);
             } catch (e: any) {
               const msg = e?.shortMessage || e?.message || String(e);
-              console.error(`✗ Base name: Failed to set contenthash - ${msg}`);
+              console.error(`✗ Failed to set default contenthash - ${msg}`);
             }
+          } else {
+            console.log(`  Skipping default contenthash update`);
           }
         } else {
-          console.log(`✓ Base name: Contenthash already set`);
+          console.log(`✓ Default contenthash already set (matches expected value)`);
         }
       }
     }

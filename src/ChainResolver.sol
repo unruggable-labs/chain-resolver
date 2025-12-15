@@ -138,6 +138,8 @@ contract ChainResolver is
     // Node to labelhash mapping. Used for events emission supportedTextKeys/supportedDataKeys
     mapping(bytes32 node => bytes32 labelhash) private nodeToLabelhash;
 
+    // Default contenthash used when no specific contenthash is set
+    bytes public defaultContenthash;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -380,6 +382,16 @@ contract ChainResolver is
     }
 
     /**
+     * @notice Set the default contenthash used when no specific contenthash is set.
+     * @param _contenthash The default contenthash to set.
+     */
+    function setDefaultContenthash(bytes calldata _contenthash) external onlyOwner {
+        defaultContenthash = _contenthash;
+        bytes32 baseNode = _computeNamehash(BASE_NAME_LABELHASH);
+        emit ContenthashChanged(baseNode, _contenthash);
+    }
+
+    /**
      * @notice Set the contenthash for a labelhash.
      * @param _labelhash The labelhash to update. Use bytes32(0) for base name.
      * @param _contenthash The contenthash to set.
@@ -394,6 +406,8 @@ contract ChainResolver is
         // Update node mapping for supportedTextKeys/supportedDataKeys
         bytes32 node = _computeNamehash(canonical);
         nodeToLabelhash[node] = canonical;
+        
+        emit ContenthashChanged(node, _contenthash);
     }
 
     /**
@@ -628,12 +642,16 @@ contract ChainResolver is
     /**
      * @notice Get a contenthash.
      * @param _labelhash The labelhash to query.
-     * @return The contenthash value.
+     * @return The contenthash value. Returns defaultContenthash if no specific contenthash is set.
      */
     function _getContenthash(
         bytes32 _labelhash
     ) internal view returns (bytes memory) {
-        return contenthashRecords[_resolveLabelhash(_labelhash)];
+        bytes memory specific = contenthashRecords[_resolveLabelhash(_labelhash)];
+        if (specific.length > 0) {
+            return specific;
+        }
+        return defaultContenthash;
     }
 
     /**

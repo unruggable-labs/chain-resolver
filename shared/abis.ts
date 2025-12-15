@@ -19,6 +19,7 @@ export const RESOLVER_ABI = [
   "function supportedTextKeys(bytes32) view returns (string[])",
   "function supportedDataKeys(bytes32) view returns (string[])",
   "function parentNamehash() view returns (bytes32)",
+  "function defaultContenthash() view returns (bytes)",
   // Write functions
   "function register((string,string,address,bytes)) external",
   "function batchRegister((string,string,address,bytes)[]) external",
@@ -32,6 +33,7 @@ export const RESOLVER_ABI = [
   "function setAddr(bytes32,uint256,bytes) external",
   "function setContenthash(bytes32,bytes) external",
   "function setChainAdmin(bytes32,address) external",
+  "function setDefaultContenthash(bytes) external",
   "function upgradeToAndCall(address,bytes) external",
   "function migrateParentNamehash(bytes32) external",
 ] as const;
