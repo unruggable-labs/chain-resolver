@@ -22,7 +22,7 @@ export const CHAINS: ChainData[] = [
     label: "optimism",
     chainName: "OP Mainnet",
     interoperableAddressHex: "0x00010001010a00",
-    aliases: ["op"],
+    aliases: ["op", "opt"],
     textRecords: {
       "avatar": "images/optimism-avatar.png",
       "header": "images/optimism-header.png",

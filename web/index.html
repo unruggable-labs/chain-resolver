@@ -491,7 +491,7 @@
       // ChainResolver proxy addresses
       resolvers: {
         mainnet: '0x0000000000000000000000000000000000000000', // TODO: Set mainnet address
-        sepolia: '0x38Bc9a2F8b5D29d29a99c2e542C2a2BDB468882C',
+        sepolia: '0x48bC7811B4d4BFb3a06A176b8378Fde2013c461a',
       },
       // Parent domains
       domains: {
@@ -499,7 +499,7 @@
         sepolia: 'cid.eth',
       },
       // Default network
-      defaultNetwork: 'sepolia',
+      defaultNetwork: 'mainnet',
     };
 
     // ABI for ChainResolver
@@ -508,7 +508,7 @@
       'function chainLabel(bytes) view returns (string)',
       'function chainName(string) view returns (string)',
       'function interoperableAddress(string) view returns (bytes)',
-      'function getCanonicalLabel(string) view returns ((string,bytes32))',
+      'function getCanonicalLabel(string) view returns ((string label,bytes32 labelhash))',
       'function getText(string,string) view returns (string)',
       'function getData(string,string) view returns (bytes)',
       'function getContenthash(string) view returns (bytes)',
@@ -734,7 +734,7 @@
           other.push({ key, value });
         }
       }
-      
+
       return { links, info, other, display };
     }
 
@@ -888,8 +888,8 @@
         const node = ethers.keccak256(ethers.solidityPacked(['bytes32', 'bytes32'], [parentNamehash, labelhash]));
 
         console.log(`Loading chain: ${chainLabel}`);
-        console.log(`  Labelhash: ${labelhash}`);
-        console.log(`  Node: ${node}`);
+        console.log(`Labelhash: ${labelhash}`);
+        console.log(`Node: ${node}`);
 
         // Fetch interoperable address first to check if chain exists
         let interopAddress = '';
@@ -908,27 +908,16 @@
         }
 
         // Check if we're viewing an alias
-        let canonicalLabel = null;
-        let isAlias = false;
         const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
-        try {
-          const canonicalInfo = await resolver.getCanonicalLabel(chainLabel);
-          if (canonicalInfo && canonicalInfo.labelhash && canonicalInfo.labelhash !== ZERO_BYTES32) {
-            // We're viewing an alias - use the canonical label from the struct
-            canonicalLabel = canonicalInfo.label;
-            isAlias = true;
-            console.log(`This is an alias. Canonical label: ${canonicalLabel}`);
-          }
-        } catch (e) {
-          console.warn('Could not check alias status:', e.message);
-        }
+        const [ canonicalLabel, canonicalLabelhash ] = await resolver.getCanonicalLabel(chainLabel);
+        const isAlias = canonicalLabelhash && canonicalLabelhash !== ZERO_BYTES32;
 
         // Fetch ALL text records using supportedTextKeys
         const textRecords = {};
         try {
           console.log('Fetching supported text keys...');
           const textKeys = await resolver.supportedTextKeys(node);
-          console.log(`  Found ${textKeys.length} text keys:`, textKeys);
+          console.log(`Found ${textKeys.length} text keys:`, textKeys);
           
           // Fetch all text records in parallel for speed
           const textPromises = textKeys.map(async (key) => {
@@ -936,7 +925,7 @@
               const value = await resolver.getText(chainLabel, key);
               return { key, value };
             } catch (e) {
-              console.warn(`  Could not fetch text record "${key}":`, e.message);
+              console.warn(`Could not fetch text record "${key}":`, e.message);
               return { key, value: null };
             }
           });
@@ -1013,12 +1002,6 @@
           console.log(`Fetching aliases from current chain "${chainLabel}":`, aliasesText);
         }
         
-        // Determine which labelhash to verify aliases against
-        // If we're viewing an alias, verify against the canonical labelhash
-        const canonicalLabelhash = canonicalLabel 
-          ? ethers.keccak256(ethers.toUtf8Bytes(canonicalLabel))
-          : labelhash;
-        
         console.log('Canonical labelhash for verification:', canonicalLabelhash);
         console.log('Is alias?', isAlias);
         console.log('Canonical label:', canonicalLabel);
@@ -1035,40 +1018,29 @@
             }
             
             try {
-              const aliasCanonicalInfo = await resolver.getCanonicalLabel(alias);
+              const [ canonicalLabel, canonicalLabelhash ] = await resolver.getCanonicalLabel(alias);
               console.log(`  Checking alias "${alias}":`, {
-                labelhash: aliasCanonicalInfo.labelhash,
-                label: aliasCanonicalInfo.label,
+                labelhash: canonicalLabelhash,
+                label: canonicalLabel,
                 expected: canonicalLabelhash
               });
               
               // Verify that this alias points to the same canonical chain
               // Compare as strings (both should be hex strings)
-              const aliasCanonicalHash = aliasCanonicalInfo.labelhash;
+              const aliasCanonicalHash = canonicalLabelhash;
               if (aliasCanonicalHash && 
                   aliasCanonicalHash.toLowerCase() === canonicalLabelhash.toLowerCase()) {
                 verifiedAliases.push(alias);
-                console.log(`  ✓ ${alias} verified`);
+                console.log(`✓ ${alias} verified`);
               } else {
-                console.log(`  ✗ ${alias} not verified (points to ${aliasCanonicalHash || 'nothing'}, expected ${canonicalLabelhash})`);
+                console.log(`✗ ${alias} not verified (points to ${aliasCanonicalHash || 'nothing'}, expected ${canonicalLabelhash})`);
               }
             } catch (e) {
-              console.warn(`  Could not verify alias "${alias}":`, e.message);
+              console.warn(`Could not verify alias "${alias}":`, e.message);
             }
           }
         } else {
           console.log('No aliases text record found');
-        }
-        
-        // If no verified aliases but we have aliases text, show them anyway (for debugging)
-        // TODO: Remove this fallback once verification is working
-        if (verifiedAliases.length === 0 && aliasesText) {
-          const aliasesList = aliasesText.split(',').map(a => a.trim()).filter(Boolean);
-          const filtered = aliasesList.filter(a => a.toLowerCase() !== chainLabel.toLowerCase());
-          if (filtered.length > 0) {
-            console.warn('No verified aliases, but showing unverified aliases for debugging:', filtered);
-            // Don't add to verifiedAliases - let's see what the actual issue is first
-          }
         }
         
         console.log('Final verified aliases:', verifiedAliases);

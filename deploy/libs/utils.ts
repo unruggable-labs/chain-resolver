@@ -52,7 +52,30 @@ export const initSmith = async (chainName: string, privateKey: string) => {
 export const shutdownSmith = async (rl: { close: () => void }, smith?: Foundry) => {
   rl.close();
   if (smith) {
-    await smith.shutdown();
+    try {
+      // launchLive() doesn't create a process, so shutdown() will fail
+      // Check if it's an anvil instance (has a process) before calling shutdown
+      // isAnvil() checks if 'anvil' property exists
+      const smithAny = smith as any;
+      if (smithAny.isAnvil && smithAny.isAnvil()) {
+        await smith.shutdown();
+      } else {
+        // For live instances, just destroy the provider
+        if (smith.provider && typeof smith.provider.destroy === 'function') {
+          smith.provider.destroy();
+        }
+      }
+    } catch (e: any) {
+      // If shutdown fails, try to at least destroy the provider
+      if (smith.provider && typeof smith.provider.destroy === 'function') {
+        try {
+          smith.provider.destroy();
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+      // Don't throw - we're shutting down anyway
+    }
   }
 };
 

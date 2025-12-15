@@ -10,7 +10,7 @@ export const RESOLVER_ABI = [
   "function interoperableAddress(string) view returns (bytes)",
   "function chainLabel(bytes) view returns (string)",
   "function chainName(string) view returns (string)",
-  "function getCanonicalLabel(string) view returns ((string,bytes32))",
+  "function getCanonicalLabel(string) view returns ((string label,bytes32 labelhash))",
   "function getText(string,string) view returns (string)",
   "function getData(string,string) view returns (bytes)",
   "function getAddr(string,uint256) view returns (bytes)",

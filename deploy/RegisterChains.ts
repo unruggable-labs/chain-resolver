@@ -331,10 +331,15 @@ async function main() {
       const registeredAliases: typeof aliases = [];
       const unregisteredAliases: typeof aliases = [];
 
+      console.log(aliases);
+
       for (const aliasData of aliases) {
-        const aliasHash = keccak256(toUtf8Bytes(aliasData.alias));
-        const existingCanonicalInfo = await resolver.getCanonicalLabel!(aliasHash).catch(() => null);
-        const isRegistered = existingCanonicalInfo && existingCanonicalInfo.labelhash !== "0x0000000000000000000000000000000000000000000000000000000000000000";
+        // Check on-chain registration via getCanonicalLabel (not text records)
+        const [ canonicalLabel, canonicalLabelhash ] = await resolver.getCanonicalLabel!(aliasData.alias).catch(() => null);
+
+        console.log(canonicalLabel, canonicalLabelhash);
+        
+        const isRegistered = canonicalLabelhash && canonicalLabelhash !== "0x0000000000000000000000000000000000000000000000000000000000000000";
         
         if (isRegistered) {
           registeredAliases.push(aliasData);
@@ -351,62 +356,80 @@ async function main() {
       }
 
       if (unregisteredAliases.length > 0) {
-        console.log(`\n○ Not registered (${unregisteredAliases.length}):`);
-        for (const { alias, canonicalLabel } of unregisteredAliases) {
-          console.log(`  - ${alias} → ${canonicalLabel}`);
-        }
-
-        const shouldRegisterAliases = await promptContinueOrExit(
-          rl,
-          `\nRegister all ${unregisteredAliases.length} unregistered aliases? (y/n)`
+        // Filter out aliases where the canonical chain isn't registered yet
+        const registeredChainLabels = new Set(registeredChains.map(c => c.label.toLowerCase()));
+        const validAliases = unregisteredAliases.filter(
+          (a) => registeredChainLabels.has(a.canonicalLabel.toLowerCase())
+        );
+        const invalidAliases = unregisteredAliases.filter(
+          (a) => !registeredChainLabels.has(a.canonicalLabel.toLowerCase())
         );
 
-        if (shouldRegisterAliases) {
-          console.log("\nRegistering aliases...\n");
+        if (invalidAliases.length > 0) {
+          console.log(`\n⚠️  Skipping ${invalidAliases.length} alias(es) - canonical chain not registered:`);
+          for (const { alias, canonicalLabel } of invalidAliases) {
+            console.log(`  - ${alias} → ${canonicalLabel} (${canonicalLabel} not registered)`);
+          }
+        }
 
-          if (unregisteredAliases.length === 1) {
-            // Single alias - use registerAlias
-            const { alias, canonicalLabel } = unregisteredAliases[0]!;
-            const canonicalHash = keccak256(toUtf8Bytes(canonicalLabel));
+        if (validAliases.length > 0) {
+          console.log(`\n○ Not registered (${validAliases.length}):`);
+          for (const { alias, canonicalLabel } of validAliases) {
+            console.log(`  - ${alias} → ${canonicalLabel}`);
+          }
 
-            try {
-              const tx = await resolver.registerAlias!(alias, canonicalHash);
-              await tx.wait();
-              console.log(`✓ ${alias} → ${canonicalLabel}: Registered`);
-            } catch (e: any) {
-              const msg = e?.shortMessage || e?.message || String(e);
-              console.error(`✗ ${alias}: Failed - ${msg}`);
-            }
-          } else {
-            // Multiple aliases - use batchRegisterAlias
-            const aliasStrings = unregisteredAliases.map((a) => a.alias);
-            const canonicalHashes = unregisteredAliases.map((a) =>
-              keccak256(toUtf8Bytes(a.canonicalLabel))
-            );
+          const shouldRegisterAliases = await promptContinueOrExit(
+            rl,
+            `\nRegister all ${validAliases.length} unregistered aliases? (y/n)`
+          );
 
-            try {
-              console.log(`Using batchRegisterAlias for ${unregisteredAliases.length} aliases...`);
-              const tx = await resolver.batchRegisterAlias!(aliasStrings, canonicalHashes);
-              await tx.wait();
-              for (const { alias, canonicalLabel } of unregisteredAliases) {
+          if (shouldRegisterAliases) {
+            console.log("\nRegistering aliases...\n");
+
+            if (validAliases.length === 1) {
+              // Single alias - use registerAlias
+              const { alias, canonicalLabel } = validAliases[0]!;
+              const canonicalHash = keccak256(toUtf8Bytes(canonicalLabel));
+
+              try {
+                const tx = await resolver.registerAlias!(alias, canonicalHash);
+                await tx.wait();
                 console.log(`✓ ${alias} → ${canonicalLabel}: Registered`);
+              } catch (e: any) {
+                const msg = e?.shortMessage || e?.message || String(e);
+                console.error(`✗ ${alias}: Failed - ${msg}`);
               }
-            } catch (e: any) {
-              const msg = e?.shortMessage || e?.message || String(e);
-              console.error(`✗ batchRegisterAlias failed: ${msg}`);
+            } else {
+              // Multiple aliases - use batchRegisterAlias
+              const aliasStrings = validAliases.map((a) => a.alias);
+              const canonicalHashes = validAliases.map((a) =>
+                keccak256(toUtf8Bytes(a.canonicalLabel))
+              );
 
-              // Fallback to individual registration
-              console.log("\nFalling back to individual registration...\n");
-              for (const { alias, canonicalLabel } of unregisteredAliases) {
-                const canonicalHash = keccak256(toUtf8Bytes(canonicalLabel));
-
-                try {
-                  const tx = await resolver.registerAlias!(alias, canonicalHash);
-                  await tx.wait();
+              try {
+                console.log(`Using batchRegisterAlias for ${validAliases.length} aliases...`);
+                const tx = await resolver.batchRegisterAlias!(aliasStrings, canonicalHashes);
+                await tx.wait();
+                for (const { alias, canonicalLabel } of validAliases) {
                   console.log(`✓ ${alias} → ${canonicalLabel}: Registered`);
-                } catch (e2: any) {
-                  const msg2 = e2?.shortMessage || e2?.message || String(e2);
-                  console.error(`✗ ${alias}: Failed - ${msg2}`);
+                }
+              } catch (e: any) {
+                const msg = e?.shortMessage || e?.message || String(e);
+                console.error(`✗ batchRegisterAlias failed: ${msg}`);
+
+                // Fallback to individual registration
+                console.log("\nFalling back to individual registration...\n");
+                for (const { alias, canonicalLabel } of validAliases) {
+                  const canonicalHash = keccak256(toUtf8Bytes(canonicalLabel));
+
+                  try {
+                    const tx = await resolver.registerAlias!(alias, canonicalHash);
+                    await tx.wait();
+                    console.log(`✓ ${alias} → ${canonicalLabel}: Registered`);
+                  } catch (e2: any) {
+                    const msg2 = e2?.shortMessage || e2?.message || String(e2);
+                    console.error(`✗ ${alias}: Failed - ${msg2}`);
+                  }
                 }
               }
             }
@@ -419,10 +442,11 @@ async function main() {
 
     // Check and set text records for all registered chains 
     // (includes auto-generated aliases and shared contenthash)
-    const chainsWithRecords = CHAINS;
+    // Only process chains that have been registered
+    const chainsWithRecords = registeredChains;
     
     if (chainsWithRecords.length > 0) {
-      console.log(`\nChecking text records for ${chainsWithRecords.length} chain(s)...`);
+      console.log(`\nChecking text records for ${chainsWithRecords.length} registered chain(s)...`);
 
       for (const chain of chainsWithRecords) {
         // Build text records, including auto-generated aliases
@@ -628,16 +652,7 @@ async function main() {
 
       if (contenthashBytes) {
         // Set contenthash for all registered chains
-        for (const chain of CHAINS) {
-          // Check if chain is registered
-          try {
-            const existingAdmin = await resolver.getChainAdmin!(chain.label).catch(() => null);
-            if (!existingAdmin || existingAdmin === "0x0000000000000000000000000000000000000000") {
-              continue; // Skip unregistered chains
-            }
-          } catch {
-            continue;
-          }
+        for (const chain of registeredChains) {
 
           // Check existing contenthash
           let existingContenthash = "";
