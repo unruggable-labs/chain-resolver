@@ -1,0 +1,2104 @@
+[
+  {
+    "label": "ethereum",
+    "chainName": "Ethereum",
+    "interoperableAddressHex": "0x00010000010100",
+    "aliases": [
+      "eth"
+    ],
+    "textRecords": {
+      "chainId": "1",
+      "url": "https://ethereum.org/",
+      "avatar": "images/avatars/ethereum-avatar.svg",
+      "com.github": "https://github.com/ethereum/ethereum-org-website",
+      "com.x": "https://x.com/ethdotorg"
+    }
+  },
+  {
+    "label": "op-mainnet",
+    "chainName": "OP Mainnet",
+    "interoperableAddressHex": "0x00010000010a00",
+    "aliases": [
+      "oeth"
+    ],
+    "textRecords": {
+      "chainId": "10",
+      "url": "https://www.optimism.io/",
+      "avatar": "images/avatars/op-mainnet-avatar.svg",
+      "com.github": "https://github.com/ethereum-optimism",
+      "com.x": "https://twitter.com/optimism"
+    }
+  },
+  {
+    "label": "flare-mainnet",
+    "chainName": "Flare Mainnet",
+    "interoperableAddressHex": "0x00010000010e00",
+    "aliases": [
+      "flr"
+    ],
+    "textRecords": {
+      "chainId": "14",
+      "url": "https://flare.network/",
+      "avatar": "images/avatars/flare-mainnet-avatar.svg",
+      "com.x": "https://x.com/FlareNetworks",
+      "com.github": "https://github.com/flare-foundation"
+    }
+  },
+  {
+    "label": "songbird-testnet-coston",
+    "chainName": "Songbird Testnet Coston",
+    "interoperableAddressHex": "0x00010000011000",
+    "aliases": [
+      "cflr"
+    ],
+    "textRecords": {
+      "chainId": "16",
+      "isTestnet": "true",
+      "url": "https://flare.network/",
+      "avatar": "images/avatars/songbird-testnet-coston-avatar.svg",
+      "com.x": "https://twitter.com/SceptreLS"
+    }
+  },
+  {
+    "label": "songbird-canary-network",
+    "chainName": "Songbird Canary-Network",
+    "interoperableAddressHex": "0x00010000011300",
+    "aliases": [
+      "sgb"
+    ],
+    "textRecords": {
+      "chainId": "19",
+      "url": "https://flare.network/songbird/",
+      "avatar": "images/avatars/songbird-canary-network-avatar.svg",
+      "com.x": "https://x.com/songbirdcomm?lang=en"
+    }
+  },
+  {
+    "label": "flare-testnet-coston2",
+    "chainName": "Flare Testnet Coston2",
+    "interoperableAddressHex": "0x00010000017200",
+    "aliases": [
+      "c2flr"
+    ],
+    "textRecords": {
+      "chainId": "114",
+      "isTestnet": "true",
+      "url": "https://flare.network/",
+      "avatar": "images/avatars/flare-testnet-coston2-avatar.svg",
+      "com.x": "https://twitter.com/SceptreLS"
+    }
+  },
+  {
+    "label": "unichain",
+    "chainName": "Unichain",
+    "interoperableAddressHex": "0x00010000018200",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "130",
+      "url": "https://unichain.org/",
+      "avatar": "images/avatars/unichain-avatar.svg",
+      "com.x": "https://x.com/unichain"
+    }
+  },
+  {
+    "label": "redbelly-network-mainnet",
+    "chainName": "Redbelly Network Mainnet",
+    "interoperableAddressHex": "0x00010000019700",
+    "aliases": [
+      "rbn"
+    ],
+    "textRecords": {
+      "chainId": "151",
+      "url": "https://www.redbelly.network/",
+      "avatar": "images/avatars/redbelly-network-mainnet-avatar.png",
+      "com.x": "https://x.com/redbellynetwork"
+    }
+  },
+  {
+    "label": "redbelly-network-testnet",
+    "chainName": "Redbelly Network Testnet",
+    "interoperableAddressHex": "0x00010000019900",
+    "aliases": [
+      "rbn-testnet"
+    ],
+    "textRecords": {
+      "chainId": "153",
+      "isTestnet": "true",
+      "url": "https://www.redbelly.network/",
+      "avatar": "images/avatars/redbelly-network-testnet-avatar.svg",
+      "com.x": "https://x.com/redbellynetwork"
+    }
+  },
+  {
+    "label": "omni-omega",
+    "chainName": "Omni Omega",
+    "interoperableAddressHex": "0x0001000001a400",
+    "aliases": [
+      "omni_omega"
+    ],
+    "textRecords": {
+      "chainId": "164",
+      "isTestnet": "true",
+      "url": "https://www.nomina.io/",
+      "avatar": "images/avatars/omni-omega-avatar.svg",
+      "com.github": "https://github.com/nomina-xyz",
+      "com.x": "https://twitter.com/Nomina"
+    }
+  },
+  {
+    "label": "nomina",
+    "chainName": "Nomina",
+    "interoperableAddressHex": "0x0001000001a600",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "166",
+      "url": "https://www.nomina.io/",
+      "avatar": "images/avatars/nomina-avatar.svg",
+      "com.github": "https://github.com/nomina-xyz",
+      "com.x": "https://twitter.com/Nomina"
+    }
+  },
+  {
+    "label": "mint-mainnet",
+    "chainName": "Mint Mainnet",
+    "interoperableAddressHex": "0x0001000001b900",
+    "aliases": [
+      "mint"
+    ],
+    "textRecords": {
+      "chainId": "185",
+      "url": "https://www.mintchain.io",
+      "avatar": "images/avatars/mint-mainnet-avatar.svg",
+      "com.x": "https://x.com/Mint_Blockchain",
+      "com.github": "https://github.com/Mint-Blockchain"
+    }
+  },
+  {
+    "label": "fraxtal",
+    "chainName": "Fraxtal",
+    "interoperableAddressHex": "0x0001000001fc00",
+    "aliases": [
+      "frax"
+    ],
+    "textRecords": {
+      "chainId": "252",
+      "url": "https://www.frax.com",
+      "avatar": "images/avatars/fraxtal-avatar.svg",
+      "com.x": "https://x.com/fraxfinance",
+      "com.github": "https://github.com/FraxFinance"
+    }
+  },
+  {
+    "label": "swan-chain-mainnet",
+    "chainName": "Swan Chain Mainnet",
+    "interoperableAddressHex": "0x0001000001fe00",
+    "aliases": [
+      "swan"
+    ],
+    "textRecords": {
+      "chainId": "254",
+      "url": "https://swanchain.io",
+      "avatar": "images/avatars/swan-chain-mainnet-avatar.svg",
+      "com.x": "https://x.com/swan_chain",
+      "com.github": "https://github.com/swanchain"
+    }
+  },
+  {
+    "label": "boba-network",
+    "chainName": "Boba Network",
+    "interoperableAddressHex": "0x0001000002012000",
+    "aliases": [
+      "boba"
+    ],
+    "textRecords": {
+      "chainId": "288",
+      "url": "https://boba.network/",
+      "avatar": "images/avatars/boba-network-avatar.svg",
+      "com.x": "https://twitter.com/bobanetwork",
+      "com.github": "https://github.com/bobanetwork"
+    }
+  },
+  {
+    "label": "orderly",
+    "chainName": "Orderly",
+    "interoperableAddressHex": "0x0001000002012300",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "291",
+      "url": "https://orderly.network",
+      "avatar": "images/avatars/orderly-avatar.svg",
+      "com.github": "https://github.com/OrderlyNetwork",
+      "com.x": "https://x.com/OrderlyNetwork"
+    }
+  },
+  {
+    "label": "hedera-mainnet",
+    "chainName": "Hedera Mainnet",
+    "interoperableAddressHex": "0x0001000002012700",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "295",
+      "url": "https://hedera.com",
+      "avatar": "images/avatars/hedera-mainnet-avatar.078ab5e30bc8"
+    }
+  },
+  {
+    "label": "zksync-era",
+    "chainName": "ZKsync Era",
+    "interoperableAddressHex": "0x0001000002014400",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "324",
+      "url": "https://www.zksync.io/",
+      "avatar": "images/avatars/zksync-era-avatar.svg",
+      "com.x": "https://x.com/zksync"
+    }
+  },
+  {
+    "label": "dfktest",
+    "chainName": "DFK Chain Test",
+    "interoperableAddressHex": "0x0001000002014f00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "335",
+      "isTestnet": "true",
+      "url": "https://defikingdoms.com/",
+      "avatar": "images/avatars/dfktest-avatar.svg",
+      "com.github": "https://github.com/defikingdoms/",
+      "com.x": "https://twitter.com/defikingdoms"
+    }
+  },
+  {
+    "label": "pulsar",
+    "chainName": "Pulsar",
+    "interoperableAddressHex": "0x0001000002016500",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "357",
+      "url": "https://pulsar.12rw.io/",
+      "avatar": "images/avatars/pulsar-avatar.svg",
+      "com.x": "https://twitter.com/PulsarGame"
+    }
+  },
+  {
+    "label": "pulsechain",
+    "chainName": "PulseChain",
+    "interoperableAddressHex": "0x0001000002017100",
+    "aliases": [
+      "pls"
+    ],
+    "textRecords": {
+      "chainId": "369",
+      "url": "https://pulsechain.com/",
+      "avatar": "images/avatars/pulsechain-avatar.png",
+      "com.x": "https://twitter.com/PulseChainCom"
+    }
+  },
+  {
+    "label": "koroshi-testnet",
+    "chainName": "Koroshi",
+    "interoperableAddressHex": "0x0001000002017a00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "378",
+      "isTestnet": "true",
+      "url": "https://www.starsarena.com/thekoroshi",
+      "com.x": "https://twitter.com/thekoroshi"
+    }
+  },
+  {
+    "label": "koroshi",
+    "chainName": "KOROSHI",
+    "interoperableAddressHex": "0x0001000002017b00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "379",
+      "url": "https://www.starsarena.com/thekoroshi",
+      "avatar": "images/avatars/koroshi-avatar.svg",
+      "com.x": "https://twitter.com/thekoroshi"
+    }
+  },
+  {
+    "label": "mode-testnet",
+    "chainName": "Mode Testnet",
+    "interoperableAddressHex": "0x0001000002039700",
+    "aliases": [
+      "modesep"
+    ],
+    "textRecords": {
+      "chainId": "919",
+      "isTestnet": "true",
+      "url": "https://www.mode.network/",
+      "avatar": "images/avatars/mode-testnet-avatar.svg",
+      "com.x": "https://twitter.com/modenetwork"
+    }
+  },
+  {
+    "label": "binary",
+    "chainName": "BinaryChain Mainnet",
+    "interoperableAddressHex": "0x000100000203db00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "987",
+      "isTestnet": "true",
+      "url": "https://binarychain.org"
+    }
+  },
+  {
+    "label": "hyperevm",
+    "chainName": "HyperEVM",
+    "interoperableAddressHex": "0x000100000203e700",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "999",
+      "url": "https://hyperfoundation.org/",
+      "avatar": "images/avatars/hyperevm-avatar.png",
+      "com.x": "https://twitter.com/hyperliquidX",
+      "com.github": "https://github.com/hyperliquid-dex"
+    }
+  },
+  {
+    "label": "metis",
+    "chainName": "Metis",
+    "interoperableAddressHex": "0x0001000002044000",
+    "aliases": [
+      "metis-andromeda"
+    ],
+    "textRecords": {
+      "chainId": "1088",
+      "url": "https://www.metis.io",
+      "avatar": "images/avatars/metis-avatar.svg",
+      "com.x": "https://x.com/MetisL2",
+      "com.github": "https://github.com/MetisProtocol"
+    }
+  },
+  {
+    "label": "lisk",
+    "chainName": "Lisk",
+    "interoperableAddressHex": "0x0001000002046f00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "1135",
+      "url": "https://lisk.com/",
+      "avatar": "images/avatars/lisk-avatar.svg",
+      "com.x": "https://twitter.com/LiskHQ",
+      "com.github": "https://github.com/LiskHQ"
+    }
+  },
+  {
+    "label": "intersect",
+    "chainName": "Intersect",
+    "interoperableAddressHex": "0x000100000204c000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "1216"
+    }
+  },
+  {
+    "label": "step-network",
+    "chainName": "Step Network",
+    "interoperableAddressHex": "0x000100000204d200",
+    "aliases": [
+      "step"
+    ],
+    "textRecords": {
+      "chainId": "1234",
+      "url": "https://linktr.ee/step.app",
+      "avatar": "images/avatars/step-network-avatar.svg",
+      "com.x": "https://twitter.com/stepapp_"
+    }
+  },
+  {
+    "label": "unichain-sepolia",
+    "chainName": "Unichain Sepolia",
+    "interoperableAddressHex": "0x0001000002051500",
+    "aliases": [
+      "unichain-sep"
+    ],
+    "textRecords": {
+      "chainId": "1301",
+      "isTestnet": "true",
+      "url": "https://www.unichain.org/",
+      "avatar": "images/avatars/unichain-sepolia-avatar.svg",
+      "com.x": "https://x.com/unichain"
+    }
+  },
+  {
+    "label": "blitz",
+    "chainName": "Blitz",
+    "interoperableAddressHex": "0x0001000002054000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "1344",
+      "url": "https://blitz.gg/",
+      "com.x": "https://twitter.com/theblitzapp"
+    }
+  },
+  {
+    "label": "mintsepoliatest",
+    "chainName": "Mint Sepolia Testnet",
+    "interoperableAddressHex": "0x0001000002069700",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "1687",
+      "isTestnet": "true",
+      "url": "https://www.mintchain.io",
+      "avatar": "images/avatars/mintsepoliatest-avatar.svg",
+      "com.x": "https://x.com/Mint_Blockchain",
+      "com.github": "https://github.com/Mint-Blockchain"
+    }
+  },
+  {
+    "label": "highoctane",
+    "chainName": "HighOctane Subnet",
+    "interoperableAddressHex": "0x0001000002073d00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "1853",
+      "url": "https://goldfever.io/",
+      "avatar": "images/avatars/highoctane-avatar.svg",
+      "com.x": "https://x.com/goldfevergame"
+    }
+  },
+  {
+    "label": "memoria",
+    "chainName": "Memoria",
+    "interoperableAddressHex": "0x0001000002076000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "1888"
+    }
+  },
+  {
+    "label": "swellchain",
+    "chainName": "Swellchain",
+    "interoperableAddressHex": "0x0001000002078300",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "1923",
+      "url": "https://www.swellnetwork.io/",
+      "avatar": "images/avatars/swellchain-avatar.svg",
+      "com.x": "https://twitter.com/swellnetworkio",
+      "com.github": "https://github.com/swellnetwork"
+    }
+  },
+  {
+    "label": "soneium-minato-testnet",
+    "chainName": "Soneium Minato Testnet",
+    "interoperableAddressHex": "0x0001000002079a00",
+    "aliases": [
+      "soneium-minato"
+    ],
+    "textRecords": {
+      "chainId": "1946",
+      "isTestnet": "true",
+      "url": "https://soneium.org/en/",
+      "avatar": "images/avatars/soneium-minato-testnet-avatar.svg",
+      "com.x": "https://x.com/Soneium"
+    }
+  },
+  {
+    "label": "kiwi",
+    "chainName": "Kiwi Subnet",
+    "interoperableAddressHex": "0x000100000207f500",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "2037",
+      "isTestnet": "true",
+      "avatar": "images/avatars/kiwi-avatar.svg"
+    }
+  },
+  {
+    "label": "shraptest",
+    "chainName": "Shrapnel Testnet",
+    "interoperableAddressHex": "0x000100000207f600",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "2038",
+      "isTestnet": "true",
+      "url": "https://www.shrapnel.com/",
+      "com.x": "https://twitter.com/playSHRAPNEL"
+    }
+  },
+  {
+    "label": "shrapnel",
+    "chainName": "Shrapnel Subnet",
+    "interoperableAddressHex": "0x000100000207fc00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "2044",
+      "url": "https://www.shrapnel.com/",
+      "avatar": "images/avatars/shrapnel-avatar.svg",
+      "com.x": "https://twitter.com/playSHRAPNEL"
+    }
+  },
+  {
+    "label": "chainbase",
+    "chainName": "Chainbase",
+    "interoperableAddressHex": "0x000100000208b900",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "2233",
+      "isTestnet": "true",
+      "url": "https://chainbase.com/",
+      "avatar": "images/avatars/chainbase-avatar.svg",
+      "com.x": "https://x.com/ChainbaseHQ"
+    }
+  },
+  {
+    "label": "fraxtal-testnet",
+    "chainName": "Fraxtal Testnet",
+    "interoperableAddressHex": "0x000100000209da00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "2522",
+      "isTestnet": "true",
+      "url": "https://www.frax.com",
+      "avatar": "images/avatars/fraxtal-testnet-avatar.svg",
+      "com.x": "https://x.com/fraxfinance",
+      "com.github": "https://github.com/FraxFinance"
+    }
+  },
+  {
+    "label": "aptm",
+    "chainName": "Apertum",
+    "interoperableAddressHex": "0x00010000020ae200",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "2786",
+      "url": "https://www.apertum.io/",
+      "avatar": "images/avatars/aptm-avatar.png",
+      "com.x": "https://x.com/Apertum_io"
+    }
+  },
+  {
+    "label": "morph",
+    "chainName": "Morph",
+    "interoperableAddressHex": "0x00010000020b0200",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "2818",
+      "url": "https://www.morphl2.io/",
+      "avatar": "images/avatars/morph-avatar.svg",
+      "com.github": "https://github.com/morph-l2/morph/",
+      "com.x": "https://x.com/Morphl2"
+    }
+  },
+  {
+    "label": "3ull",
+    "chainName": "PLAYA3ULL GAMES",
+    "interoperableAddressHex": "0x00010000020bc300",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "3011",
+      "url": "https://playa3ull.games",
+      "avatar": "images/avatars/3ull-avatar.svg",
+      "com.x": "https://x.com/PLAYA3ULL_GAMES"
+    }
+  },
+  {
+    "label": "playa3ull-games",
+    "chainName": "PLAYA3ULL Games",
+    "interoperableAddressHex": "0x00010000020bc400",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "3012",
+      "isTestnet": "true",
+      "url": "https://playa3ull.games",
+      "avatar": "images/avatars/playa3ull-games-avatar.svg",
+      "com.x": "https://x.com/PLAYA3ULL_GAMES"
+    }
+  },
+  {
+    "label": "nysl",
+    "chainName": "XL Network Testnet",
+    "interoperableAddressHex": "0x00010000020c0c00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "3084",
+      "isTestnet": "true",
+      "url": "https://www.nysl.io/",
+      "avatar": "images/avatars/nysl-avatar.png"
+    }
+  },
+  {
+    "label": "soshi",
+    "chainName": "Soshi",
+    "interoperableAddressHex": "0x00010000020cce00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "3278",
+      "isTestnet": "true",
+      "avatar": "images/avatars/soshi-avatar.svg"
+    }
+  },
+  {
+    "label": "botanix-testnet",
+    "chainName": "Botanix Testnet",
+    "interoperableAddressHex": "0x00010000020e3400",
+    "aliases": [
+      "btnxt"
+    ],
+    "textRecords": {
+      "chainId": "3636",
+      "isTestnet": "true",
+      "url": "https://www.botanixlabs.xyz/",
+      "avatar": "images/avatars/botanix-testnet-avatar.svg",
+      "com.x": "https://x.com/botanixlabs"
+    }
+  },
+  {
+    "label": "botanix",
+    "chainName": "Botanix",
+    "interoperableAddressHex": "0x00010000020e3500",
+    "aliases": [
+      "btnx"
+    ],
+    "textRecords": {
+      "chainId": "3637",
+      "url": "https://www.botanixlabs.xyz/",
+      "avatar": "images/avatars/botanix-avatar.svg",
+      "com.x": "https://x.com/botanixlabs"
+    }
+  },
+  {
+    "label": "dos-chain-testnet",
+    "chainName": "DOS Chain Testnet",
+    "interoperableAddressHex": "0x00010000020f6300",
+    "aliases": [
+      "dost"
+    ],
+    "textRecords": {
+      "chainId": "3939",
+      "isTestnet": "true",
+      "url": "https://doschain.com",
+      "avatar": "images/avatars/dos-chain-testnet-avatar.svg",
+      "com.github": "https://github.com/DOSLabs/DOS",
+      "com.x": "https://x.com/DOS_Chain"
+    }
+  },
+  {
+    "label": "nexus-iii",
+    "chainName": "Nexus III",
+    "interoperableAddressHex": "0x00010000020f6900",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "3945",
+      "isTestnet": "true",
+      "url": "https://nexus.xyz/",
+      "avatar": "images/avatars/nexus-iii-avatar.svg",
+      "com.github": "https://github.com/nexus-xyz/",
+      "com.x": "https://x.com/NexusLabs"
+    }
+  },
+  {
+    "label": "lisk-sepolia",
+    "chainName": "Lisk Sepolia",
+    "interoperableAddressHex": "0x0001000002106a00",
+    "aliases": [
+      "lisksep"
+    ],
+    "textRecords": {
+      "chainId": "4202",
+      "isTestnet": "true",
+      "url": "https://lisk.com/",
+      "avatar": "images/avatars/lisk-sepolia-avatar.svg",
+      "com.x": "https://twitter.com/LiskHQ",
+      "com.github": "https://github.com/LiskHQ"
+    }
+  },
+  {
+    "label": "hashfire",
+    "chainName": "Hashfire",
+    "interoperableAddressHex": "0x0001000002108300",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "4227",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "artery",
+    "chainName": "Artery",
+    "interoperableAddressHex": "0x000100000210d900",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "4313"
+    }
+  },
+  {
+    "label": "beam",
+    "chainName": "Beam",
+    "interoperableAddressHex": "0x000100000210f100",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "4337",
+      "url": "https://www.onbeam.com/",
+      "avatar": "images/avatars/beam-avatar.svg",
+      "com.x": "https://twitter.com/buildonbeam"
+    }
+  },
+  {
+    "label": "orderly-sepolia",
+    "chainName": "Orderly Sepolia",
+    "interoperableAddressHex": "0x0001000002116c00",
+    "aliases": [
+      "orderlyl2"
+    ],
+    "textRecords": {
+      "chainId": "4460",
+      "isTestnet": "true",
+      "url": "https://orderly.network",
+      "avatar": "images/avatars/orderly-sepolia-avatar.svg",
+      "com.github": "https://github.com/OrderlyNetwork",
+      "com.x": "https://x.com/OrderlyNetwork"
+    }
+  },
+  {
+    "label": "mantle",
+    "chainName": "Mantle",
+    "interoperableAddressHex": "0x0001000002138800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "5000",
+      "url": "https://docs.mantle.xyz/network",
+      "avatar": "images/avatars/mantle-avatar.svg",
+      "com.x": "https://x.com/0xMantle"
+    }
+  },
+  {
+    "label": "onigiritest",
+    "chainName": "ONIGIRI Test Subnet",
+    "interoperableAddressHex": "0x000100000213af00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "5039",
+      "isTestnet": "true",
+      "url": "https://onigiricatcoin.xyz/",
+      "com.x": "https://x.com/onigiricat_erc"
+    }
+  },
+  {
+    "label": "onigiri",
+    "chainName": "ONIGIRI Subnet",
+    "interoperableAddressHex": "0x000100000213b000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "5040",
+      "url": "https://onigiricatcoin.xyz/",
+      "com.x": "https://x.com/onigiricat_erc"
+    }
+  },
+  {
+    "label": "citrea-testnet",
+    "chainName": "Citrea Testnet",
+    "interoperableAddressHex": "0x000100000213fb00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "5115",
+      "isTestnet": "true",
+      "url": "https://citrea.xyz/",
+      "avatar": "images/avatars/citrea-testnet-avatar.svg",
+      "com.x": "https://twitter.com/citrea_xyz",
+      "com.github": "https://github.com/chainwayxyz/citrea"
+    }
+  },
+  {
+    "label": "superseed",
+    "chainName": "Superseed",
+    "interoperableAddressHex": "0x000100000214d200",
+    "aliases": [
+      "sseed"
+    ],
+    "textRecords": {
+      "chainId": "5330",
+      "url": "https://www.superseed.xyz/",
+      "avatar": "images/avatars/superseed-avatar.svg",
+      "com.github": "https://github.com/superseed-xyz",
+      "com.x": "https://x.com/superseedxyz/"
+    }
+  },
+  {
+    "label": "straitsx",
+    "chainName": "StraitsX",
+    "interoperableAddressHex": "0x000100000215be00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "5566",
+      "url": "https://www.straitsx.com/",
+      "avatar": "images/avatars/straitsx-avatar.svg",
+      "com.x": "https://x.com/straitsx"
+    }
+  },
+  {
+    "label": "uptn",
+    "chainName": "UPTN",
+    "interoperableAddressHex": "0x000100000217e700",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "6119",
+      "url": "https://www.uptn.io",
+      "avatar": "images/avatars/uptn-avatar.svg",
+      "com.x": "https://x.com/UPTN_official"
+    }
+  },
+  {
+    "label": "kalichain",
+    "chainName": "Kalichain",
+    "interoperableAddressHex": "0x0001000002198500",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "6533"
+    }
+  },
+  {
+    "label": "nibiru",
+    "chainName": "Nibiru",
+    "interoperableAddressHex": "0x00010000021af400",
+    "aliases": [
+      "cataclysm-1"
+    ],
+    "textRecords": {
+      "chainId": "6900",
+      "url": "https://nibiru.fi/",
+      "avatar": "images/avatars/nibiru-avatar.svg",
+      "com.x": "https://x.com/NibiruChain"
+    }
+  },
+  {
+    "label": "nibiru-testnet-2",
+    "chainName": "Nibiru testnet-2",
+    "interoperableAddressHex": "0x00010000021aff00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "6911",
+      "isTestnet": "true",
+      "url": "https://nibiru.fi/",
+      "avatar": "images/avatars/nibiru-testnet-2-avatar.svg",
+      "com.x": "https://x.com/NibiruChain"
+    }
+  },
+  {
+    "label": "mintus",
+    "chainName": "Mintus",
+    "interoperableAddressHex": "0x00010000021ed600",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "7894",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "dos-chain",
+    "chainName": "DOS Chain",
+    "interoperableAddressHex": "0x00010000021f2b00",
+    "aliases": [
+      "dos"
+    ],
+    "textRecords": {
+      "chainId": "7979",
+      "url": "https://doschain.com",
+      "avatar": "images/avatars/dos-chain-avatar.svg",
+      "com.github": "https://github.com/DOSLabs/DOS",
+      "com.x": "https://x.com/DOS_Chain"
+    }
+  },
+  {
+    "label": "polynomial",
+    "chainName": "Polynomial",
+    "interoperableAddressHex": "0x00010000021f4800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "8008",
+      "url": "https://www.polynomial.fi",
+      "avatar": "images/avatars/polynomial-avatar.svg",
+      "com.x": "https://x.com/polynomialfi"
+    }
+  },
+  {
+    "label": "numine",
+    "chainName": "Numine",
+    "interoperableAddressHex": "0x00010000021f5500",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "8021"
+    }
+  },
+  {
+    "label": "space",
+    "chainName": "Space Subnet",
+    "interoperableAddressHex": "0x0001000002202300",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "8227",
+      "url": "https://subnets.avax.network/space"
+    }
+  },
+  {
+    "label": "base",
+    "chainName": "Base",
+    "interoperableAddressHex": "0x0001000002210500",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "8453",
+      "url": "https://www.base.org/",
+      "avatar": "images/avatars/base-avatar.svg",
+      "com.x": "https://x.com/base",
+      "com.github": "https://github.com/base-org"
+    }
+  },
+  {
+    "label": "animalia",
+    "chainName": "Animalia",
+    "interoperableAddressHex": "0x0001000002225300",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "8787",
+      "url": "https://animalia.games/",
+      "com.x": "https://x.com/Animalia_games"
+    }
+  },
+  {
+    "label": "plasma",
+    "chainName": "Plasma",
+    "interoperableAddressHex": "0x0001000002261100",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "9745",
+      "url": "https://plasma.to/",
+      "avatar": "images/avatars/plasma-avatar.svg",
+      "com.x": "https://x.com/Plasma"
+    }
+  },
+  {
+    "label": "plasma-testnet",
+    "chainName": "Plasma Testnet",
+    "interoperableAddressHex": "0x0001000002261200",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "9746",
+      "isTestnet": "true",
+      "url": "https://plasma.to/",
+      "avatar": "images/avatars/plasma-testnet-avatar.svg",
+      "com.x": "https://x.com/Plasma"
+    }
+  },
+  {
+    "label": "innovo",
+    "chainName": "Innovo",
+    "interoperableAddressHex": "0x0001000002273400",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "10036"
+    }
+  },
+  {
+    "label": "jade",
+    "chainName": "Numbers Mainnet",
+    "interoperableAddressHex": "0x0001000002290b00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "10507",
+      "url": "https://www.numbersprotocol.io/",
+      "avatar": "images/avatars/jade-avatar.svg",
+      "com.x": "https://twitter.com/numbersprotocol",
+      "com.github": "https://github.com/numbersprotocol"
+    }
+  },
+  {
+    "label": "lamina1",
+    "chainName": "Lamina1",
+    "interoperableAddressHex": "0x00010000022a6100",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "10849",
+      "url": "https://lamina1.com/home",
+      "avatar": "images/avatars/lamina1-avatar.svg",
+      "com.x": "https://x.com/Lamina1official"
+    }
+  },
+  {
+    "label": "lamina1id",
+    "chainName": "Lamina1 Identity",
+    "interoperableAddressHex": "0x00010000022a6200",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "10850",
+      "url": "https://www.lamina1.com/"
+    }
+  },
+  {
+    "label": "gameswift-chain-testnet",
+    "chainName": "GameSwift Chain Testnet",
+    "interoperableAddressHex": "0x00010000022a8800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "10888",
+      "isTestnet": "true",
+      "url": "https://gameswift.io/",
+      "avatar": "images/avatars/gameswift-chain-testnet-avatar.svg",
+      "com.github": "https://github.com/gswiftcommunity",
+      "com.x": "https://twitter.com/gameswift_io"
+    }
+  },
+  {
+    "label": "jiritsutes",
+    "chainName": "Jiritsu Testnet Subnet",
+    "interoperableAddressHex": "0x00010000022bdb00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "11227",
+      "isTestnet": "true",
+      "url": "https://jiritsu.network"
+    }
+  },
+  {
+    "label": "qchain",
+    "chainName": "QChain",
+    "interoperableAddressHex": "0x00010000022f7600",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "12150",
+      "url": "https://subnets.avax.network/qchain",
+      "avatar": "images/avatars/qchain-avatar.svg",
+      "com.x": "https://x.com/Quboid_HQ"
+    }
+  },
+  {
+    "label": "fifa-blockchain",
+    "chainName": "Fifa Blockchain",
+    "interoperableAddressHex": "0x0001000002340a00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "13322"
+    }
+  },
+  {
+    "label": "beam-testnet",
+    "chainName": "Beam Testnet",
+    "interoperableAddressHex": "0x0001000002341900",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "13337",
+      "isTestnet": "true",
+      "url": "https://www.onbeam.com/",
+      "avatar": "images/avatars/beam-testnet-avatar.svg",
+      "com.x": "https://twitter.com/buildonbeam"
+    }
+  },
+  {
+    "label": "mythgames",
+    "chainName": "Mythgames",
+    "interoperableAddressHex": "0x0001000002350800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "13576",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "pecorino",
+    "chainName": "Pecorino",
+    "interoperableAddressHex": "0x0001000002375e00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "14174",
+      "isTestnet": "true",
+      "url": "https://signet.sh/",
+      "avatar": "images/avatars/pecorino-avatar.svg"
+    }
+  },
+  {
+    "label": "plyr-phi",
+    "chainName": "PLYR PHI",
+    "interoperableAddressHex": "0x00010000023f3400",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "16180",
+      "url": "https://plyr.network/",
+      "com.x": "https://x.com/OnPlyr"
+    }
+  },
+  {
+    "label": "holesky",
+    "chainName": "Holesky",
+    "interoperableAddressHex": "0x0001000002426800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "17000",
+      "isTestnet": "true",
+      "url": "https://ethereum.org/en/",
+      "avatar": "images/avatars/holesky-avatar.svg",
+      "com.github": "https://github.com/ethereum/ethereum-org-website",
+      "com.x": "https://twitter.com/ethdotorg"
+    }
+  },
+  {
+    "label": "tradex",
+    "chainName": "Tradex",
+    "interoperableAddressHex": "0x0001000002522000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "21024",
+      "url": "https://www.tradexapp.co/Home",
+      "com.x": "https://x.com/TradeXApp"
+    }
+  },
+  {
+    "label": "omc",
+    "chainName": "omChain Mainnet",
+    "interoperableAddressHex": "0x0001000002553800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "21816",
+      "isTestnet": "true",
+      "url": "https://frqtal.gitbook.io/app"
+    }
+  },
+  {
+    "label": "stealthnet",
+    "chainName": "Stealthnet",
+    "interoperableAddressHex": "0x00010000025dca00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "24010",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "zeroonemai",
+    "chainName": "zeroone Mainnet Subnet",
+    "interoperableAddressHex": "0x00010000026cb300",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "27827",
+      "url": "https://zeroone.art/"
+    }
+  },
+  {
+    "label": "blockticity",
+    "chainName": "Blockticity",
+    "interoperableAddressHex": "0x00010000026f7200",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "28530"
+    }
+  },
+  {
+    "label": "boba-sepolia",
+    "chainName": "Boba Sepolia",
+    "interoperableAddressHex": "0x000100000270d200",
+    "aliases": [
+      "bobasepolia"
+    ],
+    "textRecords": {
+      "chainId": "28882",
+      "isTestnet": "true",
+      "url": "https://boba.network/",
+      "avatar": "images/avatars/boba-sepolia-avatar.svg",
+      "com.x": "https://twitter.com/bobanetwork",
+      "com.github": "https://github.com/bobanetwork"
+    }
+  },
+  {
+    "label": "feature",
+    "chainName": "Feature",
+    "interoperableAddressHex": "0x0001000002821f00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "33311"
+    }
+  },
+  {
+    "label": "mode-mainnet",
+    "chainName": "Mode Mainnet",
+    "interoperableAddressHex": "0x0001000002868b00",
+    "aliases": [
+      "mode"
+    ],
+    "textRecords": {
+      "chainId": "34443",
+      "url": "https://www.mode.network/",
+      "avatar": "images/avatars/mode-mainnet-avatar.svg",
+      "com.x": "https://x.com/modenetwork"
+    }
+  },
+  {
+    "label": "arbitrum",
+    "chainName": "Arbitrum One",
+    "interoperableAddressHex": "0x0001000002a4b100",
+    "aliases": [
+      "arb1",
+      "arb",
+      "arbitrum-one"
+    ],
+    "textRecords": {
+      "chainId": "42161",
+      "url": "https://docs.arbitrum.io/welcome/get-started",
+      "avatar": "images/avatars/arbitrum-one-avatar.svg",
+      "com.x": "https://twitter.com/arbitrum"
+    }
+  },
+  {
+    "label": "avalanche-fuji",
+    "chainName": "Avalanche Fuji",
+    "interoperableAddressHex": "0x0001000002a86900",
+    "aliases": [
+      "fuji"
+    ],
+    "textRecords": {
+      "chainId": "43113",
+      "isTestnet": "true",
+      "url": "https://www.avax.network",
+      "avatar": "images/avatars/avalanche-fuji-avatar.svg",
+      "com.x": "https://twitter.com/avax"
+    }
+  },
+  {
+    "label": "avalanche",
+    "chainName": "Avalanche",
+    "interoperableAddressHex": "0x0001000002a86a00",
+    "aliases": [
+      "avax"
+    ],
+    "textRecords": {
+      "chainId": "43114",
+      "url": "https://www.avax.network",
+      "avatar": "images/avatars/avalanche-avatar.svg",
+      "com.x": "https://twitter.com/avax"
+    }
+  },
+  {
+    "label": "gunz-mainnet",
+    "chainName": "Gunz Mainnet",
+    "interoperableAddressHex": "0x0001000002a99b00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "43419",
+      "url": "https://gunbygunz.com/",
+      "avatar": "images/avatars/gunz-mainnet-avatar.svg",
+      "com.x": "https://twitter.com/GUNbyGunz"
+    }
+  },
+  {
+    "label": "armada",
+    "chainName": "Armada",
+    "interoperableAddressHex": "0x0001000002b86800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "47208",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "spacetestnet",
+    "chainName": "Space Subnet Testnet",
+    "interoperableAddressHex": "0x0001000002be9b00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "48795",
+      "isTestnet": "true",
+      "url": "https://subnets.avax.network/space",
+      "avatar": "images/avatars/spacetestnet-avatar.svg"
+    }
+  },
+  {
+    "label": "stork",
+    "chainName": "GUNZ Testnet",
+    "interoperableAddressHex": "0x0001000002c0a900",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "49321",
+      "isTestnet": "true",
+      "url": "https://gunbygunz.com/",
+      "avatar": "images/avatars/stork-avatar.svg",
+      "com.x": "https://x.com/GUNbyGunz"
+    }
+  },
+  {
+    "label": "sophon",
+    "chainName": "Sophon",
+    "interoperableAddressHex": "0x0001000002c3b800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "50104",
+      "url": "https://sophon.xyz",
+      "avatar": "images/avatars/sophon-avatar.svg",
+      "com.x": "https://twitter.com/sophon",
+      "com.github": "https://github.com/sophon-org"
+    }
+  },
+  {
+    "label": "dsrv2",
+    "chainName": "DSRV2",
+    "interoperableAddressHex": "0x0001000002cfc400",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "53188",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "superseed-sepolia",
+    "chainName": "Superseed Sepolia",
+    "interoperableAddressHex": "0x0001000002d03600",
+    "aliases": [
+      "seedsep"
+    ],
+    "textRecords": {
+      "chainId": "53302",
+      "isTestnet": "true",
+      "url": "https://www.superseed.xyz/",
+      "avatar": "images/avatars/superseed-sepolia-avatar.svg",
+      "com.github": "https://github.com/superseed-xyz",
+      "com.x": "https://x.com/superseedxyz/"
+    }
+  },
+  {
+    "label": "dfk-chain",
+    "chainName": "DFK Chain",
+    "interoperableAddressHex": "0x0001000002d2af00",
+    "aliases": [
+      "dfk"
+    ],
+    "textRecords": {
+      "chainId": "53935",
+      "url": "https://defikingdoms.com",
+      "avatar": "images/avatars/dfk-chain-avatar.svg",
+      "com.x": "https://twitter.com/DefiKingdoms"
+    }
+  },
+  {
+    "label": "innovomark",
+    "chainName": "Innovomark",
+    "interoperableAddressHex": "0x0001000002d48e00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "54414",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "egmtester",
+    "chainName": "Egmtester",
+    "interoperableAddressHex": "0x0001000002d79d00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "55197",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "bobabnb",
+    "chainName": "Boba BNB Mainnet",
+    "interoperableAddressHex": "0x0001000002dbe000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "56288",
+      "url": "https://boba.network/",
+      "avatar": "images/avatars/bobabnb-avatar.svg",
+      "com.x": "https://twitter.com/bobanetwork",
+      "com.github": "https://github.com/bobanetwork"
+    }
+  },
+  {
+    "label": "testnetzer",
+    "chainName": "Testnet Zeroone Subnet",
+    "interoperableAddressHex": "0x0001000002dc5000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "56400",
+      "isTestnet": "true",
+      "url": "https://zeroone.art/"
+    }
+  },
+  {
+    "label": "ink",
+    "chainName": "Ink",
+    "interoperableAddressHex": "0x0001000002def100",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "57073",
+      "url": "https://inkonchain.com/",
+      "avatar": "images/avatars/ink-avatar.svg",
+      "com.x": "https://x.com/inkonchain",
+      "com.github": "https://github.com/inkonchain"
+    }
+  },
+  {
+    "label": "lifeaiv1",
+    "chainName": "Lifeaiv1",
+    "interoperableAddressHex": "0x0001000002e81100",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "59409",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "insomnia",
+    "chainName": "Insomnia",
+    "interoperableAddressHex": "0x0001000002ea1c00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "59932",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "growth",
+    "chainName": "Growth",
+    "interoperableAddressHex": "0x0001000002f09300",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "61587"
+    }
+  },
+  {
+    "label": "lucid",
+    "chainName": "Lucid",
+    "interoperableAddressHex": "0x0001000002f43900",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "62521"
+    }
+  },
+  {
+    "label": "plyr-tau-testnet",
+    "chainName": "PLYR TAU Testnet",
+    "interoperableAddressHex": "0x0001000002f56f00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "62831",
+      "isTestnet": "true",
+      "url": "https://plyr.network/",
+      "com.x": "https://x.com/OnPlyr"
+    }
+  },
+  {
+    "label": "henesys",
+    "chainName": "Henesys",
+    "interoperableAddressHex": "0x0001000003010b3e00",
+    "aliases": [
+      "nxpc"
+    ],
+    "textRecords": {
+      "chainId": "68414",
+      "url": "https://nexpace.io",
+      "avatar": "images/avatars/henesys-avatar.png"
+    }
+  },
+  {
+    "label": "ceden",
+    "chainName": "Ceden",
+    "interoperableAddressHex": "0x000100000301104000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "69696",
+      "isTestnet": "true",
+      "url": "https://www.ceden.network/",
+      "com.x": "https://twitter.com/Ceden_Network"
+    }
+  },
+  {
+    "label": "barret",
+    "chainName": "Barret",
+    "interoperableAddressHex": "0x000100000301149000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "70800",
+      "isTestnet": "true",
+      "url": "https://www.proofofplay.com/",
+      "avatar": "images/avatars/barret-avatar.svg",
+      "com.x": "https://x.com/ProofOfPlay/"
+    }
+  },
+  {
+    "label": "cloud",
+    "chainName": "Cloud",
+    "interoperableAddressHex": "0x000100000301149500",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "70805",
+      "isTestnet": "true",
+      "url": "https://www.proofofplay.com/",
+      "avatar": "images/avatars/cloud-avatar.svg",
+      "com.x": "https://x.com/ProofOfPlay/"
+    }
+  },
+  {
+    "label": "hiss",
+    "chainName": "Hiss",
+    "interoperableAddressHex": "0x0001000003012bc000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "76736",
+      "isTestnet": "true",
+      "avatar": "images/avatars/hiss-avatar.svg"
+    }
+  },
+  {
+    "label": "lucid-testnet",
+    "chainName": "Lucid",
+    "interoperableAddressHex": "0x00010000030136c200",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "79554",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "modex",
+    "chainName": "Modex",
+    "interoperableAddressHex": "0x000100000301374500",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "79685",
+      "isTestnet": "true",
+      "url": "https://modex.tech/",
+      "com.x": "https://twitter.com/modex_tech"
+    }
+  },
+  {
+    "label": "polynomia-sepolia",
+    "chainName": "Polynomia Sepolia",
+    "interoperableAddressHex": "0x000100000301388800",
+    "aliases": [
+      "polynomialsepolia"
+    ],
+    "textRecords": {
+      "chainId": "80008",
+      "isTestnet": "true",
+      "url": "https://www.polynomial.fi",
+      "avatar": "images/avatars/polynomia-sepolia-avatar.svg",
+      "com.x": "https://x.com/polynomialfi"
+    }
+  },
+  {
+    "label": "berachain-bepolia",
+    "chainName": "Berachain Bepolia",
+    "interoperableAddressHex": "0x00010000030138c500",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "80069",
+      "isTestnet": "true",
+      "url": "https://www.berachain.com/",
+      "avatar": "images/avatars/berachain-bepolia-avatar.svg",
+      "com.x": "https://x.com/berachain",
+      "com.github": "https://github.com/berachain"
+    }
+  },
+  {
+    "label": "berachain-artio",
+    "chainName": "Berachain Artio",
+    "interoperableAddressHex": "0x00010000030138d500",
+    "aliases": [
+      "berachainartio"
+    ],
+    "textRecords": {
+      "chainId": "80085",
+      "isTestnet": "true",
+      "url": "https://www.berachain.com/",
+      "avatar": "images/avatars/berachain-artio-avatar.svg",
+      "com.x": "https://x.com/berachain",
+      "com.github": "https://github.com/berachain"
+    }
+  },
+  {
+    "label": "berachain",
+    "chainName": "Berachain",
+    "interoperableAddressHex": "0x00010000030138de00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "80094",
+      "url": "https://www.berachain.com/",
+      "avatar": "images/avatars/berachain-avatar.svg",
+      "com.x": "https://x.com/berachain",
+      "com.github": "https://github.com/berachain"
+    }
+  },
+  {
+    "label": "blast",
+    "chainName": "Blast",
+    "interoperableAddressHex": "0x0001000003013e3100",
+    "aliases": [
+      "blastmainnet"
+    ],
+    "textRecords": {
+      "chainId": "81457",
+      "url": "https://blast.io/en",
+      "avatar": "images/avatars/blast-avatar.svg",
+      "com.x": "https://twitter.com/Blast"
+    }
+  },
+  {
+    "label": "titan",
+    "chainName": "Titan",
+    "interoperableAddressHex": "0x000100000301498600",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "84358"
+    }
+  },
+  {
+    "label": "base-sepolia",
+    "chainName": "Base Sepolia",
+    "interoperableAddressHex": "0x0001000003014a3400",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "84532",
+      "isTestnet": "true",
+      "url": "https://www.base.org/",
+      "avatar": "images/avatars/base-sepolia-avatar.svg",
+      "com.x": "https://x.com/base",
+      "com.github": "https://github.com/base-org"
+    }
+  },
+  {
+    "label": "chiliz-spicy-testnet",
+    "chainName": "Chiliz Spicy Testnet",
+    "interoperableAddressHex": "0x0001000003015b3200",
+    "aliases": [
+      "chzspicy"
+    ],
+    "textRecords": {
+      "chainId": "88882",
+      "isTestnet": "true",
+      "url": "https://www.chiliz.com/",
+      "avatar": "images/avatars/chiliz-spicy-testnet-avatar.svg",
+      "com.github": "https://github.com/chiliz-chain/v2",
+      "com.x": "https://twitter.com/chiliz/"
+    }
+  },
+  {
+    "label": "chiliz-chain",
+    "chainName": "Chiliz Chain",
+    "interoperableAddressHex": "0x0001000003015b3800",
+    "aliases": [
+      "chzmainnet"
+    ],
+    "textRecords": {
+      "chainId": "88888",
+      "url": "https://www.chiliz.com/",
+      "avatar": "images/avatars/chiliz-chain-avatar.svg",
+      "com.github": "https://github.com/chiliz-chain/v2",
+      "com.x": "https://twitter.com/chiliz/"
+    }
+  },
+  {
+    "label": "delaunch",
+    "chainName": "Delaunch",
+    "interoperableAddressHex": "0x0001000003017a1200",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "96786"
+    }
+  },
+  {
+    "label": "growth-testnet",
+    "chainName": "Growth",
+    "interoperableAddressHex": "0x0001000003017c9900",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "97433",
+      "isTestnet": "true"
+    }
+  },
+  {
+    "label": "mitosis",
+    "chainName": "Mitosis",
+    "interoperableAddressHex": "0x000100000301e79000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "124816",
+      "url": "https://mitosis.org/",
+      "avatar": "images/avatars/mitosis-avatar.svg",
+      "com.x": "https://x.com/MitosisOrg"
+    }
+  },
+  {
+    "label": "bitcoinl1",
+    "chainName": "BitcoinL1",
+    "interoperableAddressHex": "0x00010000030203a800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "132008",
+      "isTestnet": "true",
+      "avatar": "images/avatars/bitcoinl1-avatar.png"
+    }
+  },
+  {
+    "label": "taiko-katla-alpha-6-testnet",
+    "chainName": "Taiko Katla (Alpha-6 Testnet)",
+    "interoperableAddressHex": "0x0001000003028c6000",
+    "aliases": [
+      "tko-katla"
+    ],
+    "textRecords": {
+      "chainId": "167008",
+      "isTestnet": "true",
+      "url": "https://taiko.xyz/",
+      "avatar": "images/avatars/taiko-katla-alpha-6-testnet-avatar.svg"
+    }
+  },
+  {
+    "label": "taiko-hekla-l2",
+    "chainName": "Taiko Hekla L2",
+    "interoperableAddressHex": "0x0001000003028c6100",
+    "aliases": [
+      "tko-hekla"
+    ],
+    "textRecords": {
+      "chainId": "167009",
+      "isTestnet": "true",
+      "url": "https://taiko.xyz/",
+      "avatar": "images/avatars/taiko-hekla-l2-avatar.svg",
+      "com.github": "https://github.com/taikoxyz",
+      "com.x": "https://x.com/taikoxyz"
+    }
+  },
+  {
+    "label": "echo",
+    "chainName": "Echo",
+    "interoperableAddressHex": "0x000100000302a6b600",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "173750",
+      "isTestnet": "true",
+      "url": "https://www.avax.network",
+      "avatar": "images/avatars/echo-avatar.svg",
+      "com.x": "https://twitter.com/avax"
+    }
+  },
+  {
+    "label": "stavax",
+    "chainName": "Stavax",
+    "interoperableAddressHex": "0x000100000303377f00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "210815",
+      "isTestnet": "true",
+      "url": "https://stavax.io/"
+    }
+  },
+  {
+    "label": "arbitrum-sepolia",
+    "chainName": "Arbitrum Sepolia",
+    "interoperableAddressHex": "0x0001000003066eee00",
+    "aliases": [
+      "arb-sep"
+    ],
+    "textRecords": {
+      "chainId": "421614",
+      "isTestnet": "true",
+      "url": "https://arbitrum.io/",
+      "avatar": "images/avatars/arbitrum-sepolia-avatar.svg",
+      "com.github": "https://github.com/arbitrumfoundation/docs",
+      "com.x": "https://twitter.com/arbitrum"
+    }
+  },
+  {
+    "label": "dexalot-testnet",
+    "chainName": "Dexalot Subnet Testnet",
+    "interoperableAddressHex": "0x000100000306984900",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "432201",
+      "isTestnet": "true",
+      "url": "https://dexalot.com/",
+      "avatar": "images/avatars/dexalot-testnet-avatar.svg",
+      "com.x": "https://twitter.com/dexalotcom",
+      "com.github": "https://github.com/dexalot"
+    }
+  },
+  {
+    "label": "dexalot",
+    "chainName": "Dexalot Subnet",
+    "interoperableAddressHex": "0x000100000306984c00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "432204",
+      "url": "https://dexalot.com/",
+      "avatar": "images/avatars/dexalot-avatar.svg",
+      "com.github": "https://github.com/dexalot"
+    }
+  },
+  {
+    "label": "eclipset",
+    "chainName": "Eclipse Testnet",
+    "interoperableAddressHex": "0x0001000003087a9200",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "555666",
+      "isTestnet": "true",
+      "url": "https://www.eclipse.xyz/",
+      "avatar": "images/avatars/eclipset-avatar.svg",
+      "com.x": "https://x.com/EclipseFND"
+    }
+  },
+  {
+    "label": "hoodi",
+    "chainName": "Hoodi",
+    "interoperableAddressHex": "0x0001000003088bb000",
+    "aliases": [
+      "hoe"
+    ],
+    "textRecords": {
+      "chainId": "560048",
+      "isTestnet": "true",
+      "url": "https://ethereum.org/",
+      "avatar": "images/avatars/hoodi-avatar.png",
+      "com.github": "https://github.com/ethereum/ethereum-org-website",
+      "com.x": "https://x.com/ethdotorg"
+    }
+  },
+  {
+    "label": "tiltyardmainnet",
+    "chainName": "Tiltyard Mainnet Subnet",
+    "interoperableAddressHex": "0x00010000030ad71400",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "710420",
+      "url": "https://play.tiltyard.gg/",
+      "avatar": "images/avatars/tiltyardmainnet-avatar.svg",
+      "com.x": "https://x.com/tiltyard_gg"
+    }
+  },
+  {
+    "label": "tixchain",
+    "chainName": "TixChain Testnet",
+    "interoperableAddressHex": "0x00010000030b08a300",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "723107",
+      "isTestnet": "true",
+      "url": "https://subnets-test.avax.network/tixchain/details"
+    }
+  },
+  {
+    "label": "ink-sepolia",
+    "chainName": "Ink Sepolia",
+    "interoperableAddressHex": "0x00010000030ba5ed00",
+    "aliases": [
+      "inksepolia"
+    ],
+    "textRecords": {
+      "chainId": "763373",
+      "isTestnet": "true",
+      "url": "https://inkonchain.com/",
+      "avatar": "images/avatars/ink-sepolia-avatar.svg",
+      "com.x": "https://x.com/inkonchain",
+      "com.github": "https://github.com/inkonchain"
+    }
+  },
+  {
+    "label": "dispatch",
+    "chainName": "Dispatch",
+    "interoperableAddressHex": "0x00010000030be59800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "779672",
+      "isTestnet": "true",
+      "url": "https://www.avax.network",
+      "avatar": "images/avatars/dispatch-avatar.svg",
+      "com.x": "https://twitter.com/avax"
+    }
+  },
+  {
+    "label": "jsc-kaigan",
+    "chainName": "JSC Kaigan",
+    "interoperableAddressHex": "0x000100000350893000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "5278000",
+      "isTestnet": "true",
+      "avatar": "images/avatars/jsc-kaigan-avatar.svg"
+    }
+  },
+  {
+    "label": "zora",
+    "chainName": "Zora",
+    "interoperableAddressHex": "0x000100000376adf100",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "7777777",
+      "url": "https://zora.co",
+      "avatar": "images/avatars/zora-avatar.svg",
+      "com.x": "https://x.com/zora"
+    }
+  },
+  {
+    "label": "sepolia",
+    "chainName": "Sepolia",
+    "interoperableAddressHex": "0x0001000003aa36a700",
+    "aliases": [
+      "sep"
+    ],
+    "textRecords": {
+      "chainId": "11155111",
+      "isTestnet": "true",
+      "url": "https://ethereum.org/en/",
+      "avatar": "images/avatars/sepolia-avatar.svg",
+      "com.github": "https://github.com/ethereum/ethereum-org-website",
+      "com.x": "https://x.com/ethdotorg"
+    }
+  },
+  {
+    "label": "op-sepolia",
+    "chainName": "OP Sepolia",
+    "interoperableAddressHex": "0x0001000003aa37dc00",
+    "aliases": [
+      "opsep"
+    ],
+    "textRecords": {
+      "chainId": "11155420",
+      "isTestnet": "true",
+      "url": "https://www.optimism.io/",
+      "avatar": "images/avatars/op-sepolia-avatar.svg",
+      "com.github": "https://github.com/ethereum-optimism/",
+      "com.x": "https://twitter.com/optimismpbc"
+    }
+  },
+  {
+    "label": "swan-proxima-testnet",
+    "chainName": "Swan Proxima Testnet",
+    "interoperableAddressHex": "0x00010000040134daed00",
+    "aliases": [
+      "proxima"
+    ],
+    "textRecords": {
+      "chainId": "20241133",
+      "isTestnet": "true",
+      "url": "https://www.proximachain.app/",
+      "avatar": "images/avatars/swan-proxima-testnet-avatar.svg"
+    }
+  },
+  {
+    "label": "corn",
+    "chainName": "Corn",
+    "interoperableAddressHex": "0x000100000401406f4000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "21000000",
+      "url": "https://usecorn.com/",
+      "avatar": "images/avatars/corn-avatar.svg",
+      "com.x": "https://x.com/use_corn",
+      "com.github": "https://github.com/usecorn"
+    }
+  },
+  {
+    "label": "corn-testnet",
+    "chainName": "Corn Testnet",
+    "interoperableAddressHex": "0x000100000401406f4100",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "21000001",
+      "isTestnet": "true",
+      "url": "https://usecorn.com/",
+      "avatar": "images/avatars/corn-testnet-avatar.svg",
+      "com.x": "https://x.com/use_corn",
+      "com.github": "https://github.com/usecorn"
+    }
+  },
+  {
+    "label": "blast-sepolia",
+    "chainName": "Blast Sepolia",
+    "interoperableAddressHex": "0x00010000040a0c71fd00",
+    "aliases": [
+      "blastsepolia"
+    ],
+    "textRecords": {
+      "chainId": "168587773",
+      "isTestnet": "true",
+      "url": "https://blast.io/en",
+      "avatar": "images/avatars/blast-sepolia-avatar.svg",
+      "com.x": "https://twitter.com/Blast"
+    }
+  },
+  {
+    "label": "alpha-0",
+    "chainName": "Alpha 0",
+    "interoperableAddressHex": "0x0001000004190a85c000",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "420120000",
+      "isTestnet": "true",
+      "url": "https://www.optimism.io/",
+      "avatar": "images/avatars/alpha-0-avatar.svg"
+    }
+  },
+  {
+    "label": "alpha-1",
+    "chainName": "Alpha 1",
+    "interoperableAddressHex": "0x0001000004190a85c100",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "420120001",
+      "isTestnet": "true",
+      "url": "https://www.optimism.io/",
+      "avatar": "images/avatars/alpha-1-avatar.svg"
+    }
+  },
+  {
+    "label": "paseohub",
+    "chainName": "PaseoHub",
+    "interoperableAddressHex": "0x0001000004190f1b4100",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "420420417",
+      "isTestnet": "true",
+      "avatar": "images/avatars/paseohub-avatar.svg"
+    }
+  },
+  {
+    "label": "westend-asset-hub",
+    "chainName": "Westend Asset Hub",
+    "interoperableAddressHex": "0x0001000004190f1b4500",
+    "aliases": [
+      "wst"
+    ],
+    "textRecords": {
+      "chainId": "420420421",
+      "isTestnet": "true",
+      "url": "https://wiki.polkadot.network/docs/en/maintain-networks#westend-test-network",
+      "avatar": "images/avatars/westend-asset-hub-avatar.svg"
+    }
+  },
+  {
+    "label": "sophon-testnet",
+    "chainName": "Sophon Testnet",
+    "interoperableAddressHex": "0x00010000041fa72e7800",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "531050104",
+      "isTestnet": "true",
+      "avatar": "images/avatars/sophon-testnet-avatar.svg"
+    }
+  },
+  {
+    "label": "sophon-os-testnet",
+    "chainName": "Sophon OS Testnet",
+    "interoperableAddressHex": "0x00010000041fa72edc00",
+    "aliases": [],
+    "textRecords": {
+      "chainId": "531050204",
+      "isTestnet": "true",
+      "avatar": "images/avatars/sophon-os-testnet-avatar.svg"
+    }
+  },
+  {
+    "label": "zora-sepolia",
+    "chainName": "Zora Sepolia",
+    "interoperableAddressHex": "0x00010000043b9ac9ff00",
+    "aliases": [
+      "zsep"
+    ],
+    "textRecords": {
+      "chainId": "999999999",
+      "isTestnet": "true",
+      "url": "https://zora.co",
+      "avatar": "images/avatars/zora-sepolia-avatar.svg",
+      "com.x": "https://x.com/zora"
+    }
+  }
+]
