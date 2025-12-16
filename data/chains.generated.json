@@ -26,7 +26,8 @@
       "url": "https://www.optimism.io/",
       "avatar": "images/avatars/op-mainnet-avatar.svg",
       "com.github": "https://github.com/ethereum-optimism",
-      "com.x": "https://twitter.com/optimism"
+      "com.x": "https://twitter.com/optimism",
+      "header": "images/optimism-header.png"
     }
   },
   {

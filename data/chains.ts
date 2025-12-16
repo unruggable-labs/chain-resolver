@@ -22,7 +22,7 @@ export interface ChainData {
 
 // List of Chains to register - imported from generated JSON
 // Run `npm run generate:chains:json` to regenerate the source data
-export const CHAINS: ChainData[] = generatedChains as ChainData[];
+export const CHAINS: ChainData[] = generatedChains as unknown as ChainData[];
 
 // Helper to get a chain by label
 export function getChainByLabel(label: string): ChainData | undefined {
