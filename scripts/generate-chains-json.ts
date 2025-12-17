@@ -77,6 +77,84 @@ function normalizeLabel(value: string | undefined | null): string | undefined {
     .replace(/^-|-$/g, ""); // Trim hyphens from start/end
 }
 
+// Helper to parse a numeric chainId from a textRecords["chainId"] value.
+// Supports both plain numeric IDs (e.g. "1") and CAIP-2 IDs (e.g. "eip155:1").
+function getNumericChainIdFromTextRecords(chain: OutputChain): number {
+  const raw = chain.textRecords["chainId"];
+  if (!raw) return NaN;
+
+  // If it's already numeric
+  if (/^[0-9]+$/.test(raw)) {
+    return Number(raw);
+  }
+
+  // CAIP-2 style: namespace:reference (e.g. "eip155:1")
+  const parts = raw.split(":");
+  const last = parts[parts.length - 1];
+  const num = Number(last);
+  return Number.isNaN(num) ? NaN : num;
+}
+
+// Map a social profile URL/type to an ENS text record key using reverse-DNS style.
+// In most cases this is simply "<tld>.<second-level-domain>", e.g. "com.github".
+// Special case: Twitter/X uses "com.x" instead of "com.twitter"/"com.x".
+function getSocialTextRecordKey(
+  type: string,
+  value: string,
+): string | null {
+  const lcType = type.toLowerCase();
+
+  let hostname = "";
+  try {
+    const url = new URL(value);
+    hostname = url.hostname.toLowerCase();
+    if (hostname.startsWith("www.")) {
+      hostname = hostname.slice(4);
+    }
+  } catch {
+    // Not a URL; fall through and try type-based matching only
+  }
+
+  // Special-case Twitter/X to use com.x
+  if (
+    lcType === "twitter" ||
+    hostname.endsWith("twitter.com") ||
+    hostname.endsWith("x.com")
+  ) {
+    return "com.x";
+  }
+
+  // Standardize Telegram to org.telegram
+  if (
+    lcType === "telegram" ||
+    hostname === "t.me" ||
+    hostname.endsWith("telegram.org")
+  ) {
+    return "org.telegram";
+  }
+
+  // Standardize Discord to com.discord
+  if (
+    lcType === "discord" ||
+    hostname.endsWith("discord.com") ||
+    hostname.endsWith("discord.gg")
+  ) {
+    return "com.discord";
+  }
+
+  // Generic case: derive key from hostname if available
+  if (hostname) {
+    const parts = hostname.split(".").filter(Boolean);
+    if (parts.length >= 2) {
+      const tld = parts[parts.length - 1];
+      const second = parts[parts.length - 2];
+      return `${tld}.${second}`;
+    }
+  }
+
+  return null;
+}
+
 // Helper function to download and save avatar image
 async function downloadAvatar(
   logoUrl: string,
@@ -265,9 +343,14 @@ async function main() {
     }
 
     const textRecords: Record<string, string> = {};
-    textRecords["chainId"] = String(chainId);
+    // CAIP-2-compliant chain identifier (namespace:reference)
+    // For EVM chains, this is always eip155:<chainId>
+    textRecords["chainId"] = `eip155:${chainId}`;
     if (testnetIds.has(chainId)) {
       textRecords["isTestnet"] = "true";
+    }
+    if (mini?.shortName) {
+      textRecords["shortName"] = mini.shortName;
     }
     
     // Extract URL from Routescan socialProfile "url" type, fallback to mini infoURL
@@ -292,14 +375,15 @@ async function main() {
       }
     }
 
-    // Extract social profile data
+    // Extract social profile data into ENS text records using reverse-DNS style keys
     if (r.socialProfile?.items) {
       for (const item of r.socialProfile.items) {
-        if (item.type === "twitter" && item.value) {
-          textRecords["com.x"] = item.value;
-        } else if (item.type === "github" && item.value) {
-          textRecords["com.github"] = item.value;
-        }
+        const value = item.value;
+        if (!value) continue;
+        const key = getSocialTextRecordKey(item.type, value);
+        // Skip if we couldn't derive a key, or if the value is identical to the primary URL
+        if (!key || value === textRecords["url"]) continue;
+        textRecords[key] = value;
       }
     }
 
@@ -350,10 +434,10 @@ async function main() {
     });
   }
 
-  // Sort by chainId for stability
+  // Sort by numeric chainId for stability (supports CAIP-2 chainId strings)
   output.sort((a, b) => {
-    const idA = Number(a.textRecords["chainId"]);
-    const idB = Number(b.textRecords["chainId"]);
+    const idA = getNumericChainIdFromTextRecords(a);
+    const idB = getNumericChainIdFromTextRecords(b);
     return idA - idB;
   });
 
@@ -372,10 +456,10 @@ async function main() {
     if (chains.length > 1) {
       // Check if there's a mix of mainnet and testnet
       const testnetChains = chains.filter((c) =>
-        testnetIds.has(Number(c.textRecords["chainId"]))
+        testnetIds.has(getNumericChainIdFromTextRecords(c))
       );
       const mainnetChains = chains.filter(
-        (c) => !testnetIds.has(Number(c.textRecords["chainId"]))
+        (c) => !testnetIds.has(getNumericChainIdFromTextRecords(c))
       );
 
       // If we have both mainnet and testnet with same label, add -testnet to testnets
@@ -400,7 +484,7 @@ async function main() {
   // Check for duplicate chainIds
   const chainIdCheckMap = new Map<number, OutputChain[]>();
   for (const chain of output) {
-    const chainId = Number(chain.textRecords["chainId"]);
+    const chainId = getNumericChainIdFromTextRecords(chain);
     if (!chainIdCheckMap.has(chainId)) {
       chainIdCheckMap.set(chainId, []);
     }
