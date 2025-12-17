@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#radial-gradient-5);
+      }
+
+      .cls-2 {
+        fill: url(#radial-gradient-4);
+      }
+
+      .cls-3 {
+        fill: url(#radial-gradient-3);
+      }
+
+      .cls-4 {
+        fill: url(#radial-gradient-2);
+      }
+
+      .cls-5 {
+        fill: url(#radial-gradient);
+      }
+
+      .cls-6 {
+        fill: url(#linear-gradient);
+      }
+
+      .cls-7 {
+        fill: #fff;
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="0" y1="150" x2="300" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6d6d6d"/>
+      <stop offset="1" stop-color="#d0ccc8"/>
+    </linearGradient>
+    <radialGradient id="radial-gradient" cx="130.805" cy="-2229.5" fx="130.805" fy="-2229.5" r="219.84" gradientTransform="translate(97.76 -742.016) scale(.4 -.4)" gradientUnits="userSpaceOnUse">
+      <stop offset=".1" stop-color="#fff" stop-opacity=".45"/>
+      <stop offset=".69" stop-color="#fff" stop-opacity=".27"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".2"/>
+    </radialGradient>
+    <radialGradient id="radial-gradient-2" cx="128.305" cy="-2224.51" fx="128.305" fy="-2224.51" r="185.64" gradientTransform="translate(97.76 -742.016) scale(.4 -.4)" gradientUnits="userSpaceOnUse">
+      <stop offset=".1" stop-color="#fff" stop-opacity=".95"/>
+      <stop offset=".21" stop-color="#fff" stop-opacity=".91"/>
+      <stop offset=".74" stop-color="#fff" stop-opacity=".72"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".65"/>
+    </radialGradient>
+    <radialGradient id="radial-gradient-3" cx="128.305" cy="-2229.5" fx="128.305" fy="-2229.5" r="219.78" gradientTransform="translate(97.76 -742.016) scale(.4 -.4)" gradientUnits="userSpaceOnUse">
+      <stop offset=".1" stop-color="#fff" stop-opacity=".35"/>
+      <stop offset=".63" stop-color="#fff" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".15"/>
+    </radialGradient>
+    <radialGradient id="radial-gradient-4" cx="125.815" cy="-2232" fx="125.815" fy="-2232" r="219.44" gradientTransform="translate(97.76 -742.016) scale(.4 -.4)" gradientUnits="userSpaceOnUse">
+      <stop offset=".1" stop-color="#fff" stop-opacity=".95"/>
+      <stop offset=".49" stop-color="#fff" stop-opacity=".71"/>
+      <stop offset=".83" stop-color="#fff" stop-opacity=".52"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".45"/>
+    </radialGradient>
+    <radialGradient id="radial-gradient-5" cx="128.305" cy="-2232" fx="128.305" fy="-2232" r="219.03" gradientTransform="translate(97.76 -742.016) scale(.4 -.4)" gradientUnits="userSpaceOnUse">
+      <stop offset=".1" stop-color="#fff"/>
+      <stop offset=".52" stop-color="#fff" stop-opacity=".92"/>
+      <stop offset="1" stop-color="#fff" stop-opacity=".85"/>
+    </radialGradient>
+  </defs>
+  <g>
+    <circle cx="150" cy="150" r="150"/>
+    <path class="cls-6" d="M150,15c36.06,0,69.961,14.042,95.459,39.541,25.498,25.498,39.541,59.4,39.541,95.459s-14.042,69.961-39.541,95.459c-25.498,25.498-59.4,39.541-95.459,39.541s-69.961-14.042-95.459-39.541c-25.498-25.498-39.541-59.4-39.541-95.459s14.042-69.961,39.541-95.459c25.498-25.498,59.4-39.541,95.459-39.541M150,0C67.157,0,0,67.157,0,150s67.157,150,150,150,150-67.157,150-150S232.843,0,150,0h0Z"/>
+  </g>
+  <g>
+    <polygon class="cls-5" points="150.002 150 236.602 200 236.602 200 236.602 100 150.002 150"/>
+    <polygon class="cls-4" points="150.002 150 150.002 50 150.002 50 63.398 100 150.002 150"/>
+    <polygon class="cls-7" points="63.406 100.004 63.406 199.996 150.002 150 150.002 150 150.002 150 63.406 100.004"/>
+    <polygon class="cls-3" points="150.002 150 150.002 150 150.002 150 150.002 150 150.002 150 150.002 250 150.002 250 236.602 200 150.002 150"/>
+    <polygon class="cls-2" points="150.002 150 150.002 150 236.602 100 236.602 100 150.002 50 150.002 150"/>
+    <polygon class="cls-1" points="150.002 250 150.002 150 63.406 199.996 63.406 199.996 63.398 200 63.398 200 150.002 250"/>
+  </g>
+</svg>

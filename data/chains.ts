@@ -1,12 +1,15 @@
 // Shared chain registration data
 // Used by both tests and deployment scripts
+// This file imports the generated chain data from chains.generated.json
+
+import generatedChains from "./chains.generated.json";
 
 export interface ChainData {
   // The canonical label (e.g., "optimism")
   label: string;
   // The display name (e.g., "OP Mainnet")
   chainName: string;
-  // The ERC-7930 interoperable address as hex string 
+  // The ERC-7930 interoperable address as hex string
   interoperableAddressHex: string;
   // Optional aliases that point to this chain (e.g., ["op"] for optimism)
   aliases?: string[];
@@ -14,45 +17,12 @@ export interface ChainData {
   owner?: string;
   // Optional text records
   textRecords?: Record<string, string>;
+  contenthash?: string;
 }
 
-// List of Chains to register
-export const CHAINS: ChainData[] = [
-  {
-    label: "arbitrum",
-    chainName: "Arbitrum One",
-    interoperableAddressHex: "0x0001000102a4b1",
-    aliases: ["arb", "arb1"],
-  },
-  {
-    label: "base",
-    chainName: "Base",
-    interoperableAddressHex: "0x00010001022105",
-    aliases: [],
-  },
-  {
-    label: "optimism",
-    chainName: "OP Mainnet",
-    interoperableAddressHex: "0x00010001010a00",
-    aliases: ["op"],
-    textRecords: {
-      "avatar": "images/optimism-avatar.png",
-      "header": "images/optimism-header.png",
-      "description": "Optimism is a Layer 2 scaling solution for Ethereum.",
-      "email": "hello@optimism.io",
-      "mail": "123 Optimistic, Rollup, L2 123",
-      "notice": "This is a notice",
-      "keywords": "optimism, rollup, l2",
-      "location": "New York, NY",
-      "phone": "+1234567890",
-      "url": "https://optimism.io",
-      "com.github": "https://github.com/ethereum-optimism",
-      "com.x": "https://twitter.com/optimism",
-    }
-  },
-
-
-];
+// List of Chains to register - imported from generated JSON
+// Run `npm run generate:chains:json` to regenerate the source data
+export const CHAINS: ChainData[] = generatedChains as unknown as ChainData[];
 
 // Helper to get a chain by label
 export function getChainByLabel(label: string): ChainData | undefined {

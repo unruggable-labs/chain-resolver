@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: url(#linear-gradient);
+      }
+
+      .cls-2 {
+        fill: #fff;
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="0" y1="150" x2="300" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6d6d6d"/>
+      <stop offset="1" stop-color="#d0ccc8"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <circle cx="150" cy="150" r="150"/>
+    <path class="cls-1" d="M150,15c36.06,0,69.961,14.042,95.459,39.541,25.498,25.498,39.541,59.4,39.541,95.459s-14.042,69.961-39.541,95.459c-25.498,25.498-59.4,39.541-95.459,39.541s-69.961-14.042-95.459-39.541c-25.498-25.498-39.541-59.4-39.541-95.459s14.042-69.961,39.541-95.459c25.498-25.498,59.4-39.541,95.459-39.541M150,0C67.157,0,0,67.157,0,150s67.157,150,150,150,150-67.157,150-150S232.843,0,150,0h0Z"/>
+  </g>
+  <g id="Logo_mark" data-name="Logo mark">
+    <path id="Vector_5" data-name="Vector 5" class="cls-2" d="M149.809,54.82l-18.12,29.76,59.22,97.02-49.62,53.22h42l46.14-49.44L149.809,54.82Z"/>
+    <path id="Vector_6" data-name="Vector 6" class="cls-2" d="M130.309,204.82l-21.6-23.22,36.36-59.58-18.12-29.7-56.82,93.06,46.14,49.44h15.3l28.08-30h-29.34Z"/>
+  </g>
+</svg>

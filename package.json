@@ -1,15 +1,19 @@
 {
-    "type": "module",
-    "dependencies": {
-        "@adraffy/blocksmith": "https://github.com/clowestab/blocksmith.js.git#2bf93f74d56b5e44de652a088d58a680d002e076",
-        "@ensdomains/ens-contracts": "^1.6.0",
-        "axios": "^1.13.2",
-        "content-hash": "^2.5.2",
-        "dotenv": "^16.5.0",
-        "ethers": "^6.14.0",
-        "multiformats": "^13.4.1",
-        "solidity-bytes-utils": "^0.8.4",
-        "tsx": "^4.19.4",
-        "viem": "^2.41.2"
-    }
+  "type": "module",
+  "scripts": {
+    "generate:chains:json": "tsx scripts/generate-chains-json.ts"
+  },
+  "dependencies": {
+    "@adraffy/blocksmith": "https://github.com/clowestab/blocksmith.js.git#2bf93f74d56b5e44de652a088d58a680d002e076",
+    "@ensdomains/ens-contracts": "^1.6.0",
+    "@wonderland/interop-addresses": "^0.1.1",
+    "axios": "^1.13.2",
+    "content-hash": "^2.5.2",
+    "dotenv": "^16.5.0",
+    "ethers": "^6.14.0",
+    "multiformats": "^13.4.1",
+    "solidity-bytes-utils": "^0.8.4",
+    "tsx": "^4.19.4",
+    "viem": "^2.42.1"
+  }
 }

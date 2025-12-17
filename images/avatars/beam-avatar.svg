@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+      }
+
+      .cls-2 {
+        fill: url(#linear-gradient-4);
+      }
+
+      .cls-3 {
+        fill: url(#linear-gradient-3);
+      }
+
+      .cls-4 {
+        fill: url(#linear-gradient-2);
+      }
+
+      .cls-5 {
+        fill: url(#linear-gradient);
+      }
+
+      .cls-6 {
+        clip-path: url(#clippath);
+      }
+    </style>
+    <clipPath id="clippath">
+      <circle class="cls-1" cx="149.779" cy="149.82" r="150"/>
+    </clipPath>
+    <linearGradient id="linear-gradient" x1="149.779" y1="987.871" x2="149.779" y2="904.211" gradientTransform="translate(0 1102) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff6b6b"/>
+      <stop offset=".33" stop-color="#fe1414"/>
+      <stop offset=".6" stop-color="#8e0900"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-2" x1="149.774" y1="1062.831" x2="149.774" y2="979.171" gradientTransform="translate(0 1102) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#bbdbff"/>
+      <stop offset=".33" stop-color="#139edd"/>
+      <stop offset=".6" stop-color="#b9f7ea"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-3" x1="149.769" y1="837.835" x2="149.769" y2="754.175" gradientTransform="translate(0 1102) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#bbffca"/>
+      <stop offset=".33" stop-color="#48dd13"/>
+      <stop offset=".6" stop-color="#008805"/>
+    </linearGradient>
+    <linearGradient id="linear-gradient-4" x1="149.769" y1="912.795" x2="149.769" y2="829.135" gradientTransform="translate(0 1102) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f1e869"/>
+      <stop offset=".33" stop-color="#fea514"/>
+      <stop offset=".6" stop-color="#ff4539"/>
+    </linearGradient>
+  </defs>
+  <g class="cls-6">
+    <g>
+      <path class="cls-5" d="M-.221,74.78h300v75.006H-.201l-.02-75.006Z"/>
+      <path class="cls-4" d="M-.221-.18h299.99v75.006l-299.99-.046V-.18Z"/>
+      <path class="cls-3" d="M-.221,224.815h299.98v75.005H-.221v-75.005Z"/>
+      <path class="cls-2" d="M-.221,149.855h299.98v75.005H-.221v-75.005Z"/>
+    </g>
+  </g>
+</svg>
