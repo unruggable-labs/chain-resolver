@@ -54,6 +54,10 @@ console.log("\nDAO Wallet is controller:", isController);
 // Proposal transactions array (for output)
 const proposalTransactions: { to: string; value: string; calldata: string; description: string }[] = [];
 
+// Track state for conditional logic
+let addedController = false;
+let registrationSucceeded = false;
+
 // Step 2: Add DAO wallet as controller if not already
 if (!isController) {
   console.log("\n--- Transaction 1: Add DAO Wallet as Controller ---");
@@ -75,16 +79,16 @@ if (!isController) {
   // Execute via sendTransaction
   const addControllerTx = await impersonatedSigner.sendTransaction({
     to: BASE_REGISTRAR_ADDRESS,
-    from: SENDER_ADDR,
     data: addControllerCalldata,
   });
   await addControllerTx.wait();
   console.log("✓ Transaction executed");
-  
+
   // Verify
   const isNowController = await baseRegistrar.controllers!(DAO_WALLET_ADDRESS);
   assert(isNowController, "Failed to add controller");
   console.log("✓ Verified: DAO Wallet is now a controller");
+  addedController = true;
 } else {
   console.log("✓ DAO Wallet is already a controller (skipping addController)");
 }
@@ -118,7 +122,7 @@ if (!isAvailable) {
 
 if (isAvailable) {
   // Register for 3 years (in seconds)
-  const duration = 3n * 365n * 24n * 60n * 60n; // 100 years
+  const duration = 3n * 365n * 24n * 60n * 60n; // 3 years
   
   const registerArgs = [tokenId, DAO_WALLET_ADDRESS, duration];
   const registerCalldata = baseRegistrarInterface.encodeFunctionData("register", registerArgs);
@@ -137,12 +141,11 @@ if (isAvailable) {
   // Execute via sendTransaction
   const registerTx = await impersonatedSigner.sendTransaction({
     to: BASE_REGISTRAR_ADDRESS,
-    from: SENDER_ADDR,
     data: registerCalldata,
   });
   await registerTx.wait();
   console.log("✓ Transaction executed");
-  
+
   // Verify ownership
   const newOwner = await baseRegistrar.ownerOf!(tokenId);
   console.log("New owner:", newOwner);
@@ -151,86 +154,99 @@ if (isAvailable) {
     "Owner mismatch after registration"
   );
   console.log("✓ Verified: DAO Wallet owns 'on.eth'");
-  
+  registrationSucceeded = true;
+
   const newExpires = await baseRegistrar.nameExpires!(tokenId);
   console.log("Expires:", new Date(Number(newExpires) * 1000).toISOString());
 } else {
   console.log("\n⚠️  Name is not available for registration");
 }
 
-// Step 4: Set resolver for 'on.eth'
-console.log("\n--- Transaction 3: Set Resolver for 'on.eth' ---");
+// Step 4: Set resolver for 'on.eth' (only if registration succeeded)
+if (registrationSucceeded) {
+  console.log("\n--- Transaction 3: Set Resolver for 'on.eth' ---");
 
-const onEthNamehash = namehash("on.eth");
-console.log("Namehash (on.eth):", onEthNamehash);
+  const onEthNamehash = namehash("on.eth");
+  console.log("Namehash (on.eth):", onEthNamehash);
 
-const setResolverArgs = [onEthNamehash, RESOLVER_ADDRESS];
-const setResolverCalldata = ensRegistryInterface.encodeFunctionData("setResolver", setResolverArgs);
+  const setResolverArgs = [onEthNamehash, RESOLVER_ADDRESS];
+  const setResolverCalldata = ensRegistryInterface.encodeFunctionData("setResolver", setResolverArgs);
 
-console.log("Target:", ENS_REGISTRY_ADDRESS);
-console.log("Arguments:", setResolverArgs);
-console.log("Calldata:", setResolverCalldata);
+  console.log("Target:", ENS_REGISTRY_ADDRESS);
+  console.log("Arguments:", setResolverArgs);
+  console.log("Calldata:", setResolverCalldata);
 
-proposalTransactions.push({
-  to: ENS_REGISTRY_ADDRESS,
-  value: "0",
-  calldata: setResolverCalldata,
-  description: `Set resolver for 'on.eth' to ${RESOLVER_ADDRESS}`
-});
+  proposalTransactions.push({
+    to: ENS_REGISTRY_ADDRESS,
+    value: "0",
+    calldata: setResolverCalldata,
+    description: `Set resolver for 'on.eth' to ${RESOLVER_ADDRESS}`
+  });
 
-// Execute via sendTransaction
-const setResolverTx = await impersonatedSigner.sendTransaction({
-  to: ENS_REGISTRY_ADDRESS,
-  from: SENDER_ADDR,
-  data: setResolverCalldata,
-});
-await setResolverTx.wait();
-console.log("✓ Transaction executed");
+  // Execute via sendTransaction
+  const setResolverTx = await impersonatedSigner.sendTransaction({
+    to: ENS_REGISTRY_ADDRESS,
+    data: setResolverCalldata,
+  });
+  await setResolverTx.wait();
+  console.log("✓ Transaction executed");
 
-// Verify resolver was set
-const currentResolver = await ensRegistry.resolver!(onEthNamehash);
-console.log("Current resolver:", currentResolver);
-assert(
-  currentResolver.toLowerCase() === RESOLVER_ADDRESS.toLowerCase(),
-  "Resolver mismatch after setting"
-);
-console.log("✓ Verified: Resolver set correctly");
+  // Verify resolver was set
+  const currentResolver = await ensRegistry.resolver!(onEthNamehash);
+  console.log("Current resolver:", currentResolver);
+  assert(
+    currentResolver.toLowerCase() === RESOLVER_ADDRESS.toLowerCase(),
+    "Resolver mismatch after setting"
+  );
+  console.log("✓ Verified: Resolver set correctly");
+} else {
+  console.log("\n⚠️  Skipping setResolver (registration did not succeed)");
+}
 
-// Step 5: Remove DAO wallet as controller (cleanup)
-console.log("\n--- Transaction 4: Remove DAO Wallet as Controller ---");
+// Step 5: Remove DAO wallet as controller (cleanup - only if we added it)
+if (addedController) {
+  console.log("\n--- Transaction 4: Remove DAO Wallet as Controller ---");
 
-const removeControllerArgs = [DAO_WALLET_ADDRESS];
-const removeControllerCalldata = baseRegistrarInterface.encodeFunctionData("removeController", removeControllerArgs);
+  const removeControllerArgs = [DAO_WALLET_ADDRESS];
+  const removeControllerCalldata = baseRegistrarInterface.encodeFunctionData("removeController", removeControllerArgs);
 
-console.log("Target:", BASE_REGISTRAR_ADDRESS);
-console.log("Arguments:", removeControllerArgs);
-console.log("Calldata:", removeControllerCalldata);
+  console.log("Target:", BASE_REGISTRAR_ADDRESS);
+  console.log("Arguments:", removeControllerArgs);
+  console.log("Calldata:", removeControllerCalldata);
 
-proposalTransactions.push({
-  to: BASE_REGISTRAR_ADDRESS,
-  value: "0",
-  calldata: removeControllerCalldata,
-  description: "Remove DAO Wallet as BaseRegistrar controller"
-});
+  proposalTransactions.push({
+    to: BASE_REGISTRAR_ADDRESS,
+    value: "0",
+    calldata: removeControllerCalldata,
+    description: "Remove DAO Wallet as BaseRegistrar controller"
+  });
 
-// Execute via sendTransaction
-const removeControllerTx = await impersonatedSigner.sendTransaction({
-  to: BASE_REGISTRAR_ADDRESS,
-  from: SENDER_ADDR,
-  data: removeControllerCalldata,
-});
-await removeControllerTx.wait();
-console.log("✓ Transaction executed");
+  // Execute via sendTransaction
+  const removeControllerTx = await impersonatedSigner.sendTransaction({
+    to: BASE_REGISTRAR_ADDRESS,
+    data: removeControllerCalldata,
+  });
+  await removeControllerTx.wait();
+  console.log("✓ Transaction executed");
 
-// Verify
-const isStillController = await baseRegistrar.controllers!(DAO_WALLET_ADDRESS);
-assert(!isStillController, "Failed to remove controller");
-console.log("✓ Verified: DAO Wallet is no longer a controller");
+  // Verify
+  const isStillController = await baseRegistrar.controllers!(DAO_WALLET_ADDRESS);
+  assert(!isStillController, "Failed to remove controller");
+  console.log("✓ Verified: DAO Wallet is no longer a controller");
+} else {
+  console.log("\n✓ Skipping removeController (was already a controller before proposal)");
+}
 
 // Output proposal summary
 console.log("\n========================================");
 console.log("=== PROPOSAL CALLDATA SUMMARY ===");
 console.log("========================================\n");
+
+if (proposalTransactions.length === 0) {
+  console.log("⚠️  No transactions generated. Registration may have failed.");
+  await foundry.shutdown();
+  process.exit(1);
+}
 
 for (let i = 0; i < proposalTransactions.length; i++) {
   const tx = proposalTransactions[i]!;
