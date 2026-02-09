@@ -22,7 +22,7 @@ export const CHAINS: ChainData[] = [
   {
     label: "optimism",
     chainName: "OP Mainnet",
-    interoperableAddressHex: "0x00010001010a00",
+    interoperableAddressHex: "0x00010000010a00",
     aliases: ["op", "opt"],
     textRecords: {
       "avatar": "images/optimism-avatar.png",
@@ -43,7 +43,7 @@ export const CHAINS: ChainData[] = [
   {
     label: "base",
     chainName: "Base",
-    interoperableAddressHex: "0x00010001022105",
+    interoperableAddressHex: "0x0001000002210500",
     aliases: [],
     textRecords: {
       "avatar": "images/base-avatar.png",
@@ -61,7 +61,7 @@ export const CHAINS: ChainData[] = [
   {
     label: "arbitrum",
     chainName: "Arbitrum One",
-    interoperableAddressHex: "0x0001000102a4b1",
+    interoperableAddressHex: "0x0001000002a4b100",
     aliases: ["arb", "arb1"],
     textRecords: {
       "avatar": "images/arbitrum-avatar.png",
