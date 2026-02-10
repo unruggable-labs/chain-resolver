@@ -246,29 +246,7 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
         console.log("Successfully prevented setting admin to zero address");
     }
 
-    function test_009____migrateParentNamehash_______OnlyOwnerCanCall() public {
-        vm.startPrank(admin);
-        resolver = deployResolver(admin);
-        registerTestChain();
-        vm.stopPrank();
-
-        // Non-owner tries to migrate
-        vm.startPrank(attacker);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                OwnableUpgradeable.OwnableUnauthorizedAccount.selector,
-                attacker
-            )
-        );
-        resolver.migrateParentNamehash(bytes32(uint256(1)));
-
-        vm.stopPrank();
-
-        console.log("Successfully prevented unauthorized parent namehash migration");
-    }
-
-    function test_010____batchSetText________________SuccessfulBatchSet() public {
+    function test_009____batchSetText________________SuccessfulBatchSet() public {
         vm.startPrank(admin);
         registerTestChain();
         vm.stopPrank();
@@ -345,7 +323,7 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
         values[1] = "Optimism L2";
         values[2] = "Extra value";
 
-        vm.expectRevert("Array length mismatch");
+        vm.expectRevert(IChainResolver.ArrayLengthMismatch.selector);
         resolver.batchSetText(TEST_LABELHASH, keys, values);
 
         vm.stopPrank();
@@ -451,7 +429,7 @@ contract ChainResolverAuthTest is ChainResolverTestBase {
         keys[1] = "key2";
         data[0] = hex"1234";
 
-        vm.expectRevert("Array length mismatch");
+        vm.expectRevert(IChainResolver.ArrayLengthMismatch.selector);
         resolver.batchSetData(TEST_LABELHASH, keys, data);
 
         vm.stopPrank();

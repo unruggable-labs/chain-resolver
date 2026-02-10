@@ -185,64 +185,7 @@ contract ChainResolverDiscoverabilityTest is ChainResolverTestBase {
         console.log("Successfully returned empty for unregistered node");
     }
 
-    function test_007____migrateParentNamehash___________UpdatesNodeMappings()
-        public
-    {
-        vm.startPrank(admin);
-        registerTestChain();
-
-        // Set some data to populate nodeToLabelhash
-        vm.stopPrank();
-        vm.startPrank(user1);
-        resolver.setData(TEST_LABELHASH, "test-key", hex"1234");
-        vm.stopPrank();
-
-        // Get original node
-        bytes32 originalParent = resolver.parentNamehash();
-        bytes32 originalNode = keccak256(
-            abi.encodePacked(originalParent, TEST_LABELHASH)
-        );
-
-        // Verify keys work with original node
-        string[] memory keysBeforeMigration = resolver.supportedDataKeys(originalNode);
-        assertEq(keysBeforeMigration.length, 2, "Should have 2 keys before migration");
-
-        // Migrate to new parent namehash
-        bytes32 newParentNamehash = keccak256("new.eth");
-        vm.startPrank(admin);
-        resolver.migrateParentNamehash(newParentNamehash);
-        vm.stopPrank();
-
-        // Compute new node
-        bytes32 newNode = keccak256(
-            abi.encodePacked(newParentNamehash, TEST_LABELHASH)
-        );
-
-        // New node should now work
-        string[] memory keysAfterMigration = resolver.supportedDataKeys(newNode);
-        assertEq(keysAfterMigration.length, 2, "Should have 2 keys after migration with new node");
-
-        console.log("Successfully migrated parent namehash");
-    }
-
-    function test_008____migrateParentNamehash___________EmitsEvent()
-        public
-    {
-        vm.startPrank(admin);
-        registerTestChain();
-
-        bytes32 newParentNamehash = keccak256("new.eth");
-
-        vm.expectEmit(true, true, true, true);
-        emit IChainResolver.ParentNamehashChanged(newParentNamehash);
-
-        resolver.migrateParentNamehash(newParentNamehash);
-        vm.stopPrank();
-
-        console.log("Successfully emitted ParentNamehashChanged event");
-    }
-
-    function test_009____supportedTextKeys_______________ReturnsSetKeys()
+    function test_007____supportedTextKeys_______________ReturnsSetKeys()
         public
     {
         vm.startPrank(admin);

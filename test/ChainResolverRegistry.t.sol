@@ -238,7 +238,7 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
 
         // Try to register alias without registering canonical first
         bytes32 unregisteredLabelhash = keccak256(bytes("unregistered"));
-        vm.expectRevert("Canonical not registered");
+        vm.expectRevert(IChainResolver.CanonicalNotRegistered.selector);
         resolver.registerAlias("alias", unregisteredLabelhash);
 
         vm.stopPrank();
@@ -259,7 +259,7 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
 
         // Try to alias to the alias - should fail
         bytes32 aliasHash = keccak256(bytes("op"));
-        vm.expectRevert("Cannot alias to an alias");
+        vm.expectRevert(IChainResolver.CannotAliasToAlias.selector);
         resolver.registerAlias("o", aliasHash);
 
         vm.stopPrank();
@@ -333,7 +333,7 @@ contract ChainResolverRegistryTest is ChainResolverTestBase {
         canonicals[0] = TEST_LABELHASH;
 
         // Should revert due to length mismatch
-        vm.expectRevert("Array length mismatch");
+        vm.expectRevert(IChainResolver.ArrayLengthMismatch.selector);
         resolver.batchRegisterAlias(aliases, canonicals);
 
         vm.stopPrank();
