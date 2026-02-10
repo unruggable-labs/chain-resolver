@@ -710,6 +710,14 @@ contract ChainResolver is
 
         bool isNew = bytes(chainNames[_labelhash]).length == 0;
 
+        // Clear old Interoperable Address mappings if re-registering with different address
+        if (!isNew) {
+            bytes memory oldAddress = dataRecords[_labelhash][INTEROPERABLE_ADDRESS_DATA_KEY];
+            if (oldAddress.length > 0 && keccak256(oldAddress) != keccak256(_interoperableAddress)) {
+                delete labelByInteroperableAddress[oldAddress];
+                delete textRecords[REVERSE_LABELHASH][concat(CHAIN_LABEL_PREFIX, oldAddress)];
+            }
+        }
 
         chainNames[_labelhash] = _chainName;
         chainOwners[_labelhash] = _owner;
@@ -733,13 +741,6 @@ contract ChainResolver is
             labelhashList.push(_labelhash);
             unchecked {
                 chainCount += 1;
-            }
-        } else {
-            // Clear old Interoperable Address mappings if re-registering
-            bytes memory oldAddress = dataRecords[_labelhash][INTEROPERABLE_ADDRESS_DATA_KEY];
-            if (oldAddress.length > 0 && keccak256(oldAddress) != keccak256(_interoperableAddress)) {
-                delete labelByInteroperableAddress[oldAddress];
-                delete textRecords[REVERSE_LABELHASH][concat(CHAIN_LABEL_PREFIX, oldAddress)];
             }
         }
 
