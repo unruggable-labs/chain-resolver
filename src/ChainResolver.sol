@@ -160,25 +160,6 @@ contract ChainResolver is
         emit ParentNamehashChanged(_parentNamehash);
     }
 
-    /**
-     * @notice Update the parent namespace and migrate node mappings.
-     * @param _newParentNamehash The new parent namespace namehash.
-     * @dev This rebuilds all node → labelhash mappings for supportedDataKeys.
-     *      Gas cost scales with number of registered chains.
-     */
-    function migrateParentNamehash(bytes32 _newParentNamehash) external onlyOwner {
-        parentNamehash = _newParentNamehash;
-
-        // Rebuild node → labelhash mappings for supportedDataKeys
-        uint256 len = labelhashList.length;
-        for (uint256 i = 0; i < len; i++) {
-            bytes32 lh = labelhashList[i];
-            nodeToLabelhash[_computeNamehash(lh)] = lh;
-        }
-
-        emit ParentNamehashChanged(_newParentNamehash);
-    }
-
     function supportsInterface(
         bytes4 interfaceId
     ) external pure override returns (bool) {

@@ -35,7 +35,6 @@ export const RESOLVER_ABI = [
   "function setChainAdmin(bytes32,address) external",
   "function setDefaultContenthash(bytes) external",
   "function upgradeToAndCall(address,bytes) external",
-  "function migrateParentNamehash(bytes32) external",
 ] as const;
 
 // ENSIP-5 text() interface
