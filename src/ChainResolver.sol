@@ -717,6 +717,9 @@ contract ChainResolver is
         if (_interoperableAddress.length < 7) {
             revert InvalidInteroperableAddress();
         }
+        if (_owner == address(0)) {
+            revert InvalidChainAdmin();
+        }
 
         bytes32 _labelhash = keccak256(bytes(_label));
 
