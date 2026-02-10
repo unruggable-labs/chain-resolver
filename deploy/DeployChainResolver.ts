@@ -187,7 +187,12 @@ if (proxyAddress) {
   const reverseRegistrar = REVERSE_REGISTRAR_ADDRESSES[chainInfo.id];
   const publicResolver = PUBLIC_RESOLVER_ADDRESSES[chainInfo.id];
 
-  if (reverseRegistrar && publicResolver) {
+  if (!reverseRegistrar || !publicResolver) {
+    console.log(`\nNote: Reverse Registrar not configured for chain ${chainInfo.id}. Skipping primary name setup.`);
+  } else if (owner.toLowerCase() !== deployerWallet.address.toLowerCase()) {
+    console.log(`\nNote: Cannot set primary name - deployer is not the contract owner.`);
+    console.log(`The contract owner (${owner}) should set the primary name after deployment.`);
+  } else {
     const shouldSetName = await promptContinueOrExit(
       rl,
       `\nSet a primary name (reverse record) for the contract? (y/n)`
@@ -196,7 +201,7 @@ if (proxyAddress) {
     if (shouldSetName) {
       const contractName = (await askQuestion(
         rl,
-        `Enter the ENS name for this contract (e.g., "resolver.on.eth"): `
+        `Enter the ENS name for this contract (e.g., "chainresolver.ensdao.eth"): `
       )).trim();
 
       if (contractName) {
@@ -231,8 +236,6 @@ if (proxyAddress) {
         }
       }
     }
-  } else {
-    console.log(`\nNote: Reverse Registrar not configured for chain ${chainInfo.id}. Skipping primary name setup.`);
   }
 }
 
