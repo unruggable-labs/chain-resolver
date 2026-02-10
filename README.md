@@ -1,53 +1,496 @@
-# ERC-7828: Interoperable Addresses using ENS
+# Chain Registry-Resolver [An on-chain single source of truth for blockchain metadata.]
 
-This repository contains a single contract, [`ChainResolver.sol`](src/ChainResolver.sol).
+## Overview
 
-This contract serves as the on-chain single source of truth for chain data discovery. 
-It is the implementation of the specifications outlined in [ERC-7828], allowing for the resolution of an [ERC-7930] _Interoperable Address_ from an _Interoperable Name_ of the form `example.eth@optimism#1234`.
+The Chain Registry-Resolver is a smart contract that acts as a **canonical, on-chain registry** for blockchain metadata. It serves as the resolver for the `on.eth` namespace and enables applications and users to retrieve metadata for *any* blockchain using a single human-readable identifier, such as `base` or `solana`.
 
-It is fully compliant with ENS standards and best practices. [ENSIP-10]: Wildcard Resolution is utilised as the entry point for resolution of data.
+Historically, blockchain metadata has been stored in centralized, fragmented repositories maintained by third parties. The Chain Registry-Resolver brings this metadata on-chain into a single, extensible registry, where control and update authority are delegated to the relevant chain operators.
+  
+## Architecture
 
-## Ownership Model
+### Ownership
 
-The contract implements the `Ownable` ownership model by proxy of Open Zeppelin's `OwnableUpgradeable` module. 
+The contract implements the `OwnableUpgradeable` interface from [OpenZeppelin](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/release-v5.5/contracts/access/OwnableUpgradeable.sol). It is owned by a **3-of-5 multisig**, requiring approval from at least three signers for any owner-level operations.
 
-Only the owner of the contract can register chain data. The resolver will be owned by a multisig with the following signers:
+The signers are:
 
-  - Josh Rudolf (EF)
-  - Thomas Clowes (Unruggable)
-  - OxOrca (Wonderland)
+- TBD
 
-The [ERC-7930] chain identifier is set for each chain by this owner. It is immutable once set.
+### Authorization Model
 
-During initialization, administrative control of **additional** data stored under the chain specific namespace is handed off to the chain operator. This allows for chain operators to set standard ENS data - addresses, a content hash, and text records.
+The Chain Registry-Resolver uses a two-tier authorization model:
 
-## Architectural points of note
+#### Contract Owner
 
-- The `ChainResolver` is to be deployed behind an [ERC-1967] proxy to allow for it to be upgraded if neccesary. This path is secured by the multisig, with ultimate control falling to the ENS DAO who will be the underlying owner of the `on.eth` name. 
+The contract owner can:
 
-- Under the hood, data is associated with the labelhash - the `keccak256` hash of the chain label. The resolver is tied to a namespace defined on initialization. The namespace for [ERC-7828] is `on.eth`.
+- Register new chains
+- Update existing chain registrations
+- Upgrade the contract implementation
+- Set the default contenthash for the namespace
 
-- When originally designed there was discussion on appropriate namespace. The `ChainResolver` was designed to be agnostic to the underlying namespace. Given that some ENS event specifications emit the namehash (which is an algorithm using unidirectional hashing mechanisms - `keccak256`) we map `nodeToLabelhash`. See `migrateParentNamehash`.
+#### Chain Admin
 
-- There is an alias system to allow for commonly understood aliases to point to the same chain data. e.g, `arb1.on.eth` will point to the same underlying data as `arbitrum.on.eth`.
+When an address is registered by the contract owner, an administrator address is specified. This is an address provided by the chain operators.
 
-- There is an in-built discovery mechanism. `chainCount()` exposes the number of chains in the registry, while `getChainAtIndex(uint256)` allows clients to iterate through them. This is provided as a utility - usage of this registry **requires no external dependencies**.
+The chain admin address  can:
 
-- Forward Resolution requires the resolution of the `interoperable-address` data record ([ENSIP-24]) for the chain in question e.g. `base.<namespace>.eth`. The data returned is the [ERC-7930] _Interoperable Address_.
+- Modify text, data, contenthash, and address records for their chain
+- Transfer admin rights to another address
 
-- Reverse Resolution requires the resolution of a text record ([ENSIP-5]) on the `reverse.<namespace>.eth` node. The key to use is the [ERC-7930] _Interoperable Address_ you want to reverse, prefixed with `chain-name:`. For example, `"chain-name:00010001010a00"`. The data returned is the human readable chain label. 
+### Upgrades
 
-## Security Considerations
+The Chain Registry-Resolver is deployed behind a [UUPS](https://docs.openzeppelin.com/contracts-stylus/uups-proxy) (Universal Upgradeable Proxy Standard) proxy. This allows the contract logic to be upgraded while preserving all stored chain data and maintaining a consistent contract address. 
 
-The storage architecture within this contract has:
+### Namespace Structure
 
-- **all** data records stored under one property, `dataRecords`
-- **all** text records stored under one property, `textRecords`
+```
+on.eth (root namespace)
+├── optimism.on.eth     → Chain record storage
+├── base.on.eth         → Chain record storage
+├── arbitrum.on.eth     → Chain record storage
+├── ...                 → Any number of chains can be registered
+└── reverse.on.eth      → Reserved for reverse resolution
+```
 
-For contract simplicity, the immutability of the `interoperable-address` data key is handled in the publicly exposed setter, `setData`. This function **does not** allow the setting of this key.This function has the `onlyChainOwner` modifier. 
-The **internal** function `_setData` is called from the `_register` function to set this immutable key on registration. It has the `onlyOwner` modifier - only the multisig can register chains. 
+:::note
+The `reverse.on.eth` name is reserved to allow for the conversion of an [ERC-7930](https://eips.ethereum.org/EIPS/eip-7930) _Interoperable Address_  to a chain label.
+:::
 
-Similarly, the immutability of the `chain-name:` prefixed text keys are set on the reverse node (`reverse.<namespace>.eth`) as part of the registration flow. Ownership of the reverse node **can not be set**. 
+### Resolver Profiles
+
+All established ENS Resolver profiles are implemented by the contract to allow for the resolution of:
+
+- Text Records ([ENSIP-5](/ensip/5))
+- Contenthash ([ENSIP-7](/ensip/7))
+- Addresses ([ENSIP-9](/ensip/9) / [ENSIP-11](/ensip/11))
+- Arbitrary Data ([ENSIP-24](/ensip/24))
+
+### Immutable Values
+
+#### Data records
+For a given chain, the `interoperable-address` data key is set upon chain registration, and is immutable. 
+It references the [ERC-7930](https://eips.ethereum.org/EIPS/eip-7930) _Interoperable Address_ for the chain in question. 
+
+As an example, for `optimism.on.eth` the value is set to `0x00010000010a`.
+
+### Aliasing
+
+Chains can have multiple aliases that point to the canonical label. 
+
+Aliases are transparent - resolution through an alias returns the same underlying data as the canonical label.
+
+For example:
+
+- `op.on.eth` → resolves the same underlying metadata as `optimism.on.eth`
+- `arb.on.eth` → resolves the same underlying metadata as `arbitrum.on.eth`
+
+
+## Usage Guide
+
+### Chain Discovery
+
+The registry is fully enumerable, allowing applications to discover all registered chains.
+
+:::note
+Enumerating all chains is an O(n) operation, which may become expensive as the registry grows to hundreds or thousands of chains. Applications are expected to perform a full enumeration once, cache the results locally, and then use `chainCount()` to detect new registrations for incremental updates.
+:::
+
+```solidity
+interface IChainResolver {
+    function chainCount() external view returns (uint256);
+    function getChainAtIndex(uint256 index) external view returns (
+        string memory label,
+        string memory name,
+        bytes memory interoperableAddress
+    );
+}
+```
+
+```ts
+const discoveryAbi = [
+  {
+    name: 'chainCount',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'getChainAtIndex',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'index', type: 'uint256' }],
+    outputs: [
+      { name: 'label', type: 'string' },
+      { name: 'name', type: 'string' },
+      { name: 'interoperableAddress', type: 'bytes' },
+    ],
+  },
+] as const
+
+// Get total number of registered chains
+const count = await client.readContract({
+  address: '0x...',
+  abi: discoveryAbi,
+  functionName: 'chainCount',
+})
+
+// Enumerate all chains
+for (let i = 0; i < count; i++) {
+  const [label, name, interopAddr] = await client.readContract({
+    address: '0x...',
+    abi: discoveryAbi,
+    functionName: 'getChainAtIndex',
+    args: [BigInt(i)],
+  })
+  console.log(`${label}: ${name} (${interopAddr})`)
+}
+```
+
+### Chain Metadata Discovery
+
+#### Data Records
+
+The resolver implements the optional discoverability mechanism outlined in [ENSIP-24](/ensip/24).
+
+```solidity
+/// @dev Interface selector: `0x29fb1892`
+interface ISupportedDataKeys {
+    /// @notice For a specific `node`, get an array of supported data keys.
+    /// @param node The node (namehash).
+    /// @return The keys for which we have associated data.
+    function supportedDataKeys(bytes32 node) external view returns (string[] memory);
+}
+```
+
+Calling `supportedDataKeys` for a given chain e.g. `optimism.on.eth` will return an array of keys for which data is defined.
+
+#### Text Records
+
+The resolver also implements the discoverability mechanism for text records:
+
+```solidity
+interface ISupportedTextKeys {
+    /// @notice For a specific `node`, get an array of supported text keys.
+    /// @param node The node (namehash).
+    /// @return The keys for which we have associated text records.
+    function supportedTextKeys(bytes32 node) external view returns (string[] memory);
+}
+```
+Calling `supportedTextKeys` for a given chain e.g. `optimism.on.eth` will return an array of keys for which text records are set.
+
+### Resolving Chain Metadata
+
+As the resolver is set on the `on.eth` name, resolution for subnames are subject to the resolution process outlined in [ENSIP-10: Wildcard Resolution](/ensip/10).
+
+The calldata that you will pass to the `resolve` method of the `IExtendedResolver` interface is dependent on whether the metadata that you are fetching is stored as a data record or a text record.
+
+For data records (e.g. fetching an [ERC-7930](https://eips.ethereum.org/EIPS/eip-7930) _Interoperable Address_), use the `data(bytes32 node, string calldata key)` getter function defined in [ENSIP-24](/ensip/24).
+
+```ts
+import { createPublicClient, http, encodeFunctionData, decodeFunctionResult, parseAbi, toHex } from 'viem'
+import { mainnet } from 'viem/chains'
+import { namehash, packetToBytes } from 'viem/ens'
+
+const client = createPublicClient({
+  chain: mainnet,
+  transport: http(),
+})
+
+const dataAbi = parseAbi([
+  'function data(bytes32 node, string key) view returns (bytes)',
+])
+
+const resolveAbi = parseAbi([
+  'function resolve(bytes name, bytes data) view returns (bytes)',
+])
+
+const name = 'optimism.on.eth'
+const dnsEncodedName = toHex(packetToBytes(name))
+const node = namehash(name)
+
+// Encode the data() call for the interoperable-address key
+const calldata = encodeFunctionData({
+  abi: dataAbi,
+  functionName: 'data',
+  args: [node, 'interoperable-address'],
+})
+
+// Call resolve()
+const result = await client.readContract({
+  address: '0x...', // Chain Registry-Resolver address
+  abi: resolveAbi,
+  functionName: 'resolve',
+  args: [dnsEncodedName, calldata],
+})
+
+// Decode the result
+const interopAddr = decodeFunctionResult({
+  abi: dataAbi,
+  functionName: 'data',
+  data: result,
+})
+// Returns: 0x00010000010a00
+```
+
+For text records (e.g. fetching an X handle), use the `text(bytes32 node, string key)` function defined in [ENSIP-5](/ensip/5) instead:
+
+```ts
+const textAbi = parseAbi([
+  'function text(bytes32 node, string key) view returns (string)',
+])
+
+const name = 'optimism.on.eth'
+const dnsEncodedName = toHex(packetToBytes(name))
+const node = namehash(name)
+
+// Encode the text() call for the com.x key
+const calldata = encodeFunctionData({
+  abi: textAbi,
+  functionName: 'text',
+  args: [node, 'com.x'],
+})
+
+// Call resolve()
+const result = await client.readContract({
+  address: '0x...', // Chain Registry-Resolver address
+  abi: resolveAbi,
+  functionName: 'resolve',
+  args: [dnsEncodedName, calldata],
+})
+
+// Decode the result
+const xHandle = decodeFunctionResult({
+  abi: textAbi,
+  functionName: 'text',
+  data: result,
+})
+// Returns: "https://x.com/optimism"
+```
+
+#### Using Direct Getters
+
+The resolver exposes helper functions that allow you to fetch frequently accessed chain metadata directly using the chain label, without needing to go through the ENSIP-10 resolution process.
+
+```solidity
+interface IChainResolver {
+    function interoperableAddress(string calldata label) external view returns (bytes memory);
+    function chainName(string calldata label) external view returns (string memory);
+}
+```
+
+For other record types, use the generic getters:
+
+```solidity
+interface IChainResolver {
+    function getText(string calldata label, string calldata key) external view returns (string memory);
+    function getData(string calldata label, string calldata key) external view returns (bytes memory);
+    function getAddr(string calldata label, uint256 coinType) external view returns (bytes memory);
+    function getContenthash(string calldata label) external view returns (bytes memory);
+}
+```
+
+```ts
+const directGetterAbi = [
+  {
+    name: 'interoperableAddress',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'label', type: 'string' }],
+    outputs: [{ name: '', type: 'bytes' }],
+  },
+  {
+    name: 'chainName',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'label', type: 'string' }],
+    outputs: [{ name: '', type: 'string' }],
+  },
+  {
+    name: 'getText',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'label', type: 'string' },
+      { name: 'key', type: 'string' },
+    ],
+    outputs: [{ name: '', type: 'string' }],
+  },
+] as const
+
+// Fetch the interoperable address for Optimism
+const interopAddr = await client.readContract({
+  address: '0x...', // Chain Registry-Resolver address
+  abi: directGetterAbi,
+  functionName: 'interoperableAddress',
+  args: ['optimism'],
+})
+// Returns: 0x00010000010a
+
+// Fetch the chain name for Optimism
+const name = await client.readContract({
+  address: '0x...', // Chain Registry-Resolver address
+  abi: directGetterAbi,
+  functionName: 'chainName',
+  args: ['optimism'],
+})
+// Returns: "Optimism"
+
+// Fetch the X handle for Optimism
+const xHandle = await client.readContract({
+  address: '0x...', // Chain Registry-Resolver address
+  abi: directGetterAbi,
+  functionName: 'getText',
+  args: ['optimism', 'com.x'],
+})
+// Returns: "https://x.com/optimism"
+```
+
+### Reverse Resolution
+
+Reverse resolution maps an [ERC-7930](https://eips.ethereum.org/EIPS/eip-7930) _Interoperable Address_ back to its human-readable chain label.
+
+Reverse resolution data is stored as text records on the special subdomain, `reverse.on.eth`. The key format is `chain-label:` appended with the _Interoperable Address_ you want to reverse.
+
+```ts
+const textAbi = parseAbi([
+  'function text(bytes32 node, string key) view returns (string)',
+])
+
+const reverseName = 'reverse.on.eth'
+const dnsEncodedReverse = toHex(packetToBytes(reverseName))
+const reverseNode = namehash(reverseName)
+
+// The key is "chain-label:" + Interoperable Address without 0x prefix
+const textKey = 'chain-label:00010000010a00'
+
+const calldata = encodeFunctionData({
+  abi: textAbi,
+  functionName: 'text',
+  args: [reverseNode, textKey],
+})
+
+const result = await client.readContract({
+  address: '0x...',
+  abi: resolveAbi,
+  functionName: 'resolve',
+  args: [dnsEncodedReverse, calldata],
+})
+
+const label = decodeFunctionResult({
+  abi: textAbi,
+  functionName: 'text',
+  data: result,
+})
+// Returns: "optimism"
+```
+
+#### Using Direct Getters
+
+The resolver exposes a helper function to achieve the same result.
+
+```solidity
+interface IChainResolver {
+    function chainLabel(bytes calldata interoperableAddress) external view returns (string memory);
+}
+```
+
+```ts
+const chainLabelAbi = [
+  {
+    name: 'chainLabel',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'interoperableAddress', type: 'bytes' }],
+    outputs: [{ name: '', type: 'string' }],
+  },
+] as const
+
+// Reverse resolve an interoperable address
+const label = await client.readContract({
+  address: '0x...', // Chain Registry-Resolver address
+  abi: chainLabelAbi,
+  functionName: 'chainLabel',
+  args: ['0x00010000010a00'],
+})
+// Returns: "optimism"
+```
+
+## Interface Reference
+
+### Core Resolution
+
+```solidity
+interface IChainResolver {
+    // Forward resolution
+    function interoperableAddress(string calldata label) external view returns (bytes memory);
+    function chainName(string calldata label) external view returns (string memory);
+
+    // Reverse resolution
+    function chainLabel(bytes calldata interoperableAddress) external view returns (string memory);
+
+    // Discovery
+    function chainCount() external view returns (uint256);
+    function getChainAtIndex(uint256 index) external view returns (
+        string memory label,
+        string memory name,
+        bytes memory interoperableAddress
+    );
+
+    // Record getters
+    function getText(string calldata label, string calldata key) external view returns (string memory);
+    function getData(string calldata label, string calldata key) external view returns (bytes memory);
+    function getAddr(string calldata label, uint256 coinType) external view returns (bytes memory);
+    function getContenthash(string calldata label) external view returns (bytes memory);
+
+    // Alias resolution
+    function canonicalLabelInfo(bytes32 labelhash) external view returns (string memory label, bytes32 canonicalLabelhash);
+
+    // ENSIP-10 wildcard resolution
+    function resolve(bytes calldata name, bytes calldata data) external view returns (bytes memory);
+
+    // Interface detection
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
+}
+```
+
+### Record management
+
+These functions are available to the respective chain operators for setting metadata about their blockchain.
+
+```solidity
+interface IChainResolverAdmin {
+    // Text records
+    function setText(bytes32 labelhash, string calldata key, string calldata value) external;
+    function batchSetText(bytes32 labelhash, string[] calldata keys, string[] calldata values) external;
+
+    // Data records
+    function setData(bytes32 labelhash, string calldata key, bytes calldata value) external;
+    function batchSetData(bytes32 labelhash, string[] calldata keys, bytes[] calldata values) external;
+
+    // Address records
+    function setAddr(bytes32 labelhash, uint256 coinType, bytes calldata value) external;
+
+    // Contenthash
+    function setContenthash(bytes32 labelhash, bytes calldata contenthash) external;
+
+    // Admin transfer
+    function setChainAdmin(bytes32 labelhash, address newAdmin) external;
+}
+```
+
+## Explorer
+
+The default contenthash for the `on.eth` namespace references a simple decentralized website that resolves data from the on-chain registry-resolver.
+
+Using a service like eth.limo, you can interface with the registry by visiting [on.eth.limo](https://on.eth.limo).
+
+The metadata for a specific chain can be viewed through this userinterface by accessing the specific subname directly. For example [base.on.eth.limo](https://base.on.eth.limo), or [optimism.on.eth.limo](https://base.on.eth.limo).
+
+![Optimism Chain Metadata](/img/optimism-on-eth-contenthash-website.png)
+
+Metadata that is supported by the ENS App will also be displayed when the domain is looked up. For example: [https://app.ens.domains/optimism.on.eth](https://app.ens.domains/optimism.on.eth)
 
 ## Development
 
