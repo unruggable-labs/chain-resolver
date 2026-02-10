@@ -445,7 +445,7 @@ interface IChainResolver {
     function getContenthash(string calldata label) external view returns (bytes memory);
 
     // Alias resolution
-    function canonicalLabelInfo(bytes32 labelhash) external view returns (string memory label, bytes32 canonicalLabelhash);
+    function getCanonicalLabel(string calldata label) external view returns (CanonicalLabelInfo memory info);
 
     // ENSIP-10 wildcard resolution
     function resolve(bytes calldata name, bytes calldata data) external view returns (bytes memory);
