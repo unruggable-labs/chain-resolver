@@ -121,8 +121,8 @@ if (!isAvailable) {
 }
 
 if (isAvailable) {
-  // Register for 3 years (in seconds)
-  const duration = 3n * 365n * 24n * 60n * 60n; // 3 years
+  // Register for 10 years (in seconds)
+  const duration = 10n * 365n * 24n * 60n * 60n; // 10 years
   
   const registerArgs = [tokenId, DAO_WALLET_ADDRESS, duration];
   const registerCalldata = baseRegistrarInterface.encodeFunctionData("register", registerArgs);
