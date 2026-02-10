@@ -824,6 +824,8 @@ contract ChainResolver is
         require(canonical != bytes32(0), "Alias does not exist");
 
         delete aliasOf[aliasHash];
+        delete labelByLabelhash[aliasHash];
+        delete nodeToLabelhash[_computeNamehash(aliasHash)];
         emit AliasRemoved(aliasHash, canonical, _alias);
     }
 
