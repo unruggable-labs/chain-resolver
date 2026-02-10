@@ -55,6 +55,16 @@ interface IChainResolver {
     error EmptyLabel();
     error EmptyChainName();
     error InvalidInteroperableAddress();
+    // Array length mismatch in batch operations
+    error ArrayLengthMismatch();
+    // Cannot create an alias pointing to another alias
+    error CannotAliasToAlias();
+    // The canonical labelhash is not registered
+    error CanonicalNotRegistered();
+    // The alias does not exist
+    error AliasDoesNotExist();
+    // Invalid address byte length (expected 20 bytes)
+    error InvalidAddressLength();
 
     /// @notice Functions
 

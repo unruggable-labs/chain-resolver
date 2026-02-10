@@ -346,7 +346,9 @@ contract ChainResolver is
         string[] calldata _keys,
         string[] calldata _values
     ) external onlyChainOwner(_labelhash) {
-        require(_keys.length == _values.length, "Array length mismatch");
+        if (_keys.length != _values.length) {
+            revert ArrayLengthMismatch();
+        }
         bytes32 canonical = _resolveLabelhash(_labelhash);
         uint256 len = _keys.length;
         for (uint256 i = 0; i < len; i++) {
@@ -440,7 +442,9 @@ contract ChainResolver is
         string[] calldata _keys,
         bytes[] calldata _data
     ) external onlyChainOwner(_labelhash) {
-        require(_keys.length == _data.length, "Array length mismatch");
+        if (_keys.length != _data.length) {
+            revert ArrayLengthMismatch();
+        }
         bytes32 canonical = _resolveLabelhash(_labelhash);
         uint256 len = _keys.length;
         for (uint256 i = 0; i < len; i++) {
@@ -783,10 +787,9 @@ contract ChainResolver is
         string[] calldata _aliases,
         bytes32[] calldata _canonicalLabelhashes
     ) external onlyOwner {
-        require(
-            _aliases.length == _canonicalLabelhashes.length,
-            "Array length mismatch"
-        );
+        if (_aliases.length != _canonicalLabelhashes.length) {
+            revert ArrayLengthMismatch();
+        }
         uint256 _length = _aliases.length;
         for (uint256 i = 0; i < _length; i++) {
             _registerAlias(_aliases[i], _canonicalLabelhashes[i]);
@@ -805,16 +808,14 @@ contract ChainResolver is
         bytes32 aliasHash = keccak256(bytes(_alias));
 
         // Prevent alias chains (op → optimism → something-else)
-        require(
-            aliasOf[_canonicalLabelhash] == bytes32(0),
-            "Cannot alias to an alias"
-        );
+        if (aliasOf[_canonicalLabelhash] != bytes32(0)) {
+            revert CannotAliasToAlias();
+        }
 
         // Ensure canonical is actually registered
-        require(
-            chainOwners[_canonicalLabelhash] != address(0),
-            "Canonical not registered"
-        );
+        if (chainOwners[_canonicalLabelhash] == address(0)) {
+            revert CanonicalNotRegistered();
+        }
 
         aliasOf[aliasHash] = _canonicalLabelhash;
         labelByLabelhash[aliasHash] = _alias;
@@ -832,7 +833,9 @@ contract ChainResolver is
     function removeAlias(string calldata _alias) external onlyOwner {
         bytes32 aliasHash = keccak256(bytes(_alias));
         bytes32 canonical = aliasOf[aliasHash];
-        require(canonical != bytes32(0), "Alias does not exist");
+        if (canonical == bytes32(0)) {
+            revert AliasDoesNotExist();
+        }
 
         delete aliasOf[aliasHash];
         delete labelByLabelhash[aliasHash];
@@ -945,7 +948,9 @@ contract ChainResolver is
     function bytesToAddress(
         bytes memory b
     ) internal pure returns (address payable a) {
-        require(b.length == 20);
+        if (b.length != 20) {
+            revert InvalidAddressLength();
+        }
         assembly {
             a := div(mload(add(b, 32)), exp(256, 12))
         }
