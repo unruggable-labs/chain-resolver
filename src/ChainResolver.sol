@@ -4,8 +4,8 @@ pragma solidity ^0.8.25;
 /**
  * @title ChainResolver
  * @author Thomas Clowes (clowes.eth) - <thomas@unruggable.com>
- * @notice Implementation of ERC-7828: Interoperable Addresses using ENS.
- * @dev Upgradeable via UUPS. Owner can upgrade directly.
+ * @notice Canonical on-chain registry for blockchain metadata.
+ * @dev Upgradeable via UUPS. Contract owner has full upgrade authority.
  * @dev Repository: https://github.com/unruggable-labs/chain-resolver
  */
 import {
