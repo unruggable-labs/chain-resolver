@@ -1,0 +1,11 @@
+{
+  "42161": {
+    "label": "arbitrum",
+    "aliases": ["arb"]
+  },
+  "10": {
+    "textRecords": {
+      "header": "images/optimism-header.png"
+    }
+  }
+}
