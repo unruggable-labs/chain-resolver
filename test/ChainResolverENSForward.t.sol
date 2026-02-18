@@ -40,7 +40,7 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
         resolver.setAddr(TEST_LABELHASH, 60, abi.encodePacked(testAddr)); // ETH coin type
 
         // Verify address record (packed 20-byte value)
-        bytes memory ethVal = resolver.getAddr(TEST_LABELHASH, 60);
+        bytes memory ethVal = resolver.getAddr(TEST_LABEL, 60);
         assertEq(
             ethVal,
             abi.encodePacked(testAddr),
@@ -65,12 +65,12 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
 
         // Verify text records
         assertEq(
-            resolver.getText(TEST_LABELHASH, "description"),
+            resolver.getText(TEST_LABEL, "description"),
             "Optimism Layer 2",
             "Description should be set"
         );
         assertEq(
-            resolver.getText(TEST_LABELHASH, "url"),
+            resolver.getText(TEST_LABEL, "url"),
             "https://optimism.io",
             "Website should be set"
         );
@@ -100,7 +100,7 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
 
         // Verify data record
         assertEq(
-            resolver.getData(TEST_LABELHASH, "custom"),
+            resolver.getData(TEST_LABEL, "custom"),
             testData,
             "Data record should be set"
         );
@@ -124,7 +124,7 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
 
         // Verify content hash
         assertEq(
-            resolver.getContenthash(TEST_LABELHASH),
+            resolver.getContenthash(TEST_LABEL),
             contentHash,
             "Content hash should be set"
         );
@@ -143,8 +143,9 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
 
         // Test resolve function for interoperable-address data record (raw bytes) with proper DNS encoding
         bytes memory name = dnsEncodeLabel(TEST_LABEL);
+        bytes4 dataSelector = bytes4(keccak256("data(bytes32,string)"));
         bytes memory data = abi.encodeWithSelector(
-            resolver.DATA_SELECTOR(),
+            dataSelector,
             TEST_LABELHASH,
             "interoperable-address"
         );
@@ -178,8 +179,9 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
 
         // Test resolve function for custom data record with proper DNS encoding
         bytes memory name = dnsEncodeLabel(TEST_LABEL);
+        bytes4 dataSelector = bytes4(keccak256("data(bytes32,string)"));
         bytes memory data = abi.encodeWithSelector(
-            resolver.DATA_SELECTOR(),
+            dataSelector,
             TEST_LABELHASH,
             "custom"
         );
@@ -213,7 +215,7 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
 
         // Ensure nothing was written
         assertEq(
-            resolver.getAddr(TEST_LABELHASH, 60),
+            resolver.getAddr(TEST_LABEL, 60),
             hex"",
             "ETH address storage should remain empty on invalid bytes"
         );
@@ -266,8 +268,9 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
 
         // Now resolve it with CONTENTHASH_SELECTOR
         bytes memory name = dnsEncodeLabel(TEST_LABEL);
+        bytes4 contenthashSelector = bytes4(keccak256("contenthash(bytes32)"));
         bytes memory contentHashData = abi.encodeWithSelector(
-            resolver.CONTENTHASH_SELECTOR(),
+            contenthashSelector,
             TEST_LABELHASH
         );
         bytes memory result = resolver.resolve(name, contentHashData);
@@ -303,8 +306,9 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
         bytes memory name = dnsEncodeLabel(TEST_LABEL);
 
         // Resolve custom text record
+        bytes4 textSelector = bytes4(keccak256("text(bytes32,string)"));
         bytes memory textCalldata = abi.encodeWithSelector(
-            resolver.TEXT_SELECTOR(),
+            textSelector,
             TEST_LABELHASH,
             customTextKey
         );

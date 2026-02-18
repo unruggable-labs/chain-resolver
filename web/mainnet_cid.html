@@ -275,6 +275,129 @@
       transform: translateY(-2px);
     }
 
+    /* Back button */
+    .back-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 1.5rem;
+    }
+
+    .back-button:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    /* Chain list */
+    .chain-list-container {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .chain-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .chain-list-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .chain-list-pagination {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .chain-list-pagination button {
+      padding: 0.5rem 1rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+
+    .chain-list-pagination button:hover:not(:disabled) {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .chain-list-pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .chain-list-pagination span {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .chain-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .chain-item {
+      padding: 1rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .chain-item:hover {
+      background: var(--bg-card);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .chain-item-label {
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .chain-item-name {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .chain-item-address {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-family: 'Space Mono', monospace;
+      word-break: break-all;
+      opacity: 0.8;
+    }
+
+    .chain-list-loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-secondary);
+    }
+
     /* Loading state */
     .loading {
       display: flex;
@@ -490,27 +613,27 @@
       },
       // ChainResolver proxy addresses
       resolvers: {
-        mainnet: '0x0000000000000000000000000000000000000000', // TODO: Set mainnet address
-        sepolia: '0x38Bc9a2F8b5D29d29a99c2e542C2a2BDB468882C',
+        mainnet: '0x52daD93beA9079e5a9144B7F79819Be4a34E118A',
+        sepolia: '0x48bC7811B4d4BFb3a06A176b8378Fde2013c461a',
       },
-      // Parent domains
-      domains: {
-        mainnet: 'on.eth',
-        sepolia: 'cid.eth',
-      },
+      // Default domain
+      defaultDomain: 'cid.eth',    
       // Default network
-      defaultNetwork: 'sepolia',
+      defaultNetwork: 'mainnet',
     };
 
     // ABI for ChainResolver
     const RESOLVER_ABI = [
       'function chainCount() view returns (uint256)',
-      'function interoperableAddress(bytes32) view returns (bytes)',
+      'function getChainAtIndex(uint256) view returns (string label, string chainName, bytes interoperableAddress)',
       'function chainLabel(bytes) view returns (string)',
-      'function chainName(bytes) view returns (string)',
-      'function getCanonicalLabelhash(bytes32) view returns (bytes32)',
-      'function getText(bytes32,string) view returns (string)',
-      'function getData(bytes32,string) view returns (bytes)',
+      'function chainName(string) view returns (string)',
+      'function interoperableAddress(string) view returns (bytes)',
+      'function getCanonicalLabel(string) view returns ((string label,bytes32 labelhash))',
+      'function getText(string,string) view returns (string)',
+      'function getData(string,string) view returns (bytes)',
+      'function getContenthash(string) view returns (bytes)',
+      'function getChainAdmin(string) view returns (address)',
       'function supportedTextKeys(bytes32) view returns (string[])',
       'function supportedDataKeys(bytes32) view returns (string[])',
       'function parentNamehash() view returns (bytes32)',
@@ -568,16 +691,6 @@
       return null;
     }
 
-    // Get network from domain
-    function detectNetwork() {
-      const hostname = window.location.hostname;
-      if (hostname.includes('on.eth')) return 'mainnet';
-      if (hostname.includes('cid.eth')) return 'sepolia';
-      
-      const params = new URLSearchParams(window.location.search);
-      return params.get('network') || CONFIG.defaultNetwork;
-    }
-
     // Shared footer HTML
     const FOOTER_HTML = `
       <div class="footer">
@@ -589,7 +702,7 @@
         </div>
         <div class="powered-by">
           Powered by <a href="https://github.com/unruggable-labs/chain-resolver" target="_blank">ChainResolver</a> - 
-          Data fetched from Ethereum
+          Data fetched from <a href="${CONFIG.defaultNetwork == 'sepolia' ? 'https://sepolia.etherscan.io' : 'https://etherscan.io'}/address/${CONFIG.resolvers[CONFIG.defaultNetwork]}#readProxyContract" target="_blank">Ethereum ${CONFIG.defaultNetwork}</a>
         </div>
       </div>
     `;
@@ -605,14 +718,14 @@
     }
 
     // Render input form for entering chain label
-    function renderInputForm(errorMessage = null) {
+    function renderInputForm(errorMessage = null, inputValue = '') {
       document.getElementById('app').innerHTML = `
         <div class="input-form-container">
           <div class="input-form">
             <h1 class="form-title">Enter a chain label to view its on-chain data.</h1>
             <div class="name-input-section">
               <div class="name-input-wrapper">
-                <input type="text" class="name-input" id="chainInput" placeholder="optimism" />
+                <input type="text" class="name-input" id="chainInput" placeholder="optimism" value="${inputValue}" />
                 <button class="load-btn" onclick="loadChain()">Lookup</button>
               </div>
               ${errorMessage ? `<p class="input-error">${errorMessage}</p>` : ''}
@@ -625,20 +738,130 @@
               <span class="separator">·</span>
               <a href="https://eips.ethereum.org/EIPS/eip-7930" target="_blank" rel="noopener">ERC-7930</a>
             </div>
+            <div class="chain-list-container" id="chainListContainer">
+              <div class="chain-list-loading">Loading chains...</div>
+            </div>
           </div>
 
           ${FOOTER_HTML}
         </div>
       `;
 
-      // Handle enter key
+      // Handle enter key and set cursor position
       const input = document.getElementById('chainInput');
       if (input) {
         input.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') loadChain();
         });
         input.focus();
+        // Move cursor to end of input if value is set
+        if (inputValue) {
+          setTimeout(() => {
+            input.setSelectionRange(inputValue.length, inputValue.length);
+          }, 0);
+        }
       }
+      
+      // Load chain list
+      loadChainList();
+    }
+
+    // Load and display paginated chain list
+    let currentPage = 0;
+    const chainsPerPage = 12;
+    let totalChains = 0;
+
+    async function loadChainList() {
+      const container = document.getElementById('chainListContainer');
+      if (!container) return;
+
+      try {
+        const network = CONFIG.defaultNetwork;
+        const rpcUrl = CONFIG.rpc[network];
+        const resolverAddress = CONFIG.resolvers[network];
+
+        if (!resolverAddress || resolverAddress === '0x0000000000000000000000000000000000000000') {
+          container.innerHTML = '<div class="chain-list-loading">ChainResolver not configured</div>';
+          return;
+        }
+
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
+        const resolver = new ethers.Contract(resolverAddress, RESOLVER_ABI, provider);
+
+        // Get total chain count
+        totalChains = Number(await resolver.chainCount());
+        
+        if (totalChains === 0) {
+          container.innerHTML = '<div class="chain-list-loading">No chains registered yet</div>';
+          return;
+        }
+
+        // Calculate pagination
+        const totalPages = Math.ceil(totalChains / chainsPerPage);
+        const startIndex = currentPage * chainsPerPage;
+        const endIndex = Math.min(startIndex + chainsPerPage, totalChains);
+
+        // Fetch chains for current page
+        const chainPromises = [];
+        for (let i = startIndex; i < endIndex; i++) {
+          chainPromises.push(resolver.getChainAtIndex(i));
+        }
+
+        const chains = await Promise.all(chainPromises);
+
+        // Render chain list
+        container.innerHTML = `
+          <div class="chain-list-header">
+            <div class="chain-list-title">Registered Chains (${totalChains})</div>
+            <div class="chain-list-pagination">
+              <button onclick="previousPage()" ${currentPage === 0 ? 'disabled' : ''}>← Prev</button>
+              <span>Page ${currentPage + 1} of ${totalPages}</span>
+              <button onclick="nextPage()" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
+            </div>
+          </div>
+          <div class="chain-list">
+            ${chains.map((chain, idx) => {
+              const [label, chainName, interopAddress] = chain;
+              const addressHex = ethers.hexlify(interopAddress);
+              const addressDisplay = addressHex.length > 20 
+                ? `${addressHex.slice(0, 10)}...${addressHex.slice(-8)}`
+                : addressHex;
+              return `
+                <div class="chain-item" onclick="viewChain('${label}')">
+                  <div class="chain-item-label">${label}</div>
+                  <div class="chain-item-name">${chainName || label}</div>
+                  <div class="chain-item-address" title="${addressHex}">${addressDisplay}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      } catch (error) {
+        console.error('Error loading chain list:', error);
+        container.innerHTML = '<div class="chain-list-loading">Error loading chains</div>';
+      }
+    }
+
+    function previousPage() {
+      if (currentPage > 0) {
+        currentPage--;
+        loadChainList();
+      }
+    }
+
+    function nextPage() {
+      const totalPages = Math.ceil(totalChains / chainsPerPage);
+      if (currentPage < totalPages - 1) {
+        currentPage++;
+        loadChainList();
+      }
+    }
+
+    function viewChain(label) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('label', label);
+      window.history.pushState({}, '', url);
+      main();
     }
 
     // Load chain from input
@@ -732,7 +955,7 @@
           other.push({ key, value });
         }
       }
-      
+
       return { links, info, other, display };
     }
 
@@ -758,6 +981,9 @@
         : '';
 
       document.getElementById('app').innerHTML = `
+        <button class="back-button" onclick="goBack()">
+          ← Back
+        </button>
         <div class="header">
           <div class="header-image" style="${headerStyle}"></div>
           <div class="header-content">
@@ -853,10 +1079,19 @@
       document.title = `${displayName} | Chain Info`;
     }
 
+    // Back button handler
+    function goBack() {
+      // Clear URL parameters and render input form
+      const url = new URL(window.location.href);
+      url.searchParams.delete('label');
+      window.history.pushState({}, '', url);
+      renderInputForm();
+    }
+
     // Main function
     async function main() {
       const chainLabel = detectChainLabel();
-      const network = detectNetwork();
+      const network = CONFIG.defaultNetwork;
 
       if (!chainLabel) {
         renderInputForm();
@@ -868,7 +1103,7 @@
       try {
         const rpcUrl = CONFIG.rpc[network];
         const resolverAddress = CONFIG.resolvers[network];
-        const domain = CONFIG.domains[network];
+        const domain = CONFIG.defaultDomain;
 
         if (!resolverAddress || resolverAddress === '0x0000000000000000000000000000000000000000') {
           throw new Error(`ChainResolver not configured for ${network}`);
@@ -886,13 +1121,13 @@
         const node = ethers.keccak256(ethers.solidityPacked(['bytes32', 'bytes32'], [parentNamehash, labelhash]));
 
         console.log(`Loading chain: ${chainLabel}`);
-        console.log(`  Labelhash: ${labelhash}`);
-        console.log(`  Node: ${node}`);
+        console.log(`Labelhash: ${labelhash}`);
+        console.log(`Node: ${node}`);
 
         // Fetch interoperable address first to check if chain exists
         let interopAddress = '';
         try {
-          const interopBytes = await resolver.interoperableAddress(labelhash);
+          const interopBytes = await resolver.interoperableAddress(chainLabel);
           if (interopBytes && interopBytes !== '0x') {
             interopAddress = interopBytes;
           }
@@ -901,41 +1136,29 @@
         }
 
         if (!interopAddress) {
-          renderInputForm(`No data found for "${chainLabel}"`);
+          renderInputForm(`No data found for "${chainLabel}"`, chainLabel);
           return;
         }
 
         // Check if we're viewing an alias
-        let canonicalLabel = null;
         const ZERO_BYTES32 = '0x0000000000000000000000000000000000000000000000000000000000000000';
-        try {
-          const canonical = await resolver.getCanonicalLabelhash(labelhash);
-          if (canonical && canonical !== ZERO_BYTES32) {
-            // We're viewing an alias - get the canonical label
-            const canonicalInterop = await resolver.interoperableAddress(canonical);
-            if (canonicalInterop && canonicalInterop !== '0x') {
-              canonicalLabel = await resolver.chainLabel(canonicalInterop);
-              console.log(`This is an alias. Canonical label: ${canonicalLabel}`);
-            }
-          }
-        } catch (e) {
-          console.warn('Could not check alias status:', e.message);
-        }
+        const [ canonicalLabel, canonicalLabelhash ] = await resolver.getCanonicalLabel(chainLabel);
+        const isAlias = canonicalLabelhash && canonicalLabelhash !== ZERO_BYTES32;
 
         // Fetch ALL text records using supportedTextKeys
         const textRecords = {};
         try {
           console.log('Fetching supported text keys...');
           const textKeys = await resolver.supportedTextKeys(node);
-          console.log(`  Found ${textKeys.length} text keys:`, textKeys);
+          console.log(`Found ${textKeys.length} text keys:`, textKeys);
           
           // Fetch all text records in parallel for speed
           const textPromises = textKeys.map(async (key) => {
             try {
-              const value = await resolver.getText(labelhash, key);
+              const value = await resolver.getText(chainLabel, key);
               return { key, value };
             } catch (e) {
-              console.warn(`  Could not fetch text record "${key}":`, e.message);
+              console.warn(`Could not fetch text record "${key}":`, e.message);
               return { key, value: null };
             }
           });
@@ -952,7 +1175,7 @@
                              'notice', 'keywords', 'email'];
           for (const key of commonKeys) {
             try {
-              const value = await resolver.getText(labelhash, key);
+              const value = await resolver.getText(chainLabel, key);
               if (value) textRecords[key] = value;
             } catch (e) {}
           }
@@ -971,7 +1194,7 @@
           const dataPromises = dataKeys.map(async (key) => {
             if (key === 'interoperable-address') return { key, value: null }; // Skip, shown separately
             try {
-              const value = await resolver.getData(labelhash, key);
+              const value = await resolver.getData(chainLabel, key);
               return { key, value };
             } catch (e) {
               console.warn(`  Could not fetch data record "${key}":`, e.message);
@@ -990,21 +1213,35 @@
         console.log('Data records:', dataRecords);
 
         // Get chain name from contract
-        let chainName = await resolver.chainName(interopAddress);
+        let chainName = await resolver.chainName(chainLabel);
 
         // Verify aliases from text record
         const verifiedAliases = [];
-        const aliasesText = textRecords['aliases'] || '';
         
-        // Determine which labelhash to verify aliases against
-        // If we're viewing an alias, verify against the canonical labelhash
-        const canonicalLabelhash = canonicalLabel 
-          ? ethers.keccak256(ethers.toUtf8Bytes(canonicalLabel))
-          : labelhash;
+        // If we're viewing an alias, get aliases from the canonical chain
+        // Otherwise, get aliases from the current chain
+        let aliasesText = '';
+        if (isAlias && canonicalLabel) {
+          // Viewing an alias - get aliases from canonical chain
+          try {
+            aliasesText = await resolver.getText(canonicalLabel, 'aliases');
+            console.log(`Fetching aliases from canonical chain "${canonicalLabel}":`, aliasesText);
+          } catch (e) {
+            console.warn('Could not fetch aliases from canonical chain:', e.message);
+          }
+        } else {
+          // Viewing canonical chain - get aliases from current chain
+          aliasesText = textRecords['aliases'] || '';
+          console.log(`Fetching aliases from current chain "${chainLabel}":`, aliasesText);
+        }
+        
+        console.log('Canonical labelhash for verification:', canonicalLabelhash);
+        console.log('Is alias?', isAlias);
+        console.log('Canonical label:', canonicalLabel);
         
         if (aliasesText) {
           const aliasesList = aliasesText.split(',').map(a => a.trim()).filter(Boolean);
-          console.log('Verifying aliases:', aliasesList);
+          console.log('Aliases list from text record:', aliasesList);
           
           for (const alias of aliasesList) {
             // Skip the current label we're viewing (don't show "op" as alias when viewing "op")
@@ -1014,20 +1251,32 @@
             }
             
             try {
-              const aliasHash = ethers.keccak256(ethers.toUtf8Bytes(alias));
-              const canonical = await resolver.getCanonicalLabelhash(aliasHash);
-              if (canonical === canonicalLabelhash) {
+              const [ canonicalLabel, canonicalLabelhash ] = await resolver.getCanonicalLabel(alias);
+              console.log(`  Checking alias "${alias}":`, {
+                labelhash: canonicalLabelhash,
+                label: canonicalLabel,
+                expected: canonicalLabelhash
+              });
+              
+              // Verify that this alias points to the same canonical chain
+              // Compare as strings (both should be hex strings)
+              const aliasCanonicalHash = canonicalLabelhash;
+              if (aliasCanonicalHash && 
+                  aliasCanonicalHash.toLowerCase() === canonicalLabelhash.toLowerCase()) {
                 verifiedAliases.push(alias);
-                console.log(`  ✓ ${alias} verified`);
+                console.log(`✓ ${alias} verified`);
               } else {
-                console.log(`  ✗ ${alias} not verified (points to ${canonical})`);
+                console.log(`✗ ${alias} not verified (points to ${aliasCanonicalHash || 'nothing'}, expected ${canonicalLabelhash})`);
               }
             } catch (e) {
-              console.warn(`  Could not verify alias "${alias}":`, e.message);
+              console.warn(`Could not verify alias "${alias}":`, e.message);
             }
           }
+        } else {
+          console.log('No aliases text record found');
         }
-        console.log('Verified aliases:', verifiedAliases);
+        
+        console.log('Final verified aliases:', verifiedAliases);
 
         renderChain({
           chainLabel,
@@ -1042,7 +1291,7 @@
 
       } catch (error) {
         console.error('Error loading chain data:', error);
-        renderInputForm(error.message || 'An unexpected error occurred.');
+        renderInputForm(error.message || 'An unexpected error occurred.', chainLabel);
       }
     }
 

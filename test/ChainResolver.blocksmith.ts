@@ -243,13 +243,13 @@ async function main() {
 
   // Getter tests
   section("Getter tests");
-  const interoperableAddress = await resolverContract.interoperableAddress!(TEST_LABELHASH);
+  const interoperableAddress = await resolverContract.interoperableAddress!(TEST_LABEL);
   log("Interoperable address", interoperableAddress);
   if (interoperableAddress !== INTEROPERABLE_ADDRESS_AS_HEX) {
     throw new Error("Interoperable Address mismatch");
   }
 
-  const chainName = await resolverContract.chainName!(interoperableAddress);
+  const chainName = await resolverContract.chainName!(TEST_LABEL);
   log("Chain name", chainName);
   if (chainName !== TEST_CHAIN_NAME) {
     throw new Error("Chain name mismatch");
@@ -265,18 +265,18 @@ async function main() {
   logEvents(aliasReceipt, castedContract);
 
   // Verify the alias was registered
-  const canonical = await resolverContract.getCanonicalLabelhash!(TEST_ALIAS_LABELHASH);
-  if (canonical !== TEST_LABELHASH) {
+  const canonicalInfo = await resolverContract.getCanonicalLabel!(TEST_ALIAS);
+  if (canonicalInfo.labelhash !== TEST_LABELHASH) {
     throw new Error(
       `Alias not registered correctly`
     );
   }
-  log("Alias registered successfully");
+  log("Alias registered successfully. Canonical label:", canonicalInfo.label);
 
   // Read Interoperable Address through getter using alias
   section("Alias - Read through alias");
   const aliasInteropAddr = await resolverContract.interoperableAddress!(
-    TEST_ALIAS_LABELHASH
+    TEST_ALIAS
   );
   if (hexlify(aliasInteropAddr) !== INTEROPERABLE_ADDRESS_AS_HEX) {
     throw new Error(
@@ -288,7 +288,7 @@ async function main() {
   log("interoperableAddress via alias ✓");
 
   // Read chain admin through alias
-  const aliasAdmin = await resolverContract.getChainAdmin!(TEST_ALIAS_LABELHASH);
+  const aliasAdmin = await resolverContract.getChainAdmin!(TEST_ALIAS);
   if (aliasAdmin.toLowerCase() !== deployer.toLowerCase()) {
     throw new Error(`Alias admin mismatch: got=${aliasAdmin} want=${deployer}`);
   }
@@ -351,7 +351,7 @@ async function main() {
 
   // Verify the text record was set on canonical
   const textViaCanonical = await resolverContract.getText!(
-    TEST_LABELHASH,
+    TEST_LABEL,
     "description"
   );
   if (textViaCanonical !== TEST_DESCRIPTION_TEXT) {
@@ -363,7 +363,7 @@ async function main() {
 
   // Also verify readable via alias
   const textViaAlias = await resolverContract.getText!(
-    TEST_ALIAS_LABELHASH,
+    TEST_ALIAS,
     "description"
   );
   if (textViaAlias !== TEST_DESCRIPTION_TEXT) {
@@ -379,20 +379,20 @@ async function main() {
   logEvents(removeAliasReceipt, castedContract);
 
   // Verify alias is removed
-  const removedCanonical = await resolverContract.getCanonicalLabelhash!(
-    TEST_ALIAS_LABELHASH
+  const removedCanonicalInfo = await resolverContract.getCanonicalLabel!(
+    TEST_ALIAS
   );
   if (
-    removedCanonical !==
+    removedCanonicalInfo.labelhash !==
     "0x0000000000000000000000000000000000000000000000000000000000000000"
   ) {
-    throw new Error(`Alias not removed: got=${removedCanonical}`);
+    throw new Error(`Alias not removed: got=${removedCanonicalInfo.labelhash}`);
   }
   log("Alias removed successfully ✓");
 
-  // Verify reading via removed alias now returns empty (alias treated as its own labelhash)
+  // Verify reading via removed alias now returns empty (alias treated as unregistered label)
   const removedAliasInteropAddr = await resolverContract.interoperableAddress!(
-    TEST_ALIAS_LABELHASH
+    TEST_ALIAS
   );
   if (removedAliasInteropAddr !== "0x") {
     throw new Error(

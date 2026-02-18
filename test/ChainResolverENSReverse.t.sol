@@ -40,8 +40,9 @@ contract ChainResolverENSReverseTest is ChainResolverTestBase {
         bytes memory name = DNS_REVERSE_PARENT_DOMAIN;
         bytes32 node = NameCoder.namehash(name, 0);
 
+        bytes4 textSelector = bytes4(keccak256("text(bytes32,string)"));
         bytes memory textData = abi.encodeWithSelector(
-            resolver.TEXT_SELECTOR(),
+            textSelector,
             node,
             KEY_CHAIN_LABEL
         );
@@ -68,21 +69,19 @@ contract ChainResolverENSReverseTest is ChainResolverTestBase {
         registerTestChain();
         vm.stopPrank();
 
-        // Test direct reverse resolution - Interoperable Address to chain name
-        string memory resolvedChainName = resolver.chainName(
-            TEST_INTEROPERABLE_ADDRESS
-        );
-        // Direct reverse mapping must return the chain name
+        // Test reverse resolution using chainLabel + chainName
+        string memory resolvedLabel = resolver.chainLabel(TEST_INTEROPERABLE_ADDRESS);
+        string memory resolvedChainName = resolver.chainName(resolvedLabel);
         assertEq(
             resolvedChainName,
             TEST_CHAIN_NAME,
-            "Should resolve chain name from Interoperable Address"
+            "Should resolve chain name via chainLabel + chainName"
         );
 
         console.log(
-            "Successfully resolved reverse chain name via direct function"
+            "Successfully resolved reverse chain name via chainLabel + chainName"
         );
-        console.log("Interoperable Address -> Label:", resolvedChainName);
+        console.log("Interoperable Address -> Label -> Name:", resolvedChainName);
     }
 
     function test_003____chainName___________________ReturnsEmptyForUnknownInteroperableAddress()
@@ -94,7 +93,8 @@ contract ChainResolverENSReverseTest is ChainResolverTestBase {
 
         // Test reverse resolution for unknown Interoperable Address
         bytes memory unknownInteroperableAddress = hex"00010001019900";
-        string memory resolvedName = resolver.chainName(unknownInteroperableAddress);
+        string memory resolvedLabel = resolver.chainLabel(unknownInteroperableAddress);
+        string memory resolvedName = bytes(resolvedLabel).length > 0 ? resolver.chainName(resolvedLabel) : "";
 
         assertEq(
             resolvedName,
@@ -113,10 +113,10 @@ contract ChainResolverENSReverseTest is ChainResolverTestBase {
         vm.stopPrank();
 
         // Build calldata for text(bytes32,string) using node-bound reverse context
-        bytes4 TEXT_SELECTOR = resolver.TEXT_SELECTOR();
+        bytes4 textSelector = bytes4(keccak256("text(bytes32,string)"));
         bytes memory name = DNS_REVERSE_PARENT_DOMAIN;
         bytes memory data = abi.encodeWithSelector(
-            TEXT_SELECTOR,
+            textSelector,
             NameCoder.namehash(name, 0),
             KEY_CHAIN_LABEL
         );

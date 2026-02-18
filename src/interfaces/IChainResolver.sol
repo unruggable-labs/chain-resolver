@@ -16,6 +16,12 @@ interface IChainResolver {
         bytes interoperableAddress; // ERC-7930 Interoperable Address
     }
 
+    // Container for canonical label information
+    struct CanonicalLabelInfo {
+        string label;
+        bytes32 labelhash;
+    }
+
     // Events
     event ChainRegistered(bytes32 indexed _labelhash, string _chainName, bytes _chainId);
     event ChainAdminSet(bytes32 indexed _labelhash, address _owner);
@@ -29,6 +35,8 @@ interface IChainResolver {
     event AddressChanged(bytes32 indexed node, uint256 coinType, bytes newAddress);
     // ENSIP-24
     event DataChanged(bytes32 indexed node, string indexed indexedKey, string key, bytes indexed indexedData);
+    // ENSIP-7
+    event ContenthashChanged(bytes32 indexed node, bytes _contenthash);
 
     // Errors
     // There is no registered chain at that index
@@ -47,8 +55,25 @@ interface IChainResolver {
     error EmptyLabel();
     error EmptyChainName();
     error InvalidInteroperableAddress();
+    // Array length mismatch in batch operations
+    error ArrayLengthMismatch();
+    // Cannot create an alias pointing to another alias
+    error CannotAliasToAlias();
+    // The canonical labelhash is not registered
+    error CanonicalNotRegistered();
+    // The alias does not exist
+    error AliasDoesNotExist();
+    // Invalid address byte length (expected 20 bytes)
+    error InvalidAddressLength();
 
     /// @notice Functions
+
+    /**
+     * @notice Set or transfer the administrator of a label (chain).
+     * @param _labelhash The ENS labelhash to update.
+     * @param _owner The new owner address.
+     */
+    function setChainAdmin(bytes32 _labelhash, address _owner) external;
 
     /**
      * @notice Return the canonical chain label for a given ERC-7930 Interoperable Address.
@@ -58,18 +83,69 @@ interface IChainResolver {
     function chainLabel(bytes calldata _interoperableAddress) external view returns (string memory _chainLabel);
 
     /**
-     * @notice Return the human readable chain name for a given ERC-7930 Interoperable Address.
-     * @param _interoperableAddress The ERC-7930 Interoperable Address.
+     * @notice Return the human readable chain name for a given label string.
+     * @param _label The chain label (e.g., "optimism").
      * @return _chainName The chain name (e.g., "Optimism").
      */
-    function chainName(bytes calldata _interoperableAddress) external view returns (string memory _chainName);
+    function chainName(string calldata _label) external view returns (string memory _chainName);
 
     /**
-     * @notice Return the ERC-7930 Interoperable Address bytes for a given labelhash.
-     * @param _labelhash The ENS labelhash `keccak256(bytes(label))`.
+     * @notice Return the ERC-7930 Interoperable Address bytes for a given label string.
+     * @param _label The chain label (e.g., "optimism").
      * @return _interoperableAddress The ERC-7930 Interoperable Address.
      */
-    function interoperableAddress(bytes32 _labelhash) external view returns (bytes memory _interoperableAddress);
+    function interoperableAddress(string calldata _label) external view returns (bytes memory _interoperableAddress);
+
+    /**
+     * @notice Get the address for a label with a specific coin type.
+     * @param _label The label string to query.
+     * @param _coinType The coin type (default: 60 for Ethereum).
+     * @return The address for this label and coin type.
+     */
+    function getAddr(string calldata _label, uint256 _coinType) external view returns (bytes memory);
+
+    /**
+     * @notice Get a text record for a label.
+     * @param _label The label string to query.
+     * @param _key The text record key.
+     * @return The text record value.
+     */
+    function getText(string calldata _label, string calldata _key) external view returns (string memory);
+
+    /**
+     * @notice Get the content hash for a label.
+     * @param _label The label string to query.
+     * @return The content hash for this label.
+     */
+    function getContenthash(string calldata _label) external view returns (bytes memory);
+
+    /**
+     * @notice Get a data record for a label.
+     * @param _label The label string to query.
+     * @param _key The data record key.
+     * @return The data record value.
+     */
+    function getData(string calldata _label, string calldata _key) external view returns (bytes memory);
+
+    /**
+     * @notice Get the admin for a chain.
+     * @param _label The label string to query.
+     * @return The owner address.
+     */
+    function getChainAdmin(string calldata _label) external view returns (address);
+
+    /**
+     * @notice Get the canonical label information for an alias.
+     * @param _label The label string to check.
+     * @return info The canonical label info (label and labelhash), or empty if not an alias.
+     */
+    function getCanonicalLabel(string calldata _label) external view returns (CanonicalLabelInfo memory info);
+
+    /**
+     * @notice Set the default contenthash used when no specific contenthash is set.
+     * @param _contenthash The default contenthash to set.
+     */
+    function setDefaultContenthash(bytes calldata _contenthash) external;
 
     /**
      * @notice Register or update a chain entry
@@ -84,13 +160,6 @@ interface IChainResolver {
     function batchRegister(ChainRegistrationData[] calldata _items) external;
 
     /**
-     * @notice Set or transfer the administrator of a label (chain).
-     * @param _labelhash The ENS labelhash to update.
-     * @param _owner The new owner address.
-     */
-    function setChainAdmin(bytes32 _labelhash, address _owner) external;
-
-    /**
      * @notice Register an alias that points to a canonical labelhash.
      * @param _alias The alias string (e.g., "op").
      * @param _canonicalLabelhash The canonical labelhash to point to.
@@ -102,11 +171,4 @@ interface IChainResolver {
      * @param _alias The alias string to remove.
      */
     function removeAlias(string calldata _alias) external;
-
-    /**
-     * @notice Get the canonical labelhash for an alias.
-     * @param _labelhash The labelhash to check.
-     * @return The canonical labelhash, or bytes32(0) if not an alias.
-     */
-    function getCanonicalLabelhash(bytes32 _labelhash) external view returns (bytes32);
 }
