@@ -1,0 +1,18 @@
+{
+  "_comment": "TEMPLATE - Copy this file and rename to {your-chain-label}.json",
+  "label": "your-chain-label",
+  "chainName": "Your Chain Display Name",
+  "interoperableAddressHex": "0x...",
+  "aliases": [],
+  "textRecords": {
+    "chainId": "eip155:YOUR_CHAIN_ID",
+    "shortName": "short",
+    "url": "https://your-chain.io/",
+    "com.x": "https://x.com/yourchain",
+    "com.discord": "https://discord.gg/yourchain",
+    "com.github": "https://github.com/yourchain",
+    "avatar": "ipfs://...",
+    "header": "ipfs://...",
+    "brand": "https://your-chain.io/brand-kit"
+  }
+}

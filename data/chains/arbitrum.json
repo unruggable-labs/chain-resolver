@@ -1,0 +1,22 @@
+{
+  "label": "arbitrum",
+  "chainName": "Arbitrum One",
+  "interoperableAddressHex": "0x0001000002a4b100",
+  "aliases": [
+    "arb1",
+    "arb"
+  ],
+  "textRecords": {
+    "chainId": "eip155:42161",
+    "shortName": "arb1",
+    "url": "https://arbitrum.io",
+    "com.x": "https://x.com/arbitrum",
+    "com.discord": "https://discord.gg/arbitrum",
+    "com.youtube": "https://www.youtube.com/@Arbitrum",
+    "avatar": "ipfs://bafkreigbydboowb3gqxfzhq2qrel3wtmdtparx6so6a75rfkotngfjmaby",
+    "brand": "https://arbitrum.io/brand-kit",
+    "com.linkedin": "https://www.linkedin.com/company/arbitrum/",
+    "com.github": "https://github.com/OffchainLabs/arbitrum",
+    "header": "ipfs://bafkreif75l2xlliybxlzxu6hrlwgfyejcxsvg2lsmlphzb4avuguoho5yu"
+  }
+}

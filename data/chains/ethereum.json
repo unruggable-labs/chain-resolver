@@ -1,0 +1,18 @@
+{
+  "label": "ethereum",
+  "chainName": "Ethereum",
+  "interoperableAddressHex": "0x00010000010100",
+  "aliases": [
+    "eth"
+  ],
+  "textRecords": {
+    "chainId": "eip155:1",
+    "shortName": "eth",
+    "url": "https://ethereum.org/",
+    "com.github": "https://github.com/ethereum/ethereum-org-website",
+    "com.x": "https://x.com/ethdotorg",
+    "com.discord": "https://discord.com/invite/ethereum-org",
+    "avatar": "ipfs://bafkreiep33nrjcrf5d64sshzljgmlvzpei4rgzrjiqwpoq76ysunwmdcjq",
+    "header": "ipfs://bafybeibornbvogsnbyyeahhk7jivzty55rz33pvkq6nhkcteof5k7wevta"
+  }
+}

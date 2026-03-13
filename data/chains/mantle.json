@@ -1,0 +1,17 @@
+{
+  "label": "mantle",
+  "chainName": "Mantle",
+  "interoperableAddressHex": "0x0001000002138800",
+  "aliases": [],
+  "textRecords": {
+    "chainId": "eip155:5000",
+    "shortName": "mantle",
+    "url": "https://mantle.xyz",
+    "com.x": "https://x.com/0xMantle",
+    "com.discord": "https://discord.com/invite/0xMantle",
+    "org.telegram": "https://t.me/mantlenetwork",
+    "avatar": "ipfs://bafkreiardphxh4ma62ijeg3hvgawc3ldqtc4alyyk5wvr4etrnpc7smupi",
+    "brand": "https://drive.google.com/drive/folders/1ByNQpJ9RTat9valFheMN3vBF_fCt7qzx",
+    "header": "ipfs://bafkreigl7r5lnf7mbye4ctebozfhuc6tgcj4tnyf7rvueakrga3xo2r2vq"
+  }
+}

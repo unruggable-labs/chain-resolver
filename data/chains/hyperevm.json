@@ -1,0 +1,21 @@
+{
+  "label": "hyperevm",
+  "chainName": "HyperEVM",
+  "interoperableAddressHex": "0x000100000203e700",
+  "aliases": [
+    "hyperliquid"
+  ],
+  "textRecords": {
+    "chainId": "eip155:999",
+    "shortName": "hyper_evm",
+    "url": "https://hyperfoundation.org/",
+    "io.gitbook": "https://hyperliquid.gitbook.io/hyperliquid-docs",
+    "com.x": "https://x.com/hyperliquidX",
+    "com.discord": "https://discord.gg/hyperliquid",
+    "com.github": "https://github.com/hyperliquid-dex",
+    "org.telegram": "https://t.me/hyperliquid_announcements",
+    "avatar": "ipfs://bafkreifeejzsbc3ekyvivzsxfyny4ochxciwlkg6tkydgnvtoxfpy45ssi",
+    "brand": "https://hyperliquid.gitbook.io/hyperliquid-docs/brand-kit",
+    "header": "ipfs://bafkreibwid6d7pgf7oswftxegnsfmsgleks5hcvbgkhfy46egbktaubecq"
+  }
+}

@@ -1,9 +1,14 @@
 // Shared chain registration data
 // Used by both tests and deployment scripts
-// This file imports the approved chain data from chains.approved.json
-// For backward compatibility, falls back to chains.generated.json
+// This file reads chain data from individual files in data/chains/
+// Each chain is a separate JSON file named {label}.json
 
-import approvedChains from "./chains.approved.json";
+import { readdirSync, readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const chainsDir = join(__dirname, "chains");
 
 export interface ChainData {
   // The canonical label (e.g., "optimism")
@@ -21,13 +26,28 @@ export interface ChainData {
   contenthash?: string;
 }
 
-// List of Chains to register - imported from approved JSON
-// Run the pipeline to regenerate:
-//   npm run fetch:sources    # Stage 1: Fetch from APIs
-//   npm run generate:chains  # Stage 2: Generate raw chains
-//   npm run diff:chains      # Stage 3: Review changes
-// Then copy raw to approved: cp data/generated/chains.raw.json data/chains.approved.json
-export const CHAINS: ChainData[] = approvedChains as unknown as ChainData[];
+function loadChains(): ChainData[] {
+  const files = readdirSync(chainsDir).filter(
+    (f) => f.endsWith(".json") && !f.startsWith("_")
+  );
+  const chains: ChainData[] = [];
+
+  for (const file of files) {
+    const content = readFileSync(join(chainsDir, file), "utf8");
+    const chain = JSON.parse(content) as ChainData;
+    // Skip invalid entries
+    if (chain.label && chain.label.trim() !== "") {
+      chains.push(chain);
+    }
+  }
+
+  return chains;
+}
+
+// List of Chains to register - loaded from data/chains/*.json
+// Each chain submits a PR adding their own file (e.g., data/chains/mychain.json)
+// Merging the PR = approval
+export const CHAINS: ChainData[] = loadChains();
 
 // Helper to get a chain by label
 export function getChainByLabel(label: string): ChainData | undefined {

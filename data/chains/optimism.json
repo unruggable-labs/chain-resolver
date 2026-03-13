@@ -1,0 +1,22 @@
+{
+  "label": "optimism",
+  "chainName": "OP Mainnet",
+  "interoperableAddressHex": "0x00010000010a00",
+  "aliases": [
+    "oeth",
+    "op",
+    "opt",
+    "op-mainnet"
+  ],
+  "textRecords": {
+    "chainId": "eip155:10",
+    "shortName": "oeth",
+    "url": "https://www.optimism.io/",
+    "com.github": "https://github.com/ethereum-optimism",
+    "com.x": "https://x.com/optimism",
+    "com.discord": "https://discord.com/invite/optimism",
+    "brand": "https://www.optimism.io/brand",
+    "avatar": "ipfs://bafkreiaf42iw54ikfohrbsrgak4pie7lzcp7r4l7zefkyc7axcpsybysuq",
+    "header": "ipfs://bafkreihpvdpswiohxavlfggjfw7exkkwxmmydijeplijtxq6lz5jbreh3u"
+  }
+}

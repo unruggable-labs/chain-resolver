@@ -1,0 +1,18 @@
+{
+  "label": "unichain",
+  "chainName": "Unichain",
+  "interoperableAddressHex": "0x00010000018200",
+  "aliases": [
+    "uni"
+  ],
+  "textRecords": {
+    "chainId": "eip155:130",
+    "shortName": "unichain",
+    "url": "https://unichain.org/",
+    "com.discord": "https://discord.com/invite/uniswap",
+    "com.x": "https://x.com/unichain",
+    "avatar": "ipfs://bafkreiatqyebwobna26jxbwxalwjnlr5rrt3pvaxma2cx2nzegyffebhei",
+    "brand": "https://www.unichain.org/brand-kit",
+    "header": "ipfs://bafkreiaoc54iellohgdpuktj7bh3kqlq5fp2knvgcpfmujy6fiha7wiqbq"
+  }
+}

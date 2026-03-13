@@ -1,0 +1,17 @@
+{
+  "label": "ink",
+  "chainName": "Ink",
+  "interoperableAddressHex": "0x0001000002def100",
+  "aliases": [],
+  "textRecords": {
+    "chainId": "eip155:57073",
+    "shortName": "ink",
+    "url": "https://inkonchain.com/",
+    "com.x": "https://x.com/inkonchain",
+    "org.telegram": "https://t.me/inkonchain",
+    "com.github": "https://github.com/inkonchain",
+    "avatar": "ipfs://bafkreidxtopgyoqkwe6nxakxjxexngs22zvbkkrk57iibnchx6uzcym6cu",
+    "brand": "https://docs.inkonchain.com/work-with-ink/brand-kit",
+    "header": "ipfs://bafkreifnrhieuowgtl2mk5zbkt7paoi5uxlrqrxg7ugzxhd7g5jti3rttu"
+  }
+}

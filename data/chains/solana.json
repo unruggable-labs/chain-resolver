@@ -1,0 +1,21 @@
+{
+  "label": "solana",
+  "chainName": "Solana",
+  "interoperableAddressHex": "0x000100022045296998a6f8e2a784db5d9f95e18fc23f70441a1039446801089879b08c7ef000",
+  "aliases": [
+    "sol"
+  ],
+  "textRecords": {
+    "chainId": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+    "url": "https://solana.com",
+    "com.x": "https://x.com/solana",
+    "com.discord": "https://discord.com/invite/kBbATFA7PW",
+    "com.youtube": "https://www.youtube.com/SolanaFndn",
+    "com.reddit": "https://www.reddit.com/r/solana/",
+    "com.github": "https://github.com/solana-foundation/solana-com",
+    "org.telegram": "https://t.me/solana",
+    "avatar": "ipfs://bafybeie6c6htc3d4q4wbuv7ctg5bxnc6oecxuacvboudf6b2ufjxxuq6nm",
+    "brand": "https://solana.com/branding",
+    "header": "ipfs://bafkreigbbcrq4nemwbpam2742fujmlry7lpc5mm6somysfsuq3hbh6ablu"
+  }
+}

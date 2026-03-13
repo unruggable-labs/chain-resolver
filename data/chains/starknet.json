@@ -1,0 +1,18 @@
+{
+  "label": "starknet",
+  "chainName": "Starknet",
+  "interoperableAddressHex": "0x0001000307534e5f4d41494e00",
+  "aliases": [],
+  "textRecords": {
+    "chainId": "starknet:SN_MAIN",
+    "url": "https://www.starknet.io/",
+    "com.x": "https://x.com/Starknet",
+    "com.discord": "https://discord.gg/starknet-community",
+    "com.youtube": "https://www.youtube.com/channel/UCnDWguR8mE2oDBsjhQkgbvg",
+    "com.github": "https://github.com/keep-starknet-strange/awesome-starknet",
+    "org.telegram": "https://t.me/starknet_ecosystem",
+    "avatar": "ipfs://bafkreiaky754jdgj5gzotimyp3p3enfdwbz4eztd7syhm7glkmpjfxe4fm",
+    "brand": "https://www.starknet.io/media-kit/",
+    "header": "ipfs://bafkreiecfs76jundh2fo63b3g4dfibd7xfdrfdj6p54hfyoprkngiyikxe"
+  }
+}

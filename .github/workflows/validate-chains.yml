@@ -1,0 +1,53 @@
+name: Validate Chain Submissions
+
+on:
+  pull_request:
+    paths:
+      - 'data/chains/*.json'
+      - 'scripts/validate-chains.ts'
+      - '.github/workflows/validate-chains.yml'
+
+jobs:
+  validate:
+    name: Validate Chain Files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for diff
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Validate changed chain files
+        run: bun run scripts/validate-chains.ts --changed --strict
+
+  json-lint:
+    name: JSON Syntax Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate JSON syntax
+        run: |
+          echo "Checking JSON syntax..."
+          for file in data/chains/*.json; do
+            if [[ $(basename "$file") != _* ]]; then
+              if ! jq empty "$file" 2>/dev/null; then
+                echo "❌ Invalid JSON: $file"
+                jq empty "$file"
+                exit 1
+              fi
+              echo "✓ $file"
+            fi
+          done
+          echo "All JSON files are valid!"

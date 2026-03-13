@@ -1,0 +1,19 @@
+{
+  "label": "base",
+  "chainName": "Base",
+  "interoperableAddressHex": "0x0001000002210500",
+  "aliases": [],
+  "textRecords": {
+    "chainId": "eip155:8453",
+    "shortName": "base",
+    "url": "https://www.base.org/",
+    "com.x": "https://x.com/base",
+    "com.warpcast": "https://warpcast.com/base",
+    "com.github": "https://github.com/base-org",
+    "com.discord": "https://discord.com/invite/buildonbase",
+    "avatar": "ipfs://bafkreifrea6y5bfs33zn5sxqmklcp2kwdf442dy6kwftejk3qiuer4ncxq",
+    "xyz.farcaster": "https://farcaster.xyz/base",
+    "brand": "https://www.base.org/brand",
+    "header": "ipfs://bafkreid2olmjmj6tlonrkpkix7lqnxtq2jcqmid4637u2ema7vnvpnmgju"
+  }
+}

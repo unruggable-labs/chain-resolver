@@ -6,7 +6,8 @@
     "diff:chains": "tsx scripts/diff-chains.ts",
     "pipeline": "npm run fetch:sources && npm run generate:chains && npm run diff:chains",
     "generate:chains:json": "tsx scripts/generate-chains-json.ts",
-    "approve:chains": "tsx scripts/approve-chains.ts"
+    "approve:chains": "tsx scripts/approve-chains.ts",
+    "validate:chains": "bun run scripts/validate-chains.ts"
   },
   "dependencies": {
     "@adraffy/blocksmith": "https://github.com/clowestab/blocksmith.js.git#2bf93f74d56b5e44de652a088d58a680d002e076",

@@ -1,0 +1,13 @@
+{
+  "label": "bitcoin",
+  "chainName": "Bitcoin",
+  "interoperableAddressHex": "0x0001000110000000000019d6689c085ae165831e9300",
+  "aliases": [
+    "btc"
+  ],
+  "textRecords": {
+    "chainId": "bip122:000000000019d6689c085ae165831e93",
+    "avatar": "ipfs://bafkreihzrzzhyc5whfvlxstfxd3znemr6pr6pgy2ccqlquopaawk74y66i",
+    "header": "ipfs://bafkreig7joi5blwufklg2vtgr2n3knftoop2zae4x6afg3bup374xdjx4m"
+  }
+}

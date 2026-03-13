@@ -1,0 +1,21 @@
+{
+  "label": "avalanche",
+  "chainName": "Avalanche",
+  "interoperableAddressHex": "0x0001000002a86a00",
+  "aliases": [
+    "avax"
+  ],
+  "textRecords": {
+    "chainId": "eip155:43114",
+    "shortName": "avax",
+    "url": "https://www.avax.network",
+    "com.x": "https://x.com/avax",
+    "com.youtube": "https://www.youtube.com/Avalancheavax",
+    "com.linkedin": "https://www.linkedin.com/company/avalancheavax",
+    "com.facebook": "https://www.facebook.com/avalancheavax",
+    "com.reddit": "https://www.reddit.com/r/Avax/",
+    "avatar": "ipfs://bafkreiho4bahae7p3zyskrjhncoh54ybmhhbkgdprav7sv5vwqes5sfvbq",
+    "brand": "https://support.avax.network/en/articles/4132288-avalanche-brand-assets",
+    "header": "ipfs://bafkreigzwkwvr7allmtbatydiuk7ts22vybemyj6qb5uhg3xzq32z6mf6m"
+  }
+}
