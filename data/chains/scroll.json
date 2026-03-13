@@ -1,0 +1,18 @@
+{
+  "label": "scroll",
+  "chainName": "Scroll",
+  "interoperableAddressHex": "",
+  "aliases": [],
+  "textRecords": {
+    "chainId": "eip155:534352",
+    "url": "https://scroll.io/",
+    "com.x": "https://x.com/Scroll_ZKP",
+    "com.discord": "https://discord.gg/scroll",
+    "com.youtube": "",
+    "com.linkedin": "",
+    "com.github": "",
+    "avatar": "",
+    "brand": "",
+    "header": ""
+  }
+}
