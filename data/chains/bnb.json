@@ -1,0 +1,24 @@
+{
+  "label": "bnb",
+  "chainName": "BNB Smart Chain",
+  "interoperableAddressHex": "0x0001000002e70800",
+  "aliases": [
+    "bnb-chain",
+    "bnb-smart-chain"
+  ],
+  "textRecords": {
+    "chainId": "eip155:56",
+    "url": "https://www.bnbchain.org/",
+    "com.x": "https://twitter.com/BNBChain",
+    "com.discord": "https://discord.gg/bnbchain",
+    "com.youtube": "https://www.youtube.com/channel/UCG9fZu6D4I83DStktBV0Ryw",
+    "com.linkedin": "https://www.linkedin.com/company/bnbchaininnovation",
+    "com.github": "https://github.com/bnb-chain",
+    "com.instagram": "https://www.instagram.com/bnbchain/",
+    "com.facebook": "https://www.facebook.com/people/BNB-Chain/61550857610291/",
+    "org.telegram": "https://t.me/bnbchain",
+    "avatar": "ipfs://bafkreiefomdqcfzgd3w2zgeednsoqp4zizf4oe2q4fuafsfpj5aj77vafy",
+    "brand": "https://www.bnbchain.org/en/brand-guidelines",
+    "header": "ipfs://bafkreidbabkefij7za7ggfcrt67wzll2qjtjh2u3zm4ctit53wp5hvejya"
+  }
+}
