@@ -1,0 +1,17 @@
+{
+  "label": "celo",
+  "chainName": "Celo",
+  "interoperableAddressHex": "",
+  "aliases": [],
+  "textRecords": {
+    "chainId": "eip155:42220",
+    "url": "https://celo.org",
+    "com.x": "https://x.com/Celo",
+    "com.discord": "https://discord.com/invite/celo",
+    "com.youtube": "https://www.youtube.com/@CeloOrg",
+    "com.github": "https://github.com/celo-org",
+    "avatar": "",
+    "brand": "https://celo.org/brand-kit",
+    "header": ""
+  }
+}
