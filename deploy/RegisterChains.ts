@@ -20,7 +20,7 @@ const IMAGE_KEYS = ["avatar", "header"];
 
 const WEBSITE_CONTENTHASH = {
   sepolia: "0xe3010155122085bc74206e1ecd490225cd2649579f87efd9d87bbf9ec75288a0fe6b95a1c9ab",
-  mainnet: "0xe30101551220d51e44228c73421b10d8937aa95654ff34b1e1dbf8123cded5a4fa0eaf6f1220"
+  mainnet: "0xe301015512208e9bf1a362cd315e25cc390ac9455962aec1dc0c98367387d3da738c959d6784"
   //"0xe30101551220bcfedd3b3076c10f119ad4ec22e2dbe60d46e737a17f94971b7824457dfb4044"
 }
 
@@ -281,6 +281,8 @@ async function main() {
           ]);
           await tx.wait();
           console.log(`✓ ${chain.label}: Registered`);
+          // Add to registeredChains so alias check works
+          registeredChains.push(chain);
         } catch (e: any) {
           const msg = e?.shortMessage || e?.message || String(e);
           console.error(`✗ ${chain.label}: Failed - ${msg}`);
@@ -300,6 +302,8 @@ async function main() {
           await tx.wait();
           for (const chain of chainsToRegister) {
             console.log(`✓ ${chain.label}: Registered`);
+            // Add to registeredChains so alias check works
+            registeredChains.push(chain);
           }
         } catch (e: any) {
           const msg = e?.shortMessage || e?.message || String(e);
@@ -317,6 +321,8 @@ async function main() {
               ]);
               await tx.wait();
               console.log(`✓ ${chain.label}: Registered`);
+              // Add to registeredChains so alias check works
+              registeredChains.push(chain);
             } catch (e2: any) {
               const msg2 = e2?.shortMessage || e2?.message || String(e2);
               console.error(`✗ ${chain.label}: Failed - ${msg2}`);
@@ -440,6 +446,51 @@ async function main() {
         }
       } else {
         console.log("\nAll aliases are already registered.");
+      }
+    }
+
+    // Set default contenthash FIRST (used for base name and all chains that don't have a specific contenthash)
+    // This must run before per-chain checks so chains inherit the default correctly
+    if (WEBSITE_CONTENTHASH) {
+      console.log(`\n=== Default Contenthash ===`);
+
+      // WEBSITE_CONTENTHASH is already in ENS contenthash format (hex string with 0x prefix)
+      const contenthashBytes: string = WEBSITE_CONTENTHASH[chainInfo.name as keyof typeof WEBSITE_CONTENTHASH];
+
+      if (contenthashBytes) {
+        // Check existing default contenthash
+        let existingDefaultContenthash = "";
+        try {
+          const existing = await resolver.defaultContenthash!();
+          existingDefaultContenthash = existing.toLowerCase();
+        } catch {}
+
+        if (existingDefaultContenthash !== contenthashBytes.toLowerCase()) {
+          console.log(`Current default contenthash: ${existingDefaultContenthash || "(not set)"}`);
+          console.log(`New default contenthash: ${contenthashBytes}`);
+
+          const shouldSetDefaultContenthash = await promptContinueOrExit(
+            rl,
+            `Update default contenthash? (y/n)`
+          );
+
+          if (shouldSetDefaultContenthash) {
+            try {
+              // setDefaultContenthash expects bytes, so convert hex string to bytes
+              const contenthashBytesArray = getBytes(contenthashBytes);
+              const tx = await resolver.setDefaultContenthash!(contenthashBytesArray);
+              await tx.wait();
+              console.log(`✓ Default contenthash updated`);
+            } catch (e: any) {
+              const msg = e?.shortMessage || e?.message || String(e);
+              console.error(`✗ Failed to set default contenthash - ${msg}`);
+            }
+          } else {
+            console.log(`  Skipping default contenthash update`);
+          }
+        } else {
+          console.log(`✓ Default contenthash already set (matches expected value)`);
+        }
       }
     }
 
@@ -649,28 +700,19 @@ async function main() {
         }
         }
 
-        console.log("WAAAAAAT");
-        // Check contenthash
-        try {
-          // Determine expected contenthash: use chain.contenthash if set, otherwise use WEBSITE_CONTENTHASH
-          const expectedContenthash = chain.contenthash ?? WEBSITE_CONTENTHASH[chainInfo.name as keyof typeof WEBSITE_CONTENTHASH];
-          
-          console.log("expectedContenthash", expectedContenthash);
-          console.log("chain.contenthash", chain.contenthash);
-          console.log("chain.label", chain.label);
-
-          if (expectedContenthash) {
-            // Get current contenthash from chain
+        // Check per-chain contenthash ONLY if chain has a specific contenthash defined
+        // (chains without chain.contenthash will inherit the default contenthash)
+        if (chain.contenthash) {
+          try {
             const currentContenthash = await resolver.getContenthash!(chain.label);
             const currentHex = hexlify(currentContenthash).toLowerCase();
-            const expectedHex = expectedContenthash.toLowerCase();
-            
-            // If different, ask to update
+            const expectedHex = chain.contenthash.toLowerCase();
+
             if (currentHex !== expectedHex) {
               console.log(`\n${chain.label}: Contenthash differs from expected`);
               console.log(`  Current: ${currentHex.slice(0, 20)}...${currentHex.slice(-10)}`);
               console.log(`  Expected: ${expectedHex.slice(0, 20)}...${expectedHex.slice(-10)}`);
-              
+
               const shouldUpdate = await promptContinueOrExit(
                 rl,
                 `Update contenthash for ${chain.label}? (y/n)`
@@ -679,7 +721,7 @@ async function main() {
               if (shouldUpdate) {
                 try {
                   const chainLabelhash = keccak256(toUtf8Bytes(chain.label));
-                  const contenthashBytes = getBytes(expectedContenthash);
+                  const contenthashBytes = getBytes(chain.contenthash);
                   const tx = await resolver.setContenthash!(chainLabelhash, contenthashBytes);
                   await tx.wait();
                   console.log(`✓ ${chain.label}: Updated contenthash`);
@@ -689,9 +731,9 @@ async function main() {
                 }
               }
             }
+          } catch (e) {
+            console.warn(`  Could not check contenthash for ${chain.label}`);
           }
-        } catch (e) {
-          console.warn(`  Could not check contenthash for ${chain.label}`);
         }
       }
     }
@@ -702,7 +744,7 @@ async function main() {
       // Add default base name records here, or leave empty to skip
       // Example:
       // "url": "https://example.com",
-      "description": "ERC-7828 Chain Registry/Resolver",
+      "description": "on.eth - An on-chain registry for blockchain metadata",
     };
 
     if (Object.keys(baseNameTextRecords).length > 0) {
@@ -791,50 +833,6 @@ async function main() {
               }
             }
           }
-        }
-      }
-    }
-
-    // Set default contenthash (used for base name and all chains if they don't have a specific contenthash)
-    if (WEBSITE_CONTENTHASH) {
-      console.log(`\n=== Default Contenthash ===`);
-
-      // WEBSITE_CONTENTHASH is already in ENS contenthash format (hex string with 0x prefix)
-      const contenthashBytes: string = WEBSITE_CONTENTHASH[chainInfo.name as keyof typeof WEBSITE_CONTENTHASH];
-
-      if (contenthashBytes) {
-        // Check existing default contenthash
-        let existingDefaultContenthash = "";
-        try {
-          const existing = await resolver.defaultContenthash!();
-          existingDefaultContenthash = existing.toLowerCase();
-        } catch {}
-
-        if (existingDefaultContenthash !== contenthashBytes.toLowerCase()) {
-          console.log(`Current default contenthash: ${existingDefaultContenthash || "(not set)"}`);
-          console.log(`New default contenthash: ${contenthashBytes}`);
-          
-          const shouldSetDefaultContenthash = await promptContinueOrExit(
-            rl,
-            `Update default contenthash? (y/n)`
-          );
-
-          if (shouldSetDefaultContenthash) {
-            try {
-              // setDefaultContenthash expects bytes, so convert hex string to bytes
-              const contenthashBytesArray = getBytes(contenthashBytes);
-              const tx = await resolver.setDefaultContenthash!(contenthashBytesArray);
-              await tx.wait();
-              console.log(`✓ Default contenthash updated`);
-            } catch (e: any) {
-              const msg = e?.shortMessage || e?.message || String(e);
-              console.error(`✗ Failed to set default contenthash - ${msg}`);
-            }
-          } else {
-            console.log(`  Skipping default contenthash update`);
-          }
-        } else {
-          console.log(`✓ Default contenthash already set (matches expected value)`);
         }
       }
     }
