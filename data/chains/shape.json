@@ -1,0 +1,15 @@
+{
+  "label": "shape",
+  "chainName": "Shape",
+  "interoperableAddressHex": "0x0001000002016800",
+  "aliases": [],
+  "textRecords": {
+    "chainId": "eip155:360",
+    "url": "https://shape.network/",
+    "com.x": "https://x.com/shape",
+    "com.discord": "https://discord.com/invite/shape-l2",
+    "avatar": "ipfs://bafkreiac7msdao56ns2xideorhpm3jegtboufci5e56edl22rbf2rlbgwq",
+    "brand": "https://shape.network/brand",
+    "header": "ipfs://bafkreibgbmv3qam3l2k4p4bdwx5deylyquv233srgotxnoqpyla7fltmmu"
+  }
+}
