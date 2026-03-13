@@ -1,7 +1,7 @@
 {
   "label": "celo",
   "chainName": "Celo",
-  "interoperableAddressHex": "",
+  "interoperableAddressHex": "0x0001000002a4ec00",
   "aliases": [],
   "textRecords": {
     "chainId": "eip155:42220",
@@ -10,8 +10,8 @@
     "com.discord": "https://discord.com/invite/celo",
     "com.youtube": "https://www.youtube.com/@CeloOrg",
     "com.github": "https://github.com/celo-org",
-    "avatar": "",
+    "avatar": "ipfs://bafkreideddol5yulasbt6nxfc72doudu2d75p4sow4ryw66vidg4pm3bjq",
     "brand": "https://celo.org/brand-kit",
-    "header": ""
+    "header": "ipfs://bafkreiawe22txjqzinnwxw5cicb3uip233wjzpx5e2xxtasthyn6rtz5fa"
   }
 }
