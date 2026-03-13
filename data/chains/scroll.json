@@ -1,18 +1,17 @@
 {
   "label": "scroll",
   "chainName": "Scroll",
-  "interoperableAddressHex": "",
+  "interoperableAddressHex": "0x000100000308275000",
   "aliases": [],
   "textRecords": {
     "chainId": "eip155:534352",
     "url": "https://scroll.io/",
     "com.x": "https://x.com/Scroll_ZKP",
     "com.discord": "https://discord.gg/scroll",
-    "com.youtube": "",
-    "com.linkedin": "",
-    "com.github": "",
-    "avatar": "",
-    "brand": "",
-    "header": ""
+    "com.youtube": "https://www.youtube.com/@Scroll_ZKP",
+    "com.github": "https://github.com/scroll-tech",
+    "avatar": "ipfs://bafkreif6batny2azyvu7junmzojlsxu4la5ls3wgypsc5d2e3rct2cinba",
+    "brand": "https://scroll.io/brand-kit",
+    "header": "ipfs://bafybeiail6srmxqkxf34jhufbcel3ijfxpt6y2mt7qfe6gwm3bxnmx4oqi"
   }
 }
