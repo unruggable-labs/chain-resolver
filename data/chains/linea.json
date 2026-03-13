@@ -1,0 +1,16 @@
+{
+  "label": "linea",
+  "chainName": "Linea",
+  "interoperableAddressHex": "0x0001000002e70800",
+  "aliases": [],
+  "textRecords": {
+    "chainId": "eip155:59144",
+    "url": "https://linea.build/",
+    "com.x": "https://x.com/LineaBuild",
+    "com.discord": "https://discord.com/invite/linea",
+    "com.linkedin": "https://www.linkedin.com/company/lineabuild/",
+    "avatar": "ipfs://bafkreiam3xqqpdehqb37jfvt2o6tado4qqlikxnzz5u4z7wa6ccwea3tai",
+    "brand": "https://linea.build/assets",
+    "header": "ipfs://bafkreihj3qceui6xrvha6fki7l2juy7h2vbq5nkq642z3767jx7trkzjdu"
+  }
+}
