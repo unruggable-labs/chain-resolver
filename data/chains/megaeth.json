@@ -1,0 +1,22 @@
+{
+  "label": "megaeth",
+  "chainName": "MegaETH",
+  "interoperableAddressHex": "0x000100000210e600",
+  "aliases": [
+    "mega"
+  ],
+  "textRecords": {
+    "chainId": "eip155:4326",
+    "shortName": "mega",
+    "url": "https://megaeth.com",
+    "com.github": "https://github.com/megaeth-labs",
+    "com.x": "https://x.com/megaeth",
+    "com.discord": "https://discord.gg/megaeth",
+    "org.telegram": "https://t.me/megaeth_labs",
+    "com.linkedin": "https://www.linkedin.com/company/megaeth",
+    "brand": "https://www.megaeth.com/brand-kit",
+    "description": "MegaETH is the first real-time blockchain.",
+    "avatar": "ipfs://bafkreidkpsi5inhfatc2qegn4mnfcplfluky4626ewaesuwcw3i4orv4lq",
+    "header": "ipfs://bafkreifjaplgc73jtyohzrx67lyk2r4ku2wcftxjphfex3wlxkwif4mycu"
+  }
+}
