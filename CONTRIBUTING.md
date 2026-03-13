@@ -32,8 +32,6 @@ Your file must be named `{label}.json` where `label`:
 
 Alongside defining the `ipfs://` URLs for the avatar and header, you should include the raw image files in the respective `avatars`/`headers` folder.
 
-We recommend avatars be at least 250 x 250 px, and headers be 1920 x 600px.
-
 ### Optional Fields
 
 | Field | Type | Description |
@@ -43,6 +41,7 @@ We recommend avatars be at least 250 x 250 px, and headers be 1920 x 600px.
 You can defined any [text records](https://docs.ens.domains/ensip/5/) that will be set on the name under the top level `textRecords` key.
 
 | Field | Type | Description |
+|-------|------|-------------|
 | `textRecords.url` | string | Official website |
 | `textRecords.shortName` | string | Short identifier |
 | `textRecords.avatar` | string | Chain logo (IPFS URL recommended) |
@@ -56,6 +55,7 @@ You can defined any [text records](https://docs.ens.domains/ensip/5/) that will 
 You can defined any [data records](https://docs.ens.domains/ensip/24/) that will be set on the name under the top level `dataRecords` key.
 
 | Field | Type | Description |
+|-------|------|-------------|
 | `dataRecords.myBlob` | bytes | An arbitrary blob of data |
 
 ## Example
@@ -87,9 +87,9 @@ You can defined any [data records](https://docs.ens.domains/ensip/24/) that will
 
 For `avatar` and `header` images:
 - Upload them to IPFS (using a provider like [Pinata](https://pinata.cloud))
-- Use `ipfs://` URLs (not gateway URLs)
+- Use `ipfs://` URLs for the text record values 
 - Avatar: square, recommended 256x256 or larger
-- Header: recommended 1200x630 or similar banner ratio
+- Header: recommended 1920x600 or similar banner ratio
 
 ## Interoperable Address
 

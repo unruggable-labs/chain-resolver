@@ -152,6 +152,14 @@ function validateChain(
       errors.push(`Invalid chainId format: "${chain.textRecords.chainId}" (must be CAIP-2, e.g., "eip155:1")`);
     }
 
+    // avatar and header are required
+    if (!chain.textRecords.avatar) {
+      errors.push("Missing required field: textRecords.avatar");
+    }
+    if (!chain.textRecords.header) {
+      errors.push("Missing required field: textRecords.header");
+    }
+
     // Check all text records - if a key is defined, it must have a value
     for (const [key, value] of Object.entries(chain.textRecords)) {
       if (value === "") {
