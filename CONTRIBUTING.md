@@ -27,6 +27,12 @@ Your file must be named `{label}.json` where `label`:
 | `chainName` | string | Display name (e.g., `"OP Mainnet"`) |
 | `interoperableAddressHex` | string | ERC-7930 interoperable address (hex) |
 | `textRecords.chainId` | string | [CAIP-2](https://standards.chainagnostic.org/CAIPs/caip-2) chain ID (e.g., `"eip155:10"`) |
+| `textRecords.avatar` | string | Chain logo as `ipfs://` URL |
+| `textRecords.header` | string | Header/banner image as `ipfs://` URL |
+
+Alongside defining the `ipfs://` URLs for the avatar and header, you should include the raw image files in the respective `avatars`/`headers` folder.
+
+We recommend avatars be at least 250 x 250 px, and headers be 1920 x 600px.
 
 ### Optional Fields
 
