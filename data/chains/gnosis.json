@@ -1,0 +1,19 @@
+{
+  "label": "gnosis",
+  "chainName": "Gnosis Chain",
+  "interoperableAddressHex": "0x00010000016400",
+  "aliases": [],
+  "textRecords": {
+    "chainId": "eip155:100",
+    "url": "https://www.gnosis.io/",
+    "com.x": "https://www.x.com/gnosischain",
+    "com.discord": "https://discord.gg/gnosis",
+    "com.youtube": "https://www.youtube.com/@GnosisChain",
+    "com.github": "https://github.com/gnosischain",
+    "com.reddit": "https://www.reddit.com/r/gnosisPM/",
+    "description": "Gnosis Chain is an EVM compatible, community-owned network that prioritizes credible neutrality and resiliency, open to everyone without privilege or prejudice.",
+    "avatar": "ipfs://bafkreihqsebsqutpy3n3dmirxph6kmpmixtychqglygkeoqxhlnw65gkya",
+    "brand": "https://github.com/gnosischain/media-kit",
+    "header": "ipfs://bafkreiczrfk34izcoe37mxa6bn3irf7egyzzfwabt56nok752zujvmnoni"
+  }
+}
