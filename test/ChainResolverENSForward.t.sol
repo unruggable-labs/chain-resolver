@@ -322,4 +322,163 @@ contract ChainResolverENSForwardTest is ChainResolverTestBase {
 
         console.log("Successfully resolved custom text");
     }
+
+    function test_012____resolve_____________________ContenthashEmptyForUnregisteredLabel()
+        public
+    {
+        bytes memory defaultCh = hex"e30101701220deadbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+        vm.startPrank(admin);
+        resolver.setDefaultContenthash(defaultCh);
+        vm.stopPrank();
+
+        // Query contenthash for a label that was never registered.
+        bytes memory name = dnsEncodeLabel("never-registered");
+        bytes4 contenthashSelector = bytes4(keccak256("contenthash(bytes32)"));
+        bytes memory data = abi.encodeWithSelector(
+            contenthashSelector,
+            keccak256("never-registered")
+        );
+        bytes memory result = resolver.resolve(name, data);
+        bytes memory ch = abi.decode(result, (bytes));
+
+        assertEq(
+            ch.length,
+            0,
+            "Unregistered label must not return the default contenthash"
+        );
+
+        console.log("Unregistered label returns empty contenthash");
+    }
+
+    function test_013____resolve_____________________ContenthashDefaultForBaseName()
+        public
+    {
+        bytes memory defaultCh = hex"e30101701220deadbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+        vm.startPrank(admin);
+        resolver.setDefaultContenthash(defaultCh);
+        vm.stopPrank();
+
+        // The bare parent name (e.g. on.eth) resolves to defaultContenthash.
+        bytes memory name = dnsEncode(PARENT_DOMAIN);
+        bytes4 contenthashSelector = bytes4(keccak256("contenthash(bytes32)"));
+        bytes memory data = abi.encodeWithSelector(
+            contenthashSelector,
+            bytes32(0)
+        );
+        bytes memory result = resolver.resolve(name, data);
+        bytes memory ch = abi.decode(result, (bytes));
+
+        assertEq(ch, defaultCh, "Base name should return defaultContenthash");
+
+        console.log("Base name returns defaultContenthash");
+    }
+
+    function test_014____resolve_____________________ContenthashDefaultForRegisteredLabel()
+        public
+    {
+        bytes memory defaultCh = hex"e30101701220deadbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+        vm.startPrank(admin);
+        resolver.setDefaultContenthash(defaultCh);
+        registerTestChain();
+        vm.stopPrank();
+
+        // Registered label with no specific contenthash falls back to default.
+        bytes memory name = dnsEncodeLabel(TEST_LABEL);
+        bytes4 contenthashSelector = bytes4(keccak256("contenthash(bytes32)"));
+        bytes memory data = abi.encodeWithSelector(
+            contenthashSelector,
+            TEST_LABELHASH
+        );
+        bytes memory result = resolver.resolve(name, data);
+        bytes memory ch = abi.decode(result, (bytes));
+
+        assertEq(
+            ch,
+            defaultCh,
+            "Registered label should fall back to defaultContenthash"
+        );
+
+        console.log("Registered label falls back to defaultContenthash");
+    }
+
+    function test_015____resolve_____________________ContenthashDefaultForAlias()
+        public
+    {
+        bytes memory defaultCh = hex"e30101701220deadbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+        vm.startPrank(admin);
+        resolver.setDefaultContenthash(defaultCh);
+        registerTestChain();
+        resolver.registerAlias("op", TEST_LABELHASH);
+        vm.stopPrank();
+
+        // Alias of a registered chain still resolves through to defaultContenthash.
+        bytes memory name = dnsEncodeLabel("op");
+        bytes4 contenthashSelector = bytes4(keccak256("contenthash(bytes32)"));
+        bytes memory data = abi.encodeWithSelector(
+            contenthashSelector,
+            keccak256("op")
+        );
+        bytes memory result = resolver.resolve(name, data);
+        bytes memory ch = abi.decode(result, (bytes));
+
+        assertEq(ch, defaultCh, "Alias should resolve to defaultContenthash");
+
+        console.log("Alias of registered chain falls back to defaultContenthash");
+    }
+
+    function test_016____resolve_____________________ContenthashEmptyForDeepUnregisteredName()
+        public
+    {
+        bytes memory defaultCh = hex"e30101701220deadbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+        vm.startPrank(admin);
+        resolver.setDefaultContenthash(defaultCh);
+        registerTestChain();
+        vm.stopPrank();
+
+        // A deeply-nested name like "a.b.optimism.cid.eth" has first label "a"
+        // which is unregistered, so it must return empty contenthash. This is
+        // the abuse vector eth.limo wildcards exposed.
+        bytes memory name = dnsEncode(
+            string(abi.encodePacked("a.b.", TEST_LABEL, ".", PARENT_DOMAIN))
+        );
+        bytes4 contenthashSelector = bytes4(keccak256("contenthash(bytes32)"));
+        bytes memory data = abi.encodeWithSelector(
+            contenthashSelector,
+            keccak256("a")
+        );
+        bytes memory result = resolver.resolve(name, data);
+        bytes memory ch = abi.decode(result, (bytes));
+
+        assertEq(
+            ch.length,
+            0,
+            "Deep name with unregistered first label must return empty"
+        );
+
+        console.log("Deep unregistered name returns empty contenthash");
+    }
+
+    function test_017____getContenthash______________EmptyForUnregisteredLabel()
+        public
+    {
+        bytes memory defaultCh = hex"e30101701220deadbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+
+        vm.startPrank(admin);
+        resolver.setDefaultContenthash(defaultCh);
+        vm.stopPrank();
+
+        // Direct getter must also return empty for unknown labels.
+        assertEq(
+            resolver.getContenthash("never-registered").length,
+            0,
+            "Unregistered label must return empty from getContenthash"
+        );
+
+        console.log("getContenthash returns empty for unregistered label");
+    }
 }

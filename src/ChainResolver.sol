@@ -627,16 +627,30 @@ contract ChainResolver is
     /**
      * @notice Get a contenthash.
      * @param _labelhash The labelhash to query.
-     * @return The contenthash value. Returns defaultContenthash if no specific contenthash is set.
+     * @return The contenthash value. Returns defaultContenthash for the base name
+     *         or any registered chain that has no specific contenthash set.
+     *         Returns empty bytes for unregistered labels so ENS gateways do not
+     *         serve content (and provision certs) for wildcard subdomains.
      */
     function _getContenthash(
         bytes32 _labelhash
     ) internal view returns (bytes memory) {
-        bytes memory specific = contenthashRecords[_resolveLabelhash(_labelhash)];
+        if (_labelhash == BASE_NAME_LABELHASH) {
+            return defaultContenthash;
+        }
+
+        bytes32 canonical = _resolveLabelhash(_labelhash);
+
+        bytes memory specific = contenthashRecords[canonical];
         if (specific.length > 0) {
             return specific;
         }
-        return defaultContenthash;
+
+        if (chainOwners[canonical] != address(0)) {
+            return defaultContenthash;
+        }
+
+        return "";
     }
 
     /**
