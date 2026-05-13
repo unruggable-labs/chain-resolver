@@ -23,6 +23,7 @@
     "multiformats": "^13.4.2",
     "ora": "^9.3.0",
     "pinata": "^2.5.5",
+    "solc": "^0.8.35",
     "solidity-bytes-utils": "^0.8.4",
     "tsx": "^4.21.0",
     "viem": "^2.47.2"

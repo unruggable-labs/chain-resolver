@@ -5,10 +5,13 @@
  */
 
 import { parseArgs } from "./utils.ts";
-import { setOrDie } from "../../shared/utils.ts";
+import { setOrDie, loadEnvFromAncestors } from "../../shared/utils.ts";
 import { getNetwork, type NetworkConfig } from "./constants.ts";
 
-import 'dotenv/config'
+// Load .env by walking up from CWD; falls back to `dotenv/config` semantics
+// when the .env is right next to the working dir. This is the difference
+// between "works in main checkout only" and "works in worktrees too".
+loadEnvFromAncestors();
 
 export type InitData = {
     args: Map<string, string>

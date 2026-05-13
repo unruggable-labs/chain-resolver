@@ -1,5 +1,56 @@
 // Shared utility functions
 import readline from "node:readline";
+import fs from "node:fs";
+import path from "node:path";
+import * as dotenv from "dotenv";
+
+/**
+ * Walk up from `startDir` looking for a `.env` file and load it if found.
+ * Stops at the filesystem root, or one level past the first ancestor that
+ * contains a `.git` entry (so we don't escape the repo into an unrelated
+ * parent project).
+ *
+ * This makes deploy scripts work identically whether invoked from the main
+ * checkout or from a git worktree (worktrees don't carry gitignored files
+ * like `.env`).
+ *
+ * Idempotent — calling more than once is a no-op. Returns the path that
+ * was loaded, or null if none was found.
+ */
+let _envLoadedFrom: string | null | undefined = undefined;
+
+export function loadEnvFromAncestors(
+  startDir: string = process.cwd()
+): string | null {
+  if (_envLoadedFrom !== undefined) return _envLoadedFrom;
+
+  let dir = path.resolve(startDir);
+  let crossedGitBoundary = false;
+
+  while (true) {
+    const candidate = path.join(dir, ".env");
+    if (fs.existsSync(candidate)) {
+      dotenv.config({ path: candidate, override: false, quiet: true });
+      _envLoadedFrom = candidate;
+      return candidate;
+    }
+
+    if (fs.existsSync(path.join(dir, ".git"))) {
+      if (crossedGitBoundary) {
+        _envLoadedFrom = null;
+        return null;
+      }
+      crossedGitBoundary = true;
+    }
+
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      _envLoadedFrom = null;
+      return null;
+    }
+    dir = parent;
+  }
+}
 
 /**
  * Create a readline interface for interactive prompts

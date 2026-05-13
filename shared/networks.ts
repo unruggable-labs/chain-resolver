@@ -1,5 +1,9 @@
 // Shared network configuration
-import "dotenv/config";
+import { loadEnvFromAncestors } from "./utils.ts";
+
+// Load .env from the nearest ancestor so this works equally well from a
+// worktree (which doesn't carry gitignored files) and from the main checkout.
+loadEnvFromAncestors();
 
 export interface NetworkConfig {
   id: number;

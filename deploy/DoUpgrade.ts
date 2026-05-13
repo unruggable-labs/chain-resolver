@@ -6,7 +6,9 @@
 // 2. Upgrades the proxy to the new implementation
 // 3. Verifies data persisted and new implementation is active
 
-import "dotenv/config";
+import { loadEnvFromAncestors } from "../shared/utils.ts";
+loadEnvFromAncestors();
+
 import { init } from "./libs/init.ts";
 import {
   initSmith,
@@ -17,17 +19,15 @@ import {
 } from "./libs/utils.ts";
 import { askQuestion, promptContinueOrExit } from "../shared/utils.ts";
 import { RESOLVER_ABI } from "../shared/abis.ts";
-import { Contract, keccak256, toUtf8Bytes } from "ethers";
-
-
-// ERC1967 implementation slot
-const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-
-async function getImplementationAddress(provider: any, proxyAddress: string): Promise<string> {
-  const slot = await provider.getStorage(proxyAddress, IMPLEMENTATION_SLOT);
-  // Extract address from slot (last 20 bytes)
-  return "0x" + slot.slice(-40);
-}
+import { Contract, Interface, keccak256, toUtf8Bytes } from "ethers";
+import {
+  getResolverAddress,
+  getImplementationAddress,
+  getLocalLayout,
+  fetchDeployedLayout,
+  compareLayouts,
+} from "./libs/storageLayout.ts";
+import { simulateTransaction } from "./libs/tenderly.ts";
 
 async function main() {
   const { chainInfo, privateKey } = await init();
@@ -45,18 +45,46 @@ async function main() {
   }
 
   try {
-    // Find the deployed proxy
+    // Find the deployed proxy. Source-of-truth is the ENS resolver record on
+    // the parent domain (on.eth on mainnet, cid.eth on sepolia) since that is
+    // what actually serves traffic. Deployment file and env var are kept as
+    // cross-checks.
     let proxyAddress: string | undefined;
+    const ensName = chainInfo.domain;
 
+    try {
+      console.log(`\nResolving ${ensName} via ENS registry...`);
+      const ensResolver = await getResolverAddress(
+        deployerWallet.provider,
+        ensName
+      );
+      proxyAddress = ensResolver;
+      console.log(`  ${ensName} resolver → ${ensResolver}`);
+    } catch (e: any) {
+      console.warn(
+        `  ENS lookup failed (${e?.message ?? e}). Falling back to deployment file / env var.`
+      );
+    }
+
+    let deploymentFileProxy: string | undefined;
     try {
       const proxyDep = await loadDeployment(chainInfo.id, "[Proxy]ERC1967Proxy");
       const addr = proxyDep.target as string;
       const code = await deployerWallet.provider.getCode(addr);
       if (code && code !== "0x") {
-        proxyAddress = addr;
-        console.log("Found proxy from deployment file:", proxyAddress);
+        deploymentFileProxy = addr;
+        console.log("Deployment file proxy:", deploymentFileProxy);
       }
     } catch {}
+
+    if (proxyAddress && deploymentFileProxy &&
+        proxyAddress.toLowerCase() !== deploymentFileProxy.toLowerCase()) {
+      console.warn(
+        `⚠️  ENS resolver (${proxyAddress}) differs from deployment file proxy (${deploymentFileProxy}). Using ENS.`
+      );
+    }
+
+    if (!proxyAddress) proxyAddress = deploymentFileProxy;
 
     if (!proxyAddress) {
       const envAddr = process.env.CHAIN_RESOLVER_PROXY?.trim();
@@ -91,6 +119,66 @@ async function main() {
     if (owner.toLowerCase() !== deployerWallet.address.toLowerCase()) {
       console.error("\n❌ You are not the contract owner. Cannot upgrade.");
       process.exit(1);
+    }
+
+    // --- Storage layout pre-flight ---
+    // Rebuild the deployed implementation's storage layout from Etherscan's
+    // verified source, compare against the local artifact. Refuses to proceed
+    // if any deployed slot has been renamed, retyped, removed, or reordered.
+    console.log("\n--- Storage Layout Check ---");
+    const etherscanKey = process.env.ETHERSCAN_API_KEY?.trim();
+    if (!etherscanKey) {
+      console.warn(
+        "⚠️  ETHERSCAN_API_KEY not set — skipping storage layout check. This is unsafe; set the key."
+      );
+      const proceedWithoutLayout = await promptContinueOrExit(
+        rl,
+        "Proceed without storage layout verification? (y/n)"
+      );
+      if (!proceedWithoutLayout) {
+        console.log("Aborted.");
+        return;
+      }
+    } else {
+      try {
+        const deployedLayout = await fetchDeployedLayout(
+          currentImpl,
+          chainInfo.id,
+          etherscanKey
+        );
+        const localLayout = await getLocalLayout();
+        const cmp = compareLayouts(deployedLayout, localLayout);
+
+        console.log(
+          `  Deployed vars: ${deployedLayout.storage.length}, local vars: ${localLayout.storage.length}`
+        );
+
+        if (cmp.appended.length > 0) {
+          console.log(`  Appended (safe): ${cmp.appended.map((v) => v.label).join(", ")}`);
+        }
+
+        if (!cmp.compatible) {
+          console.error("\n❌ STORAGE LAYOUT INCOMPATIBLE — upgrade would corrupt state:");
+          for (const issue of cmp.issues) {
+            console.error(`   ${issue}`);
+          }
+          process.exit(1);
+        }
+
+        console.log("  ✓ Layout is upgrade-compatible");
+      } catch (e: any) {
+        console.error(
+          `\n❌ Storage layout check failed: ${e?.message ?? e}`
+        );
+        const forceContinue = await promptContinueOrExit(
+          rl,
+          "Continue anyway? (y/n)"
+        );
+        if (!forceContinue) {
+          console.log("Aborted.");
+          return;
+        }
+      }
     }
 
     // Test data persistence - get a sample chain if any exist
@@ -188,6 +276,60 @@ async function main() {
     console.log("\n--- Upgrade Details ---");
     console.log("From:", currentImpl);
     console.log("To:  ", newImplAddress);
+
+    // --- Tenderly dry-run ---
+    // Simulate upgradeToAndCall(newImpl, "0x") against latest block. The
+    // simulation runs from the owner address (which is what will sign the
+    // real tx) so a Tenderly "success" means the on-chain tx should also
+    // succeed (modulo gas price / nonce / RPC issues).
+    if (process.env.TENDERLY_API_KEY) {
+      console.log("\n--- Tenderly Simulation ---");
+      try {
+        const iface = new Interface([
+          "function upgradeToAndCall(address newImplementation, bytes data) payable",
+        ]);
+        const calldata = iface.encodeFunctionData("upgradeToAndCall", [
+          newImplAddress!,
+          "0x",
+        ]);
+        const sim = await simulateTransaction(
+          { from: owner, to: proxyAddress, input: calldata },
+          chainInfo.id
+        );
+        if (sim.status) {
+          console.log(`  ✓ Simulation succeeded (gas used: ${sim.gasUsed ?? "?"})`);
+        } else {
+          console.error(`  ✗ Simulation FAILED: ${sim.errorMessage ?? "unknown"}`);
+        }
+        if (sim.shareUrl) {
+          console.log(`  Share: ${sim.shareUrl}`);
+        }
+        if (!sim.status) {
+          const forceProceed = await promptContinueOrExit(
+            rl,
+            "Simulation failed. Proceed with live tx anyway? (y/n)"
+          );
+          if (!forceProceed) {
+            console.log("Aborted.");
+            return;
+          }
+        }
+      } catch (e: any) {
+        console.warn(`  ⚠️  Tenderly simulation errored: ${e?.message ?? e}`);
+        const forceProceed = await promptContinueOrExit(
+          rl,
+          "Continue without Tenderly dry-run? (y/n)"
+        );
+        if (!forceProceed) {
+          console.log("Aborted.");
+          return;
+        }
+      }
+    } else {
+      console.log(
+        "\n(TENDERLY_API_KEY not set — skipping Tenderly simulation)"
+      );
+    }
 
     const shouldUpgrade = await promptContinueOrExit(
       rl,
