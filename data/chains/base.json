@@ -1,6 +1,6 @@
 {
   "label": "base",
-  "chainName": "Base",
+  "chainName": "Base Chain",
   "interoperableAddressHex": "0x0001000002210500",
   "aliases": [],
   "textRecords": {
